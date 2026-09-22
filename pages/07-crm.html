@@ -1,0 +1,1944 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Khách hàng — ERP NHÔM OWIN</title>
+  <link rel="stylesheet" href="../assets/css/style.css" />
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+  <style>
+    /* ============================================================
+       CRM · List-first
+       ============================================================ */
+
+    /* ===== Top KPI strip ===== */
+    .kpi-strip {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 0;
+      background: var(--canvas);
+      border: 1px solid var(--rule-soft);
+      border-radius: var(--r-5);
+      padding: 14px 0;
+      margin-bottom: 12px;
+    }
+    .kpi-strip .km {
+      padding: 0 22px;
+      border-right: 1px solid var(--rule-hair);
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .kpi-strip .km:last-child { border-right: 0; }
+    .kpi-strip .km .l {
+      font-family: var(--ff-mono);
+      font-size: 9px; font-weight: 500;
+      letter-spacing: 0.16em; text-transform: uppercase;
+      color: var(--ash);
+    }
+    .kpi-strip .km .v {
+      font-size: 22px; font-weight: 500;
+      letter-spacing: -0.015em;
+      color: var(--ink);
+      font-variant-numeric: tabular-nums;
+      line-height: 1.1;
+    }
+    .kpi-strip .km .v .unit { font-size: 12px; color: var(--ash); font-weight: 400; margin-left: 2px; }
+    .kpi-strip .km .d {
+      font-size: 11px;
+      color: var(--ash);
+      margin-top: 2px;
+    }
+    .kpi-strip .km .d.up { color: var(--moss); }
+
+    /* ===== Filter strip ===== */
+    .filter-strip {
+      background: var(--canvas);
+      border: 1px solid var(--rule-soft);
+      border-radius: var(--r-5);
+      padding: 12px 14px;
+      margin-bottom: 10px;
+      display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+    }
+    .filter-strip .search-wrap {
+      flex: 1; min-width: 240px; position: relative;
+      display: flex; align-items: center;
+      background: var(--paper-2);
+      border-radius: var(--r-3);
+      padding: 0 12px;
+      height: 32px;
+    }
+    .filter-strip .search-wrap i { color: var(--ash-2); flex-shrink: 0; margin-right: 6px; }
+    .filter-strip .search-wrap input {
+      flex: 1; background: transparent; border: 0; outline: none;
+      font-size: 13px; color: var(--ink);
+    }
+    .filter-strip .filter-pill { padding: 5px 10px; font-size: 12px; }
+
+    /* ===== Tabs ===== */
+    .tabs-strip { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 12px; }
+    .tabs-strip .tab {
+      padding: 6px 12px;
+      background: transparent;
+      border: 1px solid transparent;
+      color: var(--ash);
+      font-size: 13px; font-weight: 500;
+      border-radius: var(--r-3);
+      cursor: pointer;
+      transition: all 140ms ease;
+      display: inline-flex; align-items: center; gap: 6px;
+    }
+    .tabs-strip .tab:hover { color: var(--ink); }
+    .tabs-strip .tab .count {
+      font-family: var(--ff-mono);
+      font-size: 10px;
+      padding: 1px 6px;
+      background: var(--paper-2);
+      border-radius: 2px;
+      letter-spacing: 0.08em;
+    }
+    .tabs-strip .tab.tab-active {
+      background: var(--ink);
+      color: var(--paper);
+    }
+    .tabs-strip .tab.tab-active .count { background: rgba(245, 241, 232, 0.15); color: var(--paper); }
+    .tabs-strip .tab.tab-warn { color: var(--rust); }
+    .tabs-strip .tab.tab-warn.tab-active { background: var(--rust); color: var(--paper); }
+
+    /* ===== Customer table ===== */
+    .cust-list {
+      background: var(--canvas);
+      border: 1px solid var(--rule-soft);
+      border-radius: var(--r-5);
+      overflow: hidden;
+    }
+    .cl-head, .cl-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1.5fr) 132px 96px 92px 130px 104px 94px minmax(0, 1.25fr) 26px;
+      gap: 14px;
+      align-items: center;
+      padding: 12px 18px;
+      min-width: 0;
+    }
+    .cl-head {
+      background: var(--paper);
+      border-bottom: 1px solid var(--rule);
+      font-family: var(--ff-mono);
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--ash);
+    }
+    .cl-head .sort-btn {
+      background: transparent; border: 0; padding: 0;
+      cursor: pointer;
+      color: inherit;
+      font: inherit;
+      letter-spacing: inherit;
+      text-transform: inherit;
+      display: inline-flex; align-items: center; gap: 3px;
+      transition: color 140ms ease;
+    }
+    .cl-head .sort-btn:hover { color: var(--ink); }
+    .cl-head .sort-btn.active { color: var(--rust); }
+    .cl-head .sort-btn .sort-icon {
+      display: inline-flex; flex-direction: column; line-height: 0.4;
+      font-size: 9px; opacity: 0.4;
+    }
+    .cl-head .sort-btn.active .sort-icon { opacity: 1; }
+    .cl-head .num { text-align: right; justify-content: flex-end; }
+    .cl-head .num .sort-btn { flex-direction: row-reverse; }
+
+    .cl-row {
+      border-bottom: 1px solid var(--rule-hair);
+      cursor: pointer;
+      transition: background 140ms ease;
+      font-size: 13px;
+    }
+    .cl-row:hover { background: var(--paper-2); }
+    .cl-row.active { background: var(--rust-soft); border-left: 3px solid var(--rust); padding-left: 15px; }
+    .cl-row:last-child { border-bottom: 0; }
+
+    .cl-row .cust-cell { display: grid; grid-template-columns: 32px minmax(0, 1fr); gap: 10px; align-items: center; min-width: 0; }
+    .cl-row .avatar {
+      width: 32px; height: 32px;
+      border-radius: var(--r-2);
+      background: var(--paper-2);
+      display: inline-flex; align-items: center; justify-content: center;
+      font-family: var(--ff-mono);
+      font-size: 11px; font-weight: 600;
+      color: var(--ink);
+      letter-spacing: -0.02em;
+    }
+    .cl-row .cust-name {
+      font-weight: 600; color: var(--ink); letter-spacing: -0.005em;
+      line-height: 1.3;
+    }
+    .cl-row .cust-mst {
+      font-family: var(--ff-mono);
+      font-size: 10px;
+      color: var(--ash-2);
+      letter-spacing: 0.08em;
+      margin-top: 2px;
+    }
+    .cl-row .tier {
+      font-family: var(--ff-mono);
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 0.1em;
+    }
+    .cl-row .tier.vip { color: var(--rust); }
+
+    /* Thẻ khách hàng (tag) */
+    .cust-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 5px; }
+    .cust-tag {
+      display: inline-flex; align-items: center;
+      font-size: 10px; font-weight: 600; line-height: 1;
+      padding: 3px 7px; border-radius: 9999px;
+      color: var(--tag-c, var(--ink));
+      background: color-mix(in srgb, var(--tag-c, #c5400a) 12%, transparent);
+      border: 1px solid color-mix(in srgb, var(--tag-c, #c5400a) 30%, transparent);
+    }
+    .cust-tag.on-dark { color: #f5f1e8; background: color-mix(in srgb, var(--tag-c, #c5400a) 55%, transparent); border-color: color-mix(in srgb, var(--tag-c, #c5400a) 70%, transparent); }
+    .dr-hero .dr-tags { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 12px; }
+    .dr-hero .tag-add {
+      display: inline-flex; align-items: center; gap: 5px;
+      font-size: 11px; font-weight: 500; color: #f5f1e8;
+      padding: 4px 10px; border-radius: 9999px;
+      background: rgba(245,241,232,0.10); border: 1px dashed rgba(245,241,232,0.4); cursor: pointer;
+    }
+    .dr-hero .tag-add:hover { background: rgba(245,241,232,0.18); }
+
+    /* Modal chọn thẻ */
+    .tag-editor .tag-pool { display: flex; flex-wrap: wrap; gap: 7px; }
+    .tag-pick {
+      font-size: 12px; font-weight: 500; cursor: pointer;
+      padding: 6px 12px; border-radius: 9999px;
+      color: var(--ash); background: var(--canvas); border: 1px solid var(--rule);
+      transition: all 120ms ease;
+    }
+    .tag-pick:hover { border-color: var(--tag-c, var(--ink)); }
+    .tag-pick.on { color: #fff; background: var(--tag-c, var(--ink)); border-color: var(--tag-c, var(--ink)); }
+    .tag-new { margin-top: 12px; }
+    .tag-new input { width: 100%; padding: 9px 11px; font-size: 13px; background: var(--canvas); border: 1px solid var(--rule); border-radius: var(--r-3); }
+    .tag-new input:focus { outline: none; border-color: var(--rust); }
+    .tag-hint { font-size: 11.5px; color: var(--ash); margin-top: 10px; line-height: 1.5; }
+
+    .cl-row .num { text-align: right; font-variant-numeric: tabular-nums; }
+    .cl-row .rev { font-weight: 600; color: var(--ink); }
+    .cl-row .rev-unit { font-size: 10px; color: var(--ash); font-weight: 400; }
+    .cl-row .orders { color: var(--ash); }
+    .cl-row .avg { color: var(--ink); }
+
+    .cl-row .debt-cell {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+    .cl-row .debt-val { font-weight: 500; color: var(--ink); }
+    .cl-row .debt-status {
+      font-family: var(--ff-mono);
+      font-size: 9px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      margin-top: 2px;
+    }
+    .cl-row .debt-status.ok { color: var(--moss); }
+    .cl-row .debt-status.late { color: var(--signal); }
+    .cl-row .debt-status.zero { color: var(--ash-2); }
+
+    .cl-row .score-pill {
+      font-family: var(--ff-mono);
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 8px;
+      border-radius: 2px;
+      text-align: center;
+      font-variant-numeric: tabular-nums;
+    }
+    .score-good { background: var(--moss-soft); color: var(--moss-deep); }
+    .score-okay { background: var(--amber-soft); color: var(--amber); }
+    .score-risk { background: var(--signal-soft); color: var(--signal); }
+
+    .cl-row .rep {
+      font-size: 12px;
+      color: var(--ash);
+      line-height: 1.3;
+    }
+    .cl-row .rep b { color: var(--ink); font-weight: 500; }
+
+    .cl-row .arrow-cell {
+      color: var(--ash-2);
+      display: inline-flex;
+      align-items: center; justify-content: center;
+    }
+
+    /* Pagination */
+    .pagination {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 14px 4px;
+      font-size: 12px;
+      color: var(--ash);
+    }
+    .pagination .pg-controls { display: flex; gap: 4px; align-items: center; }
+    .pagination .pg-controls button {
+      min-width: 28px; height: 28px;
+      padding: 0 8px;
+      background: var(--canvas);
+      border: 1px solid var(--rule);
+      border-radius: var(--r-2);
+      font-size: 12px; cursor: pointer;
+      color: var(--ink);
+      font-family: var(--ff-mono);
+    }
+    .pagination .pg-controls button.is-active { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+
+    /* ============================================================
+       DRAWER 360
+       ============================================================ */
+    .cust-drawer {
+      position: fixed; inset: 0;
+      z-index: 100;
+      pointer-events: none;
+    }
+    .drawer-overlay {
+      position: absolute; inset: 0;
+      background: rgba(20, 19, 15, 0.42);
+      opacity: 0;
+      transition: opacity 240ms ease;
+    }
+    .drawer-panel {
+      position: absolute; right: 0; top: 0; bottom: 0;
+      width: 100%; max-width: 780px;
+      background: var(--paper);
+      border-left: 1px solid var(--rule);
+      transform: translateX(100%);
+      transition: transform 280ms cubic-bezier(.2,.8,.2,1);
+      overflow-y: auto;
+      display: flex; flex-direction: column;
+      box-shadow: -16px 0 48px rgba(20, 19, 15, 0.15);
+    }
+    .cust-drawer.is-open { pointer-events: auto; }
+    .cust-drawer.is-open .drawer-overlay { opacity: 1; }
+    .cust-drawer.is-open .drawer-panel { transform: translateX(0); }
+
+    /* Drawer hero (dark) */
+    .dr-hero {
+      padding: 20px 24px 24px;
+      background-color: #14130f;
+      color: #f5f1e8;
+      flex-shrink: 0;
+      position: relative;
+      isolation: isolate;
+    }
+    .dr-hero::before {
+      content: ""; position: absolute; top: 0; left: 0;
+      width: 100%; height: 3px; background: #c5400a;
+      z-index: 1;
+    }
+    .dr-hero > * { position: relative; z-index: 2; }
+    .dr-hero h2,
+    .dr-hero .meta,
+    .dr-hero .meta b,
+    .dr-hero .meta span { color: #f5f1e8; }
+    .dr-hero .meta { color: rgba(245, 241, 232, 0.65) !important; }
+    .dr-hero .meta b { color: #f5f1e8 !important; }
+    .dr-hero .top-bar {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 14px;
+    }
+    .dr-hero .nav-arrows { display: flex; gap: 4px; }
+    .dr-hero .nav-btn {
+      background: rgba(245, 241, 232, 0.08);
+      border: 1px solid rgba(245, 241, 232, 0.16);
+      color: var(--paper);
+      width: 28px; height: 28px;
+      border-radius: var(--r-2);
+      display: inline-flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      transition: background 140ms ease;
+    }
+    .dr-hero .nav-btn:hover { background: rgba(245, 241, 232, 0.16); }
+    .dr-hero .nav-btn.close { background: rgba(245, 241, 232, 0.12); }
+    .dr-hero .nav-pos {
+      font-family: var(--ff-mono);
+      font-size: 10px;
+      letter-spacing: 0.16em;
+      color: rgba(245, 241, 232, 0.55);
+      align-self: center;
+      margin: 0 6px;
+    }
+
+    .dr-hero .main {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 200px;
+      gap: 20px;
+      align-items: center;
+      background: transparent; /* tránh ăn nền sáng của .main layout chung */
+    }
+    @media (max-width: 720px) { .dr-hero .main { grid-template-columns: 1fr; } }
+
+    .dr-hero .tier-tag {
+      font-family: var(--ff-mono);
+      font-size: 10px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--rust-2);
+      display: inline-flex; align-items: center; gap: 6px;
+    }
+    .dr-hero h2 {
+      font-size: 26px; font-weight: 500;
+      letter-spacing: -0.015em;
+      line-height: 1.1;
+      margin-top: 6px;
+    }
+    .dr-hero .meta {
+      margin-top: 8px;
+      font-size: 12px;
+      color: rgba(245, 241, 232, 0.6);
+      display: flex; flex-wrap: wrap; gap: 8px;
+    }
+    .dr-hero .meta b { color: var(--paper); font-weight: 500; }
+    .dr-hero .meta .sep { opacity: 0.4; }
+
+    .dr-hero .actions {
+      display: flex; gap: 6px; flex-wrap: wrap;
+      margin-top: 16px;
+    }
+    .dr-hero .actions button {
+      padding: 7px 12px;
+      background: rgba(245, 241, 232, 0.08);
+      border: 1px solid rgba(245, 241, 232, 0.16);
+      color: var(--paper);
+      border-radius: var(--r-2);
+      font-size: 12px; font-weight: 500;
+      display: inline-flex; align-items: center; gap: 6px;
+      cursor: pointer;
+      transition: background 140ms ease;
+    }
+    .dr-hero .actions button:hover { background: rgba(245, 241, 232, 0.16); }
+    .dr-hero .actions .primary {
+      background: var(--rust);
+      border-color: var(--rust);
+    }
+    .dr-hero .actions .primary:hover { background: var(--rust-deep); border-color: var(--rust-deep); }
+
+    /* Gauge */
+    .gauge-wrap { display: flex; flex-direction: column; align-items: center; }
+    .gauge-svg { width: 100%; max-width: 200px; }
+    .gauge-lbl {
+      margin-top: -2px;
+      font-family: var(--ff-mono);
+      font-size: 9px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: rgba(245, 241, 232, 0.55);
+      text-align: center;
+    }
+
+    /* Drawer body */
+    .dr-body { padding: 18px 22px; display: flex; flex-direction: column; gap: 14px; }
+
+    .sec-card {
+      background: var(--canvas);
+      border: 1px solid var(--rule-soft);
+      border-radius: var(--r-5);
+      padding: 16px;
+      min-width: 0;
+      display: flex; flex-direction: column; gap: 12px;
+    }
+    .sec-h {
+      display: flex; justify-content: space-between; align-items: baseline;
+      gap: 8px;
+    }
+    .sec-h .t {
+      font-size: 13px; font-weight: 600;
+      color: var(--ink);
+      display: flex; align-items: center; gap: 8px;
+    }
+    .sec-h .t .tag {
+      font-family: var(--ff-mono);
+      font-size: 9px;
+      letter-spacing: 0.16em; text-transform: uppercase;
+      color: var(--ash);
+      padding: 2px 6px;
+      background: var(--paper-2);
+      border-radius: 2px;
+    }
+    .sec-h .extra {
+      font-family: var(--ff-mono);
+      font-size: 10px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--ash);
+    }
+
+    /* KPI mini in drawer */
+    .dr-kpi { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+    .dr-kpi .item {
+      background: var(--canvas);
+      border: 1px solid var(--rule-soft);
+      border-radius: var(--r-3);
+      padding: 10px 12px;
+    }
+    .dr-kpi .item .l {
+      font-family: var(--ff-mono);
+      font-size: 9px; font-weight: 500;
+      letter-spacing: 0.14em; text-transform: uppercase;
+      color: var(--ash);
+    }
+    .dr-kpi .item .v {
+      font-size: 18px;
+      font-weight: 500;
+      letter-spacing: -0.015em;
+      color: var(--ink);
+      font-variant-numeric: tabular-nums;
+      line-height: 1.1;
+      margin-top: 2px;
+    }
+    .dr-kpi .item .v .unit { font-size: 10px; color: var(--ash); font-weight: 400; }
+    .dr-kpi .item .d { font-size: 10px; color: var(--ash); margin-top: 4px; }
+    .dr-kpi .item .d.up { color: var(--moss); }
+    @media (max-width: 600px) { .dr-kpi { grid-template-columns: 1fr 1fr; } }
+
+    /* 2-col layouts inside drawer */
+    .dr-2col { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 10px; }
+    .dr-3col { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+    @media (max-width: 720px) {
+      .dr-2col, .dr-3col { grid-template-columns: 1fr; }
+    }
+
+    /* Heatmap */
+    .heatmap { display: grid; grid-template-columns: repeat(12, 1fr); gap: 3px; margin-top: 4px; }
+    .hm-month { display: grid; grid-template-rows: repeat(4, 10px); gap: 2px; }
+    .hm-cell { background: var(--paper-2); border-radius: 1px; cursor: help; }
+    .hm-cell.l1 { background: rgba(197, 64, 10, 0.18); }
+    .hm-cell.l2 { background: rgba(197, 64, 10, 0.38); }
+    .hm-cell.l3 { background: rgba(197, 64, 10, 0.62); }
+    .hm-cell.l4 { background: rgba(197, 64, 10, 0.88); }
+    .hm-labels {
+      display: grid; grid-template-columns: repeat(12, 1fr); gap: 3px;
+      margin-top: 5px;
+      font-family: var(--ff-mono);
+      font-size: 9px;
+      color: var(--ash-2);
+      text-align: center;
+      letter-spacing: 0.08em;
+    }
+    .hm-legend {
+      display: flex; align-items: center; gap: 4px;
+      font-family: var(--ff-mono);
+      font-size: 9px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--ash);
+    }
+    .hm-legend span.box { width: 9px; height: 9px; border-radius: 1px; }
+
+    /* Preferences */
+    .pref-list { display: flex; flex-direction: column; gap: 8px; }
+    .pref-item {
+      display: grid;
+      grid-template-columns: 24px minmax(0, 1fr) auto;
+      gap: 10px;
+      align-items: center;
+      font-size: 12px;
+    }
+    .pref-item .ic {
+      width: 24px; height: 24px;
+      background: var(--paper-2);
+      color: var(--rust);
+      border-radius: var(--r-2);
+      display: inline-flex; align-items: center; justify-content: center;
+    }
+    .pref-item .b { min-width: 0; }
+    .pref-item .b .k {
+      font-family: var(--ff-mono);
+      font-size: 9px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--ash);
+    }
+    .pref-item .b .v { color: var(--ink); font-weight: 500; }
+    .pref-item .bar {
+      width: 50px; height: 3px;
+      background: var(--paper-2);
+      border-radius: 9999px;
+    }
+    .pref-item .bar > div { height: 100%; background: var(--rust); border-radius: 9999px; }
+
+    /* Payment behavior */
+    .pay-score {
+      text-align: center;
+      padding: 12px 0;
+      background: var(--paper-2);
+      border-radius: var(--r-3);
+    }
+    .pay-score .v {
+      font-size: 28px; font-weight: 500;
+      color: var(--moss);
+      font-variant-numeric: tabular-nums;
+      line-height: 1;
+    }
+    .pay-score .l {
+      font-family: var(--ff-mono);
+      font-size: 9px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--ash);
+      margin-top: 6px;
+    }
+    .pay-rows .pr {
+      display: flex; justify-content: space-between;
+      padding: 6px 0;
+      border-bottom: 1px solid var(--rule-hair);
+      font-size: 12px;
+    }
+    .pay-rows .pr:last-child { border-bottom: 0; }
+    .pay-rows .pr .k { color: var(--ash); }
+    .pay-rows .pr .v { color: var(--ink); font-weight: 500; font-variant-numeric: tabular-nums; }
+
+    /* Activity feed */
+    .feed-item {
+      display: grid;
+      grid-template-columns: 24px minmax(0, 1fr) auto;
+      gap: 10px;
+      padding: 9px 0;
+      border-bottom: 1px solid var(--rule-hair);
+      font-size: 12px;
+      align-items: start;
+    }
+    .feed-item:first-child { padding-top: 0; }
+    .feed-item:last-child { border-bottom: 0; }
+    .feed-item .ic {
+      width: 24px; height: 24px;
+      border-radius: var(--r-2);
+      display: inline-flex; align-items: center; justify-content: center;
+    }
+    .feed-item.f-quote .ic { background: var(--rust-soft); color: var(--rust); }
+    .feed-item.f-order .ic { background: var(--steel-soft); color: var(--steel); }
+    .feed-item.f-done .ic, .feed-item.f-pay .ic { background: var(--moss-soft); color: var(--moss); }
+    .feed-item.f-issue .ic { background: var(--signal-soft); color: var(--signal); }
+    .feed-item.f-msg .ic, .feed-item.f-vip .ic { background: var(--paper-2); color: var(--ash); }
+    .feed-item .ttl { color: var(--ink); font-weight: 500; line-height: 1.4; }
+    .feed-item .sub { color: var(--ash); font-size: 11px; margin-top: 2px; }
+    .feed-item .time {
+      font-family: var(--ff-mono);
+      font-size: 10px;
+      letter-spacing: 0.08em;
+      color: var(--ash-2);
+    }
+
+    /* Care list */
+    .care-due {
+      background: var(--rust-soft);
+      border: 1px solid rgba(197, 64, 10, 0.25);
+      border-radius: var(--r-3);
+      padding: 10px 12px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 8px; align-items: center;
+    }
+    .care-due .l {
+      font-family: var(--ff-mono);
+      font-size: 9px; font-weight: 600;
+      letter-spacing: 0.18em; text-transform: uppercase;
+      color: var(--rust-deep);
+    }
+    .care-due .act {
+      font-size: 12px;
+      color: var(--ink);
+      font-weight: 500;
+      margin-top: 3px;
+      line-height: 1.4;
+    }
+    .care-item {
+      display: grid;
+      grid-template-columns: 18px minmax(0, 1fr) auto;
+      gap: 8px;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--rule-hair);
+      font-size: 12px;
+    }
+    .care-item:last-child { border-bottom: 0; }
+    .care-item input { width: 14px; height: 14px; accent-color: var(--rust); cursor: pointer; }
+    .care-item .ttl { color: var(--ink); font-weight: 500; line-height: 1.4; }
+    .care-item .when { color: var(--ash); font-size: 11px; margin-top: 2px; }
+    .care-item.done .ttl { color: var(--ash); text-decoration: line-through; }
+    .care-item .tag {
+      font-family: var(--ff-mono);
+      font-size: 9px; font-weight: 500;
+      letter-spacing: 0.12em; text-transform: uppercase;
+      padding: 1px 5px;
+      border-radius: 2px;
+      background: var(--paper-2);
+      color: var(--ash);
+    }
+    .care-item .tag.soon { background: var(--amber-soft); color: var(--amber); }
+
+    /* NBA */
+    .nba-item {
+      padding: 10px 12px;
+      background: var(--paper-2);
+      border-left: 3px solid var(--rust);
+      border-radius: var(--r-2);
+      cursor: pointer;
+      transition: background 140ms ease;
+    }
+    .nba-item:hover { background: var(--rust-soft); }
+    .nba-item .why {
+      font-family: var(--ff-mono);
+      font-size: 9px;
+      letter-spacing: 0.14em; text-transform: uppercase;
+      color: var(--rust);
+    }
+    .nba-item .t { font-size: 13px; color: var(--ink); font-weight: 600; margin-top: 3px; line-height: 1.35; }
+    .nba-item .s { font-size: 11px; color: var(--ash); margin-top: 4px; line-height: 1.4; }
+
+    /* Insights bar */
+    .insights {
+      background: var(--ink);
+      color: var(--paper);
+      border-radius: var(--r-5);
+      padding: 16px 20px;
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      gap: 14px; align-items: start;
+      position: relative; overflow: hidden;
+    }
+    .insights::before { content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 3px; background: var(--rust); }
+    .insights .ic {
+      width: 32px; height: 32px;
+      background: rgba(197, 64, 10, 0.18);
+      color: var(--rust-2);
+      border-radius: var(--r-3);
+      display: inline-flex; align-items: center; justify-content: center;
+    }
+    .insights .ttl {
+      font-family: var(--ff-mono);
+      font-size: 10px; font-weight: 500;
+      letter-spacing: 0.16em; text-transform: uppercase;
+      color: var(--rust-2);
+      margin-bottom: 8px;
+    }
+    .insights ul { list-style: none; display: grid; grid-template-columns: 1fr 1fr; gap: 4px 16px; font-size: 12.5px; color: rgba(245, 241, 232, 0.85); line-height: 1.5; }
+    .insights ul li { display: flex; gap: 6px; }
+    .insights ul li::before { content: "→"; color: var(--rust-2); font-weight: 600; }
+    .insights ul li b { color: var(--paper); font-weight: 500; }
+    @media (max-width: 720px) { .insights ul { grid-template-columns: 1fr; } }
+
+    /* Responsive table */
+    @media (max-width: 1280px) {
+      .cl-head, .cl-row {
+        grid-template-columns: minmax(0, 1.6fr) 90px minmax(0, 1fr) 100px 110px 70px 32px;
+      }
+      .col-orders, .col-avg { display: none; }
+    }
+    @media (max-width: 900px) {
+      .cl-head, .cl-row {
+        grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) 70px 32px;
+      }
+      .col-tier, .col-debt, .col-rep { display: none; }
+    }
+    @media (max-width: 720px) {
+      .kpi-strip { grid-template-columns: 1fr 1fr; }
+      .kpi-strip .km { padding: 10px 16px; border-right: 0; border-bottom: 1px solid var(--rule-hair); }
+      .kpi-strip .km:nth-last-child(-n+2) { border-bottom: 0; }
+      .cl-head, .cl-row { padding: 12px; }
+      .drawer-panel { max-width: 100%; }
+    }
+
+    /* ============================================================
+       Drawer tabs
+       ============================================================ */
+    .dr-tabs {
+      display: flex;
+      gap: 2px;
+      padding: 0 22px;
+      background: var(--paper);
+      border-bottom: 1px solid var(--rule);
+      position: sticky;
+      top: 0;
+      z-index: 4;
+    }
+    .dr-tab {
+      flex: 1;
+      padding: 14px 12px;
+      background: transparent;
+      border: 0;
+      border-bottom: 2px solid transparent;
+      cursor: pointer;
+      font-family: var(--ff-sans);
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--ash);
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      transition: color 140ms ease, border-color 140ms ease;
+    }
+    .dr-tab:hover { color: var(--ink); }
+    .dr-tab.active {
+      color: var(--ink);
+      border-bottom-color: var(--rust);
+      font-weight: 600;
+    }
+    .dr-tab .count {
+      font-family: var(--ff-mono);
+      font-size: 10px;
+      padding: 1px 6px;
+      background: var(--paper-2);
+      border-radius: 2px;
+      letter-spacing: 0.08em;
+      color: var(--ash);
+    }
+    .dr-tab.active .count { background: var(--rust); color: var(--paper); }
+
+    /* ============================================================
+       History view
+       ============================================================ */
+    .hv-filter {
+      display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+      margin-bottom: 14px;
+    }
+    .hv-filter .y-pill {
+      padding: 5px 10px;
+      background: var(--canvas);
+      border: 1px solid var(--rule);
+      border-radius: 9999px;
+      font-family: var(--ff-mono);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      cursor: pointer;
+      color: var(--ash);
+      transition: all 140ms ease;
+    }
+    .hv-filter .y-pill:hover { color: var(--ink); border-color: var(--ink); }
+    .hv-filter .y-pill.active { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+
+    .hv-stats {
+      display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    @media (max-width: 600px) { .hv-stats { grid-template-columns: 1fr; } }
+    .hv-stat {
+      background: var(--canvas);
+      border: 1px solid var(--rule-soft);
+      border-radius: var(--r-3);
+      padding: 12px 14px;
+    }
+    .hv-stat .l {
+      font-family: var(--ff-mono);
+      font-size: 9px; font-weight: 500;
+      letter-spacing: 0.14em; text-transform: uppercase;
+      color: var(--ash);
+    }
+    .hv-stat .v {
+      font-size: 22px; font-weight: 500;
+      color: var(--ink);
+      letter-spacing: -0.015em;
+      font-variant-numeric: tabular-nums;
+      line-height: 1.1;
+      margin-top: 4px;
+    }
+    .hv-stat .v .u { font-size: 11px; color: var(--ash); font-weight: 400; }
+    .hv-stat .d { font-size: 11px; color: var(--ash); margin-top: 4px; }
+    .hv-stat .d.up { color: var(--moss); }
+    .hv-stat .d.down { color: var(--signal); }
+
+    .hv-top-prod { display: flex; flex-direction: column; }
+    .top-prod-row {
+      display: grid; grid-template-columns: 24px minmax(0, 1fr) auto;
+      gap: 10px;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--rule-hair);
+      font-size: 12px;
+      align-items: center;
+    }
+    .top-prod-row:last-child { border-bottom: 0; }
+    .top-prod-row .rk {
+      font-family: var(--ff-mono);
+      font-size: 11px;
+      color: var(--ash-2);
+      text-align: center;
+    }
+    .top-prod-row.top1 .rk { color: var(--rust); font-weight: 700; }
+    .top-prod-row .nm { color: var(--ink); font-weight: 500; }
+    .top-prod-row .sub { color: var(--ash); font-size: 11px; margin-top: 2px; }
+    .top-prod-row .val {
+      text-align: right;
+      font-family: var(--ff-mono);
+      font-weight: 600;
+      color: var(--ink);
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* Orders table */
+    .ord-table { width: 100%; border-collapse: collapse; font-size: 12.5px; min-width: 0; }
+    .ord-table thead th {
+      font-family: var(--ff-mono);
+      font-size: 9px;
+      font-weight: 500;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--ash);
+      text-align: left;
+      padding: 8px 0 8px 0;
+      border-bottom: 1px solid var(--rule);
+    }
+    .ord-table thead th.num { text-align: right; }
+    .ord-table thead th.center { text-align: center; }
+    .ord-table tbody td {
+      padding: 10px 0;
+      border-bottom: 1px solid var(--rule-hair);
+      vertical-align: middle;
+    }
+    .ord-table tbody tr { cursor: pointer; transition: background 140ms ease; }
+    .ord-table tbody tr:hover { background: var(--paper-2); }
+    .ord-table tbody tr:last-child td { border-bottom: 0; }
+    .ord-table .o-code { font-family: var(--ff-mono); font-weight: 600; color: var(--ink); font-size: 11px; white-space: nowrap; }
+    .ord-table .o-when {
+      display: inline-flex; align-items: center; gap: 5px;
+      margin-top: 4px;
+      white-space: nowrap;
+    }
+    .ord-table .o-when .o-d {
+      font-family: var(--ff-mono);
+      font-size: 10.5px;
+      color: var(--ash);
+      letter-spacing: 0.04em;
+      font-weight: 500;
+    }
+    .ord-table .o-when .o-t {
+      font-family: var(--ff-mono);
+      font-size: 9.5px;
+      color: var(--ash-2);
+      letter-spacing: 0.04em;
+      padding: 1px 5px;
+      background: var(--paper-2);
+      border-radius: 2px;
+    }
+    .ord-table .o-prod { color: var(--ink); font-weight: 500; }
+    .ord-table .o-prod-sub { color: var(--ash); font-size: 10.5px; margin-top: 2px; }
+    .ord-table .o-qty, .ord-table .o-val { text-align: right; font-variant-numeric: tabular-nums; }
+    .ord-table .o-qty { color: var(--ash); }
+    .ord-table .o-val { color: var(--ink); font-weight: 600; }
+    .ord-table .o-status, .ord-table .o-pay {
+      font-family: var(--ff-mono);
+      font-size: 9px;
+      font-weight: 600;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      padding: 3px 7px;
+      border-radius: 2px;
+      white-space: nowrap;
+      display: inline-block;
+    }
+    .stat-done { background: var(--moss-soft); color: var(--moss-deep); }
+    .stat-prod { background: var(--steel-soft); color: var(--steel); }
+    .stat-kcs { background: var(--amber-soft); color: var(--amber); }
+    .stat-cancel { background: var(--signal-soft); color: var(--signal); }
+    .pay-paid { background: var(--moss-soft); color: var(--moss-deep); }
+    .pay-partial { background: var(--amber-soft); color: var(--amber); }
+    .pay-unpaid { background: var(--signal-soft); color: var(--signal); }
+
+    /* ============================================================
+       Cột mới trong bảng khách hàng (nhôm kính)
+       ============================================================ */
+    .cl-row .cell-plain { font-size: 12.5px; color: var(--ink); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .cl-row .cell-sub { font-size: 10px; color: var(--ash); margin-top: 2px; }
+    .type-chip {
+      display: inline-block; max-width: 100%;
+      padding: 3px 8px; border-radius: var(--r-pill, 999px);
+      background: var(--paper-2); color: var(--ash-deep, #4a453c);
+      font-size: 11px; font-weight: 500; line-height: 1.3;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .rank-chip {
+      display: inline-block; padding: 3px 8px; border-radius: var(--r-2);
+      font-size: 11px; font-weight: 600; letter-spacing: 0.01em;
+    }
+    .rank-chip.rank-kc { background: rgba(74, 85, 96, 0.14); color: #34506b; }
+    .rank-chip.rank-v  { background: rgba(156, 119, 20, 0.16); color: #7a5c0f; }
+    .rank-chip.rank-b  { background: rgba(145, 139, 126, 0.18); color: #5f5a51; }
+    .rank-chip.rank-none { background: transparent; color: var(--ash-2, #b8b2a2); font-weight: 400; }
+    .mch { font-size: 11.5px; font-weight: 500; }
+    .mch.yes { color: #1f6b3a; }
+    .mch.no { color: var(--ash-2, #b8b2a2); }
+    .warn-cell {
+      font-size: 11.5px; line-height: 1.35; min-width: 0;
+      overflow: hidden; text-overflow: ellipsis;
+    }
+    .warn-cell.bad { color: #8a1f1f; font-weight: 600; }
+    .warn-cell.good { color: #1f6b3a; font-weight: 600; }
+    .warn-cell.none { color: var(--ash-2, #b8b2a2); }
+
+    /* ============================================================
+       Drawer bản ghi — mã lớn, chip trạng thái, nhóm trường sửa được
+       ============================================================ */
+    .dr-hero .dr-idline { display: flex; align-items: center; gap: 10px; margin: 10px 0 4px; flex-wrap: wrap; }
+    .dr-hero .dr-id {
+      font-family: var(--ff-mono); font-weight: 700; font-size: 20px;
+      letter-spacing: -0.01em; color: #f5f1e8;
+    }
+    .st-chip {
+      display: inline-flex; align-items: center;
+      padding: 3px 10px; border-radius: 999px;
+      font-size: 10.5px; font-weight: 600; letter-spacing: 0.03em;
+      background: #e8a075; color: #14130f;
+    }
+    .st-chip.ok { background: #8fbf6f; }
+    .st-chip.warn { background: #e5c454; }
+    .st-chip.bad { background: #e07a6a; }
+
+    .fgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 14px; }
+    @media (max-width: 620px) { .fgrid { grid-template-columns: 1fr; } }
+    .fcell { min-width: 0; }
+    .fcell.wide { grid-column: 1 / -1; }
+    .fcell .fl {
+      display: block;
+      font-family: var(--ff-mono); font-size: 9px;
+      letter-spacing: 0.12em; text-transform: uppercase;
+      color: var(--ash); margin-bottom: 3px;
+    }
+    .fcell .fv { display: block; font-size: 13px; font-weight: 600; color: var(--ink); line-height: 1.4; word-break: break-word; }
+    .fcell .fe input,
+    .fcell .fe select,
+    .fcell .fe textarea {
+      width: 100%; box-sizing: border-box;
+      padding: 7px 9px; font: inherit; font-size: 13px;
+      color: var(--ink); background: var(--paper);
+      border: 1px solid var(--rust); border-radius: var(--r-2);
+    }
+    .fcell .fe textarea { resize: vertical; }
+
+    .doc-list { display: flex; flex-direction: column; gap: 6px; }
+    .doc-row {
+      display: flex; align-items: center; justify-content: space-between; gap: 10px;
+      padding: 8px 10px; background: var(--paper); border: 1px solid var(--rule-soft); border-radius: var(--r-3);
+    }
+    .doc-row .doc-k { font-family: var(--ff-mono); font-size: 9.5px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ash); }
+    .doc-row .doc-i { font-family: var(--ff-mono); font-size: 13px; font-weight: 600; }
+
+    /* Anchor liên kết bản ghi (ERPPeek bắt click) */
+    .lnk {
+      color: var(--rust); font-weight: 600; text-decoration: none;
+      border-bottom: 1px dashed rgba(197, 64, 10, 0.45); cursor: pointer;
+    }
+    .lnk:hover { color: var(--rust-deep); border-bottom-style: solid; }
+  </style>
+</head>
+<body>
+
+<div id="app-shell" data-active="crm" data-title="Khách hàng" data-crumb="<b>Kinh doanh</b> · Khách hàng &amp; đại lý">
+
+  <div class="page-header">
+    <div>
+      <h1>Khách hàng &amp; đại lý</h1>
+      <p><b>247</b> khách · <b style="color: var(--rust);">38 đại lý uỷ quyền</b> · 12 khách mới trong tháng · TB đơn 20.05M ₫</p>
+    </div>
+    <div class="actions">
+      <button class="btn btn-secondary" id="btnImport" data-no-interact="true">
+        <i data-lucide="upload" style="width:14px;height:14px"></i> Import Excel
+      </button>
+      <button class="btn btn-primary" id="btnAdd" data-no-interact="true">
+        <i data-lucide="plus" style="width:14px;height:14px"></i> Thêm khách hàng
+      </button>
+    </div>
+  </div>
+
+  <!-- 4 ô số nhỏ -->
+  <div class="kpi-strip">
+    <div class="km">
+      <span class="l">Doanh số luỹ kế</span>
+      <span class="v">20,7<span class="unit">tỷ ₫</span></span>
+      <span class="d up">+18% YoY</span>
+    </div>
+    <div class="km">
+      <span class="l">Đại lý uỷ quyền</span>
+      <span class="v">38<span class="unit"> / 247</span></span>
+      <span class="d">6 Kim cương · 14 Vàng · 18 Bạc</span>
+    </div>
+    <div class="km">
+      <span class="l">Tổng công nợ</span>
+      <span class="v">1.245<span class="unit">M ₫</span></span>
+      <span class="d">248M quá hạn · 4 khách</span>
+    </div>
+    <div class="km">
+      <span class="l">Đã chuyển giao dàn máy</span>
+      <span class="v">12<span class="unit"> đại lý</span></span>
+      <span class="d">Dàn máy WEIKE · 3 đại lý đang đàm phán</span>
+    </div>
+  </div>
+
+  <!-- Filter -->
+  <div class="filter-strip">
+    <div class="search-wrap">
+      <i data-lucide="search" style="width:14px;height:14px"></i>
+      <input id="searchInput" placeholder="Tìm theo tên, MST, khu vực, NV phụ trách..." />
+    </div>
+    <button class="filter-pill" data-no-interact="true"><i data-lucide="award" style="width:12px;height:12px"></i> Hạng đại lý <i data-lucide="chevron-down" style="width:11px;height:11px"></i></button>
+    <button class="filter-pill" data-no-interact="true"><i data-lucide="user-circle" style="width:12px;height:12px"></i> NV phụ trách <i data-lucide="chevron-down" style="width:11px;height:11px"></i></button>
+    <button class="filter-pill" data-no-interact="true"><i data-lucide="map-pin" style="width:12px;height:12px"></i> Khu vực <i data-lucide="chevron-down" style="width:11px;height:11px"></i></button>
+    <button class="filter-pill" data-no-interact="true"><i data-lucide="settings" style="width:12px;height:12px"></i> Có dàn máy chuyển giao <i data-lucide="chevron-down" style="width:11px;height:11px"></i></button>
+  </div>
+
+  <!-- Phân loại khách hàng -->
+  <div class="tabs-strip" id="typeTabs">
+    <button class="tab tab-active" data-type="all" data-no-interact="true">Tất cả <span class="count" data-cnt="all">0</span></button>
+    <button class="tab" data-type="Đại lý uỷ quyền" data-no-interact="true">Đại lý uỷ quyền <span class="count" data-cnt="Đại lý uỷ quyền">0</span></button>
+    <button class="tab" data-type="Cửa hàng nhôm kính" data-no-interact="true">Cửa hàng nhôm kính <span class="count" data-cnt="Cửa hàng nhôm kính">0</span></button>
+    <button class="tab" data-type="Chủ đầu tư/Dự án" data-no-interact="true">Chủ đầu tư/Dự án <span class="count" data-cnt="Chủ đầu tư/Dự án">0</span></button>
+    <button class="tab" data-type="Nhà thầu" data-no-interact="true">Nhà thầu <span class="count" data-cnt="Nhà thầu">0</span></button>
+    <button class="tab" data-type="Khách lẻ" data-no-interact="true">Khách lẻ <span class="count" data-cnt="Khách lẻ">0</span></button>
+    <button class="tab" data-type="Xuất khẩu" data-no-interact="true">Xuất khẩu <span class="count" data-cnt="Xuất khẩu">0</span></button>
+  </div>
+
+  <!-- Customer table -->
+  <div class="cust-list">
+    <div class="cl-head">
+      <div>
+        <button class="sort-btn active" data-sort="name">
+          Khách hàng <span class="sort-icon"><span>▲</span></span>
+        </button>
+      </div>
+      <div><button class="sort-btn" data-sort="type">Phân loại <span class="sort-icon"><span>▴</span></span></button></div>
+      <div><button class="sort-btn" data-sort="region">Khu vực <span class="sort-icon"><span>▴</span></span></button></div>
+      <div><button class="sort-btn" data-sort="rank">Hạng ĐL <span class="sort-icon"><span>▴</span></span></button></div>
+      <div class="num"><button class="sort-btn" data-sort="ltv">Doanh số luỹ kế <span class="sort-icon"><span>▴</span></span></button></div>
+      <div class="num"><button class="sort-btn" data-sort="debt">Công nợ <span class="sort-icon"><span>▴</span></span></button></div>
+      <div><button class="sort-btn" data-sort="machine">Dàn máy <span class="sort-icon"><span>▴</span></span></button></div>
+      <div>Cảnh báo</div>
+      <div></div>
+    </div>
+    <div id="custBody"><!-- rendered by JS --></div>
+  </div>
+
+  <!-- Pagination -->
+  <div class="pagination">
+    <div>Hiển thị <b style="color: var(--ink); font-family: var(--ff-mono);" id="pgCount">1–12</b> trong 247 khách hàng</div>
+    <div class="pg-controls">
+      <button data-no-interact="true"><i data-lucide="chevron-left" style="width:13px;height:13px"></i></button>
+      <button class="is-active" data-no-interact="true">1</button>
+      <button data-no-interact="true">2</button>
+      <button data-no-interact="true">3</button>
+      <span style="padding:0 4px;color:var(--ash-2)">…</span>
+      <button data-no-interact="true">21</button>
+      <button data-no-interact="true"><i data-lucide="chevron-right" style="width:13px;height:13px"></i></button>
+    </div>
+  </div>
+
+</div>
+
+<!-- ===== Drawer bản ghi khách hàng (sửa được) ===== -->
+<div class="cust-drawer" id="custDrawer">
+  <div class="drawer-overlay" id="drawerOverlay"></div>
+  <div class="drawer-panel" id="drawerPanel">
+    <!-- populated by JS -->
+  </div>
+</div>
+
+<script src="../assets/js/layout.js"></script>
+<script src="../assets/js/loss-data.js"></script>
+<script src="../assets/js/loss-ui.js"></script>
+<script src="../assets/js/pricing-engine.js"></script>
+<script src="../assets/js/quote-data.js"></script>
+<script src="../assets/js/stock-data.js"></script>
+<script src="../assets/js/bom-data.js"></script>
+<script src="../assets/js/inventory.js"></script>
+<script src="../assets/js/purchase-data.js"></script>
+<script>
+  // ============================================================
+  // Dữ liệu khách hàng — đại lý uỷ quyền · cửa hàng nhôm kính ·
+  // chủ đầu tư · nhà thầu · khách lẻ · xuất khẩu
+  // ============================================================
+  const CUSTOMERS = [
+    {
+      id: 'KH-001', name: 'VINHOMES OCEAN PARK', short: 'VH',
+      type: 'Chủ đầu tư/Dự án', region: 'Hà Nội', rank: '—', machine: false,
+      mst: '0123456789', contact: 'Anh Tuấn · 0909-xxx', contactRole: 'Trưởng BQL dự án',
+      email: 'tuan.pm@vhop.vn', since: '03/2022',
+      ltv: 4200, revenue: 1200, orders: 42, avg: 28.6, debt: 144, overdue: 0,
+      credit: '600M', payOnTime: 96, payAvg: 22, payMaxLate: 6,
+      rep: 'Vũ Ngọc Anh', status: 'Đang hợp tác',
+      warn: { cls: 'none', text: '—' },
+      revSpark: [80, 88, 95, 102, 108, 105, 115, 120, 110, 118, 125, 110],
+      products: 'Cửa sổ mở quay Luxanode 121 · Vách kính khung nhôm · Cửa thuỷ lực hệ 120',
+      docs: [ {k:'order', id:'DH-0370'}, {k:'order', id:'DH-0371'}, {k:'bg', id:'BG-2026-0541'} ],
+      notes: 'Dự án cao tầng, đặt theo tiến độ bàn giao từng toà. Yêu cầu CO/CQ nhôm 6063-T5 và phiếu kiểm định lớp phủ anod cho mỗi lô.',
+    },
+    {
+      id: 'KH-002', name: 'ĐL Owin Hoàng Long', short: 'HL',
+      type: 'Đại lý uỷ quyền', region: 'Hải Dương', rank: 'Kim cương', machine: true,
+      mst: '0234567890', contact: 'Chị Hà · 0908-xxx', contactRole: 'Giám đốc',
+      email: 'ha@owinhoanglong.vn', since: '07/2021',
+      ltv: 3800, revenue: 980, orders: 38, avg: 25.8, debt: 96, overdue: 0,
+      credit: '500M', payOnTime: 100, payAvg: 12, payMaxLate: 0,
+      rep: 'Bùi Thị Mai', status: 'Đang hợp tác',
+      warn: { cls: 'good', text: 'Trả đúng hạn 12 tháng' },
+      revSpark: [62, 68, 72, 78, 82, 80, 88, 92, 84, 90, 96, 86],
+      products: 'Nhôm thanh hệ 120 (bán xá) · Cửa trượt quay 93 · Cửa thuỷ lực hệ 180',
+      docs: [ {k:'hd', id:'HD-2026-003'}, {k:'bg', id:'BG-2026-0513'}, {k:'bg', id:'BG-2026-0514'} ],
+      notes: 'Đại lý Kim cương, đã mua dàn máy làm cửa nhôm WEIKE gói chuyển giao từ 09/2023. Tự gia công cửa, chủ yếu mua nhôm thanh và phụ kiện.',
+    },
+    {
+      id: 'KH-003', name: 'ĐL Nhôm kính Minh Anh', short: 'MA',
+      type: 'Đại lý uỷ quyền', region: 'Bắc Ninh', rank: 'Vàng', machine: true,
+      mst: '0345678901', contact: 'Anh Minh · 0906-xxx', contactRole: 'Chủ đại lý',
+      email: 'minh@nhomkinhminhanh.vn', since: '01/2022',
+      ltv: 2600, revenue: 620, orders: 25, avg: 24.8, debt: 312, overdue: 68,
+      credit: '250M', payOnTime: 72, payAvg: 34, payMaxLate: 31,
+      rep: 'Bùi Thị Mai', status: 'Cần theo dõi',
+      warn: { cls: 'bad', text: 'Công nợ quá hạn 31 ngày · 68 tr' },
+      revSpark: [48, 52, 55, 58, 62, 60, 65, 68, 58, 56, 52, 48],
+      products: 'Cửa thuỷ lực hệ 120 · Nhôm thanh hệ 120 · Bản lề thuỷ lực sàn',
+      docs: [ {k:'hd', id:'HD-2026-002'}, {k:'bg', id:'BG-2026-0511'}, {k:'bg', id:'BG-2026-0516'}, {k:'bg', id:'BG-2026-0519'} ],
+      notes: 'Dư nợ vượt hạn mức 250M. Đã 3 lần trễ thanh toán, lần dài nhất 31 ngày. Tạm dừng giao đơn mới cho tới khi thu bớt công nợ.',
+    },
+    {
+      id: 'KH-004', name: 'NHÔM KÍNH NAM TIẾN', short: 'NT',
+      type: 'Cửa hàng nhôm kính', region: 'Hà Nội', rank: '—', machine: false,
+      mst: '0456789012', contact: 'Anh Hùng · 0907-xxx', contactRole: 'Chủ cửa hàng',
+      email: 'hung@namtien.vn', since: '11/2023',
+      ltv: 1100, revenue: 320, orders: 18, avg: 17.8, debt: 62, overdue: 0,
+      credit: '120M', payOnTime: 88, payAvg: 18, payMaxLate: 9,
+      rep: 'Vũ Ngọc Anh', status: 'Đang hợp tác',
+      warn: { cls: 'none', text: '—' },
+      revSpark: [22, 26, 28, 30, 32, 30, 34, 36, 30, 28, 26, 24],
+      products: 'Cửa sổ mở lùa 76 Luxanode · Hệ chấn song kết hợp phào · Kính hộp 5-9-5',
+      docs: [],
+      notes: 'Cửa hàng nhôm kính dân dụng, đặt lẻ theo công trình nhà phố. Ưu tiên giao nhanh trong 5 ngày.',
+    },
+    {
+      id: 'KH-005', name: 'NT XÂY DỰNG HOÀNG GIA', short: 'HG',
+      type: 'Nhà thầu', region: 'Hưng Yên', rank: '—', machine: false,
+      mst: '0567890123', contact: 'Anh Phong · 0900-xxx', contactRole: 'Chỉ huy trưởng',
+      email: 'phong@hoanggia.com.vn', since: '06/2020',
+      ltv: 980, revenue: 286, orders: 14, avg: 20.4, debt: 156, overdue: 140,
+      credit: '150M', payOnTime: 50, payAvg: 48, payMaxLate: 65,
+      rep: 'Vũ Ngọc Anh', status: 'Rủi ro',
+      warn: { cls: 'bad', text: 'Công nợ quá hạn 65 ngày · 140 tr' },
+      revSpark: [30, 32, 28, 26, 24, 22, 24, 26, 20, 18, 16, 14],
+      products: 'Cửa nhôm tấm tổ ong 2 cánh · Vách kính khung nhôm Luxanode',
+      docs: [],
+      notes: 'Nhà thầu phụ, thanh toán phụ thuộc tiến độ nghiệm thu chủ đầu tư. Đã đòi nợ 3 lần, cần đưa vào diện chỉ giao khi thanh toán trước 70%.',
+    },
+    {
+      id: 'KH-006', name: 'SUN GROUP HẠ LONG', short: 'SG',
+      type: 'Chủ đầu tư/Dự án', region: 'Quảng Ninh', rank: '—', machine: false,
+      mst: '0678901234', contact: 'Chị Lan · 0904-xxx', contactRole: 'Trưởng Mua hàng',
+      email: 'lan.tm@sungroup.vn', since: '08/2022',
+      ltv: 2100, revenue: 640, orders: 22, avg: 29.1, debt: 0, overdue: 0,
+      credit: '400M', payOnTime: 100, payAvg: 10, payMaxLate: 0,
+      rep: 'Vũ Ngọc Anh', status: 'Đang hợp tác',
+      warn: { cls: 'good', text: 'Thanh toán trước hạn 100%' },
+      revSpark: [45, 48, 52, 56, 60, 58, 64, 68, 60, 62, 66, 58],
+      products: 'Cửa thuỷ lực hệ 180 · 4 cánh vân gỗ hương · Cửa vòm nhôm uốn hệ 120',
+      docs: [],
+      notes: 'Khách dự án nghỉ dưỡng, ưu tiên cửa vòm uốn và vân gỗ hương. Chấp nhận giá cao nếu bảo đảm dung sai ≤2mm và lớp anod ≥15µm.',
+    },
+    {
+      id: 'KH-007', name: 'Cty Xây dựng ABC', short: 'ABC',
+      type: 'Nhà thầu', region: 'Hà Nội', rank: '—', machine: false,
+      mst: '0789012345', contact: 'Anh Đức · 0903-xxx', contactRole: 'Trưởng Mua hàng',
+      email: 'mua@xaydungabc.vn', since: '04/2021',
+      ltv: 1240, revenue: 380, orders: 16, avg: 23.8, debt: 185, overdue: 40,
+      credit: '200M', payOnTime: 78, payAvg: 28, payMaxLate: 12,
+      rep: 'Bùi Thị Mai', status: 'Cần theo dõi',
+      warn: { cls: 'bad', text: 'Công nợ quá hạn 12 ngày · 40 tr' },
+      revSpark: [25, 28, 32, 35, 38, 36, 42, 45, 38, 40, 44, 38],
+      products: 'Vách kính khung nhôm Luxanode · Cửa đi mở lùa 121 Luxanode',
+      docs: [],
+      notes: 'Hợp đồng khung theo năm, gia hạn Q1 mỗi năm. Trễ thanh toán chủ yếu do chờ nghiệm thu, không phải mất khả năng chi trả.',
+    },
+    {
+      id: 'KH-008', name: 'ĐL OWIN NGHỆ AN', short: 'NA',
+      type: 'Đại lý uỷ quyền', region: 'Nghệ An', rank: 'Bạc', machine: true,
+      mst: '0890123456', contact: 'Anh Sơn · 0905-xxx', contactRole: 'Chủ đại lý',
+      email: 'son@owinnghean.vn', since: '02/2024',
+      ltv: 620, revenue: 240, orders: 12, avg: 20.0, debt: 38, overdue: 0,
+      credit: '100M', payOnTime: 90, payAvg: 16, payMaxLate: 7,
+      rep: 'Bùi Thị Mai', status: 'Đang hợp tác',
+      warn: { cls: 'none', text: '—' },
+      revSpark: [12, 15, 18, 20, 22, 20, 24, 26, 22, 20, 18, 16],
+      products: 'Nhôm thanh hệ 120 (bán xá) · Dịch vụ uốn vòm nhôm · Ke góc &amp; vít inox',
+      docs: [],
+      notes: 'Đại lý mới 2 năm, vừa nhận chuyển giao dàn máy WEIKE 01/2025. Đang tăng trưởng, nên nâng hạng lên Vàng nếu giữ được đà quý này.',
+    },
+    {
+      id: 'KH-009', name: 'Nhôm kính Đại Phát', short: 'ĐP',
+      type: 'Cửa hàng nhôm kính', region: 'Hà Nội', rank: '—', machine: false,
+      mst: '0901234567', contact: 'Anh Phát · 0902-xxx', contactRole: 'Chủ cửa hàng',
+      email: 'phat@daiphat.vn', since: '03/2022',
+      ltv: 1840, revenue: 580, orders: 25, avg: 23.2, debt: 248, overdue: 0,
+      credit: '300M', payOnTime: 100, payAvg: 14, payMaxLate: 0,
+      rep: 'Vũ Ngọc Anh', status: 'Đang hợp tác',
+      warn: { cls: 'good', text: 'Trả đúng hạn 12 tháng' },
+      revSpark: [32, 38, 42, 48, 51, 48, 55, 58, 52, 60, 64, 58],
+      products: 'Cửa trượt quay 93 · 4 cánh ghi xám · Tủ bếp nhôm nội thất Owin Luxury',
+      docs: [ {k:'order', id:'DH-0319'}, {k:'hd', id:'HD-2026-001'}, {k:'bg', id:'BG-2026-0518'}, {k:'bg', id:'BG-2026-0515'} ],
+      notes: 'Cửa hàng lớn nhất khu Cầu Giấy, kéo theo nhiều khách lẻ. Ưu tiên báo giá nhanh trong ngày, phản hồi qua Zalo.',
+    },
+    {
+      id: 'KH-010', name: 'OWIN EXPORT — LAOS PROJECT', short: 'EX',
+      type: 'Xuất khẩu', region: 'Xuất khẩu (Lào)', rank: '—', machine: false,
+      mst: 'FOREIGN-LA-01', contact: 'Mr. Somsak · +856-20-xxx', contactRole: 'Project Buyer',
+      email: 'somsak@laosbuild.la', since: '05/2025',
+      ltv: 480, revenue: 240, orders: 6, avg: 40.0, debt: 0, overdue: 0,
+      credit: 'LC 100%', payOnTime: 100, payAvg: 0, payMaxLate: 0,
+      rep: 'Vũ Ngọc Anh', status: 'Đang hợp tác',
+      warn: { cls: 'none', text: '—' },
+      revSpark: [0, 0, 0, 0, 30, 42, 38, 46, 0, 40, 44, 0],
+      products: 'Cửa thuỷ lực hệ 120 · 2 cánh · Cửa sổ mở quay Luxanode 121',
+      docs: [],
+      notes: 'Đơn xuất khẩu, thanh toán L/C 100% trước khi xếp container. Đóng kiện gỗ chuẩn xuất khẩu, hun trùng ISPM-15.',
+    },
+    {
+      id: 'KH-011', name: 'Anh Trần Minh Quân (nhà phố Mỹ Đình)', short: 'TQ',
+      type: 'Khách lẻ', region: 'Hà Nội', rank: '—', machine: false,
+      mst: '—', contact: 'Anh Quân · 0901-xxx', contactRole: 'Chủ nhà',
+      email: 'quan.tran@gmail.com', since: '09/2025',
+      ltv: 86, revenue: 86, orders: 2, avg: 43.0, debt: 12, overdue: 0,
+      credit: '—', payOnTime: 100, payAvg: 6, payMaxLate: 0,
+      rep: 'Vũ Ngọc Anh', status: 'Đang hợp tác',
+      warn: { cls: 'none', text: '—' },
+      revSpark: [0, 0, 0, 0, 0, 0, 0, 46, 0, 0, 40, 0],
+      products: 'Cửa thuỷ lực hệ 120 · 2 cánh vân gỗ trắc · Tủ bếp nhôm nội thất Omega',
+      docs: [],
+      notes: 'Khách lẻ nhà phố, đặt trọn gói cửa chính + tủ bếp. Đã giữ lại 12M bảo hành tới khi nghiệm thu lắp đặt.',
+    },
+    {
+      id: 'KH-012', name: 'NHÔM KÍNH PHƯƠNG TRANG', short: 'PT',
+      type: 'Cửa hàng nhôm kính', region: 'Hải Phòng', rank: '—', machine: false,
+      mst: '0012345678', contact: 'Chị Trang · 0908-xxx', contactRole: 'Chủ cửa hàng',
+      email: 'trang@phuongtrang.vn', since: '06/2023',
+      ltv: 740, revenue: 210, orders: 11, avg: 19.1, debt: 84, overdue: 84,
+      credit: '80M', payOnTime: 64, payAvg: 30, payMaxLate: 22,
+      rep: 'Bùi Thị Mai', status: 'Cần theo dõi',
+      warn: { cls: 'bad', text: 'Công nợ quá hạn 22 ngày · 84 tr' },
+      revSpark: [20, 22, 18, 20, 18, 16, 18, 20, 16, 14, 12, 10],
+      products: 'Cửa trượt quay 93 · 6 cánh vân gỗ trắc · Gioăng EPDM',
+      docs: [],
+      notes: 'Doanh số giảm dần 4 tháng gần đây, kèm công nợ quá hạn toàn bộ. Cần gọi kiểm tra xem có chuyển sang nguồn nhôm khác không.',
+    },
+  ];
+
+  const TYPE_OPTIONS = ['Đại lý uỷ quyền', 'Cửa hàng nhôm kính', 'Chủ đầu tư/Dự án', 'Nhà thầu', 'Khách lẻ', 'Xuất khẩu'];
+  const RANK_OPTIONS = ['—', 'Kim cương', 'Vàng', 'Bạc'];
+  const REGION_OPTIONS = ['Hà Nội', 'Hải Dương', 'Bắc Ninh', 'Hưng Yên', 'Hải Phòng', 'Quảng Ninh', 'Nghệ An', 'Thái Bình', 'TP.HCM', 'Xuất khẩu (Lào)'];
+  const REP_OPTIONS = ['Vũ Ngọc Anh', 'Bùi Thị Mai', 'Nguyễn Quang Đạt', 'Phạm Văn Thành'];
+  const STATUS_OPTIONS = ['Đang hợp tác', 'Cần theo dõi', 'Rủi ro', 'Tạm dừng'];
+
+  // Trang đích cho mã bản ghi liên quan (anchor .lnk → ERPPeek mở đúng bản ghi)
+  const DOC_PAGE = {
+    order: { page: '03-don-hang.html', key: 'order', label: 'Đơn hàng' },
+    hd:    { page: '18-hop-dong.html', key: 'hd',    label: 'Hợp đồng' },
+    bg:    { page: '02-bao-gia.html',  key: 'bg',    label: 'Báo giá' },
+  };
+
+  let sortBy = 'name';
+  let sortDir = 'asc';
+  let currentIdx = -1;
+  let currentType = 'all';
+  let editing = false;
+
+  const $ = (s) => document.querySelector(s);
+  const fmtM = (n) => (Number(n) || 0).toLocaleString('vi-VN');
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  }
+  function money(n) {
+    n = Number(n) || 0;
+    return n >= 1000 ? (n / 1000).toFixed(2).replace('.', ',') + ' tỷ ₫' : n + 'M ₫';
+  }
+  function rankCls(r) {
+    if (r === 'Kim cương') return 'rank-kc';
+    if (r === 'Vàng') return 'rank-v';
+    if (r === 'Bạc') return 'rank-b';
+    return 'rank-none';
+  }
+  function statusCls(s) {
+    if (s === 'Rủi ro') return 'bad';
+    if (s === 'Cần theo dõi') return 'warn';
+    if (s === 'Tạm dừng') return 'warn';
+    return 'ok';
+  }
+  function docLink(d) {
+    const m = DOC_PAGE[d.k];
+    if (!m) return esc(d.id);
+    return '<a class="lnk" href="' + m.page + '?' + m.key + '=' + encodeURIComponent(d.id) + '">' + esc(d.id) + '</a>';
+  }
+
+  // ============================================================
+  // Thẻ khách hàng (dùng chung qua window.ERPTags)
+  // ============================================================
+  const TAG_PRESETS = (window.ERPTags && ERPTags.PRESETS) || ['Tiềm năng', 'Ưu tiên', 'Đối tác lâu năm', 'Trả đúng hạn', 'Hay trễ hẹn', 'Khó tính', 'Nhạy giá', 'Ưa giao nhanh', 'Cần chăm sóc', 'Tái ký HĐ'];
+  function tagColor(name) { return window.ERPTags ? ERPTags.color(name) : '#c5400a'; }
+  function initTags() {
+    if (!window.ERPTags) { CUSTOMERS.forEach(c => { c.tags = []; }); return; }
+    CUSTOMERS.forEach(c => { c.tags = ERPTags.get(c.name); });
+  }
+  function tagChips(tags, extraCls) {
+    if (!tags || !tags.length) return '';
+    return tags.map(t => `<span class="cust-tag ${extraCls || ''}" style="--tag-c:${tagColor(t)}">${esc(t)}</span>`).join('');
+  }
+  function openTagEditor(c) {
+    const cur = (c.tags || []).slice();
+    const all = TAG_PRESETS.slice();
+    cur.forEach(t => { if (all.indexOf(t) < 0) all.push(t); });
+    const chips = all.map(t =>
+      `<button type="button" class="tag-pick ${cur.indexOf(t) >= 0 ? 'on' : ''}" data-tag="${esc(t)}" data-no-interact="true" style="--tag-c:${tagColor(t)}">${esc(t)}</button>`
+    ).join('');
+    ERPInteract.showModal({
+      title: 'Gắn thẻ · ' + c.name,
+      body: '<div class="tag-editor">' +
+        '<div class="tag-pool" id="tagPool">' + chips + '</div>' +
+        '<div class="tag-new"><input id="tagNewInput" placeholder="Tạo thẻ mới rồi Enter..." /></div>' +
+        '<div class="tag-hint">Bấm để chọn / bỏ chọn. Thẻ giúp lọc &amp; nhận diện nhanh nhóm khách.</div>' +
+      '</div>',
+      primaryText: 'Lưu thẻ', secondaryText: 'Huỷ',
+      onPrimary: function () {
+        const picked = [];
+        document.querySelectorAll('#tagPool .tag-pick.on').forEach(b => picked.push(b.dataset.tag));
+        c.tags = picked;
+        if (window.ERPTags) ERPTags.set(c.name, picked);
+        renderList();
+        openDrawer(c, getSorted());
+        ERPInteract.showToast('<b>Đã cập nhật thẻ</b> cho ' + esc(c.name), 'success', 2000);
+      }
+    });
+    setTimeout(function () {
+      const pool = document.getElementById('tagPool');
+      if (pool) pool.addEventListener('click', function (e) { const b = e.target.closest('.tag-pick'); if (b) b.classList.toggle('on'); });
+      const inp = document.getElementById('tagNewInput');
+      if (inp) inp.addEventListener('keydown', function (e) {
+        if (e.key !== 'Enter') return;
+        e.preventDefault();
+        const v = inp.value.trim(); if (!v) return;
+        if (!document.querySelector('#tagPool .tag-pick[data-tag="' + v.replace(/"/g, '') + '"]')) {
+          const btn = document.createElement('button');
+          btn.type = 'button'; btn.className = 'tag-pick on'; btn.dataset.tag = v; btn.style.setProperty('--tag-c', tagColor(v)); btn.textContent = v;
+          pool.appendChild(btn);
+        }
+        inp.value = '';
+      });
+    }, 30);
+  }
+
+  // ============================================================
+  // Danh sách bản ghi
+  // ============================================================
+  function getSorted() {
+    const list = CUSTOMERS.filter(c => currentType === 'all' || c.type === currentType);
+    const sorted = [...list];
+    sorted.sort((a, b) => {
+      let av = a[sortBy], bv = b[sortBy];
+      if (sortBy === 'machine') { av = a.machine ? 1 : 0; bv = b.machine ? 1 : 0; }
+      if (typeof av === 'string' || typeof bv === 'string') {
+        av = String(av || ''); bv = String(bv || '');
+        return sortDir === 'asc' ? av.localeCompare(bv, 'vi') : bv.localeCompare(av, 'vi');
+      }
+      return sortDir === 'asc' ? av - bv : bv - av;
+    });
+    return sorted;
+  }
+
+  function renderCounts() {
+    document.querySelectorAll('[data-cnt]').forEach(el => {
+      const t = el.dataset.cnt;
+      el.textContent = t === 'all' ? CUSTOMERS.length : CUSTOMERS.filter(c => c.type === t).length;
+    });
+  }
+
+  function renderList() {
+    const sorted = getSorted();
+    const body = $('#custBody');
+    body.innerHTML = sorted.map((c) => {
+      const w = c.warn || { cls: 'none', text: '—' };
+      return `
+        <div class="cl-row" data-id="${c.id}">
+          <div class="cust-cell">
+            <span class="avatar">${esc(c.short)}</span>
+            <div>
+              <div class="cust-name">${esc(c.name)}</div>
+              <div class="cust-mst">${c.mst === '—' ? 'Khách cá nhân' : 'MST ' + esc(c.mst)} · ${esc(c.id)}</div>
+              ${c.tags && c.tags.length ? `<div class="cust-tags">${tagChips(c.tags)}</div>` : ''}
+            </div>
+          </div>
+          <div><span class="type-chip">${esc(c.type)}</span></div>
+          <div class="cell-plain">${esc(c.region)}</div>
+          <div><span class="rank-chip ${rankCls(c.rank)}">${esc(c.rank)}</span></div>
+          <div class="num"><div class="rev">${money(c.ltv)}</div><div class="cell-sub">12T: ${c.revenue}M · ${c.orders} đơn</div></div>
+          <div class="num debt-cell">
+            <div class="debt-val">${c.debt === 0 ? '—' : c.debt + 'M'}</div>
+            <div class="debt-status ${c.overdue > 0 ? 'late' : (c.debt === 0 ? 'zero' : 'ok')}">${c.overdue > 0 ? 'Quá hạn ' + c.overdue + 'M' : (c.debt === 0 ? 'đã thu đủ' : 'trong hạn')}</div>
+          </div>
+          <div>${c.machine ? '<span class="mch yes">Có dàn máy</span>' : '<span class="mch no">—</span>'}</div>
+          <div class="warn-cell ${w.cls}">${esc(w.text)}</div>
+          <div class="arrow-cell"><i data-lucide="chevron-right" style="width:14px;height:14px"></i></div>
+        </div>
+      `;
+    }).join('');
+    if (window.lucide) lucide.createIcons();
+
+    const pg = $('#pgCount');
+    if (pg) pg.textContent = sorted.length ? '1–' + sorted.length : '0';
+
+    body.querySelectorAll('.cl-row').forEach(row => {
+      row.addEventListener('click', (e) => {
+        if (e.target.closest('a')) return;
+        body.querySelectorAll('.cl-row').forEach(r => r.classList.remove('active'));
+        row.classList.add('active');
+        const idx = sorted.findIndex(x => x.id === row.dataset.id);
+        currentIdx = idx;
+        editing = false;
+        openDrawer(sorted[idx], sorted);
+      });
+    });
+  }
+
+  // ============================================================
+  // Drawer bản ghi — nhóm trường, sửa tại chỗ
+  // ============================================================
+  function field(key, label, value, editor) {
+    return `
+      <div class="fcell" data-field="${key}">
+        <span class="fl">${label}</span>
+        <b class="fv">${value}</b>
+        ${editor ? `<div class="fe" style="display:none">${editor}</div>` : ''}
+      </div>`;
+  }
+  function selEditor(key, options, current) {
+    return `<select data-edit="${key}">${options.map(o => `<option value="${esc(o)}"${o === current ? ' selected' : ''}>${esc(o)}</option>`).join('')}</select>`;
+  }
+  function inpEditor(key, current, type) {
+    return `<input data-edit="${key}" type="${type || 'text'}" value="${esc(current)}" />`;
+  }
+
+  function renderDrawerBody(c) {
+    const w = c.warn || { cls: 'none', text: '—' };
+    const docs = (c.docs || []).map(d => `
+      <div class="doc-row">
+        <span class="doc-k">${DOC_PAGE[d.k] ? DOC_PAGE[d.k].label : 'Chứng từ'}</span>
+        <span class="doc-i">${docLink(d)}</span>
+      </div>`).join('') || '<div class="t-caption" style="color:var(--ash)">Chưa có chứng từ liên quan</div>';
+
+    return `
+      <div class="dr-kpi">
+        <div class="item">
+          <div class="l">Doanh số luỹ kế</div>
+          <div class="v">${money(c.ltv)}</div>
+          <div class="d">Từ ${esc(c.since)}</div>
+        </div>
+        <div class="item">
+          <div class="l">Doanh số 12T</div>
+          <div class="v">${c.revenue}<span class="unit"> M ₫</span></div>
+          <div class="d">${c.orders} đơn · TB ${c.avg}M</div>
+        </div>
+        <div class="item">
+          <div class="l">Công nợ</div>
+          <div class="v">${c.debt === 0 ? '—' : c.debt + 'M'}</div>
+          <div class="d ${c.overdue > 0 ? '' : 'up'}">${c.overdue > 0 ? 'Quá hạn ' + c.overdue + 'M' : 'Trong hạn'}</div>
+        </div>
+        <div class="item">
+          <div class="l">Trả đúng hạn</div>
+          <div class="v">${c.payOnTime}<span class="unit"> %</span></div>
+          <div class="d">TB ${c.payAvg} ngày · trễ tối đa ${c.payMaxLate} ngày</div>
+        </div>
+      </div>
+
+      <div class="sec-card">
+        <div class="sec-h"><div class="t"><i data-lucide="info" style="width:13px;height:13px"></i> Thông tin chung</div></div>
+        <div class="fgrid">
+          ${field('name', 'Tên khách hàng', esc(c.name), inpEditor('name', c.name))}
+          ${field('mst', 'Mã số thuế', esc(c.mst), inpEditor('mst', c.mst))}
+          ${field('type', 'Phân loại', esc(c.type), selEditor('type', TYPE_OPTIONS, c.type))}
+          ${field('region', 'Khu vực', esc(c.region), selEditor('region', REGION_OPTIONS, c.region))}
+          ${field('contact', 'Người liên hệ', esc(c.contact), inpEditor('contact', c.contact))}
+          ${field('contactRole', 'Chức vụ', esc(c.contactRole), inpEditor('contactRole', c.contactRole))}
+          ${field('email', 'Email', esc(c.email), inpEditor('email', c.email))}
+          ${field('rep', 'NV phụ trách', esc(c.rep), selEditor('rep', REP_OPTIONS, c.rep))}
+        </div>
+      </div>
+
+      <div class="sec-card">
+        <div class="sec-h"><div class="t"><i data-lucide="award" style="width:13px;height:13px"></i> Thương mại &amp; chính sách đại lý</div></div>
+        <div class="fgrid">
+          ${field('rank', 'Hạng đại lý', `<span class="rank-chip ${rankCls(c.rank)}">${esc(c.rank)}</span>`, selEditor('rank', RANK_OPTIONS, c.rank))}
+          ${field('machine', 'Mua dàn máy chuyển giao', c.machine ? '<span class="mch yes">Có — dàn máy WEIKE</span>' : '<span class="mch no">Không</span>', selEditor('machine', ['Có', 'Không'], c.machine ? 'Có' : 'Không'))}
+          ${field('ltv', 'Doanh số luỹ kế (triệu ₫)', fmtM(c.ltv), inpEditor('ltv', c.ltv, 'number'))}
+          ${field('credit', 'Hạn mức công nợ', esc(c.credit), inpEditor('credit', c.credit))}
+          ${field('products', 'Sản phẩm thường đặt', c.products, inpEditor('products', String(c.products).replace(/&amp;/g, '&')))}
+          ${field('status', 'Trạng thái hợp tác', `<span class="st-chip ${statusCls(c.status)}">${esc(c.status)}</span>`, selEditor('status', STATUS_OPTIONS, c.status))}
+        </div>
+      </div>
+
+      <div class="sec-card">
+        <div class="sec-h"><div class="t"><i data-lucide="banknote" style="width:13px;height:13px"></i> Công nợ &amp; thanh toán</div></div>
+        <div class="fgrid">
+          ${field('debt', 'Dư nợ hiện tại (triệu ₫)', fmtM(c.debt), inpEditor('debt', c.debt, 'number'))}
+          ${field('overdue', 'Trong đó quá hạn (triệu ₫)', fmtM(c.overdue), inpEditor('overdue', c.overdue, 'number'))}
+          ${field('payOnTime', 'Tỷ lệ trả đúng hạn (%)', c.payOnTime + '%', inpEditor('payOnTime', c.payOnTime, 'number'))}
+          ${field('warnText', 'Cảnh báo', `<span class="warn-cell ${w.cls}" style="padding:0">${esc(w.text)}</span>`, inpEditor('warnText', w.text))}
+        </div>
+      </div>
+
+      <div class="dr-2col">
+        <div class="sec-card">
+          <div class="sec-h">
+            <div class="t"><i data-lucide="trending-up" style="width:13px;height:13px"></i> Doanh số 12 tháng <span class="tag">Triệu ₫</span></div>
+          </div>
+          <div id="drChartRev" style="min-height: 180px;"></div>
+        </div>
+        <div class="sec-card">
+          <div class="sec-h"><div class="t"><i data-lucide="link" style="width:13px;height:13px"></i> Chứng từ liên quan</div></div>
+          <div class="doc-list">${docs}</div>
+        </div>
+      </div>
+
+      <div class="sec-card">
+        <div class="sec-h"><div class="t"><i data-lucide="sticky-note" style="width:13px;height:13px"></i> Ghi chú</div></div>
+        <div class="fcell wide" data-field="notes">
+          <span class="fl">Ghi chú nội bộ</span>
+          <b class="fv" style="font-weight:400;line-height:1.5">${esc(c.notes)}</b>
+          <div class="fe" style="display:none"><textarea data-edit="notes" rows="3">${esc(c.notes)}</textarea></div>
+        </div>
+      </div>
+    `;
+  }
+
+  function setEditMode(on) {
+    editing = on;
+    const panel = $('#drawerPanel');
+    if (!panel) return;
+    panel.querySelectorAll('.fcell').forEach(cell => {
+      const fv = cell.querySelector('.fv');
+      const fe = cell.querySelector('.fe');
+      if (!fe) return;
+      if (fv) fv.style.display = on ? 'none' : '';
+      fe.style.display = on ? '' : 'none';
+    });
+    const bar = panel.querySelector('#drEditBar');
+    if (bar) bar.style.display = on ? '' : 'none';
+    const btnEdit = panel.querySelector('#drEdit');
+    if (btnEdit) btnEdit.style.display = on ? 'none' : '';
+  }
+
+  function saveEdits(c, fullList) {
+    const panel = $('#drawerPanel');
+    const get = (k) => {
+      const el = panel.querySelector('[data-edit="' + k + '"]');
+      return el ? el.value : null;
+    };
+    const num = (k, cur) => { const v = get(k); const n = parseFloat(v); return (v === null || isNaN(n)) ? cur : n; };
+    const str = (k, cur) => { const v = get(k); return (v === null || !String(v).trim()) ? cur : String(v).trim(); };
+
+    c.name = str('name', c.name);
+    c.mst = str('mst', c.mst);
+    c.type = str('type', c.type);
+    c.region = str('region', c.region);
+    c.contact = str('contact', c.contact);
+    c.contactRole = str('contactRole', c.contactRole);
+    c.email = str('email', c.email);
+    c.rep = str('rep', c.rep);
+    c.rank = str('rank', c.rank);
+    c.machine = get('machine') === 'Có';
+    c.ltv = num('ltv', c.ltv);
+    c.credit = str('credit', c.credit);
+    c.products = str('products', c.products);
+    c.status = str('status', c.status);
+    c.debt = num('debt', c.debt);
+    c.overdue = num('overdue', c.overdue);
+    c.payOnTime = num('payOnTime', c.payOnTime);
+    const wt = str('warnText', (c.warn && c.warn.text) || '—');
+    c.warn = { cls: c.overdue > 0 ? 'bad' : (wt === '—' ? 'none' : (c.payOnTime >= 95 && c.overdue === 0 ? 'good' : 'none')), text: wt };
+    const nt = get('notes');
+    if (nt !== null) c.notes = nt;
+
+    editing = false;
+    renderCounts();
+    renderList();
+    openDrawer(c, getSorted());
+    ERPInteract.showToast('<b>Đã lưu</b> bản ghi ' + esc(c.id) + ' — ' + esc(c.name), 'success');
+  }
+
+  function printCustomer(c) {
+    if (!window.ERPPrint) return;
+    const w = c.warn || { cls: 'none', text: '—' };
+    const row = (k, v) => '<tr><td>' + k + '</td><td>' + v + '</td></tr>';
+    const body = ERPPrint.docHead() +
+      '<div class="pdoc">' +
+        '<div style="font-size:11px;line-height:1.5">Đơn vị: CÔNG TY CỔ PHẦN THƯƠNG MẠI OWIN — MST 0109541582<br>' +
+          '359 Phúc Diễn, Xuân Phương, Hà Nội · Hotline 056.386.9999</div>' +
+        '<div class="pdoc-title">HỒ SƠ KHÁCH HÀNG</div>' +
+        '<div class="pdoc-sub">Mã khách: ' + esc(c.id) + ' · Ngày in: ' + new Date().toLocaleDateString('vi-VN') + '</div>' +
+        '<table class="pdoc-rows">' +
+          row('Tên khách hàng', '<b>' + esc(c.name) + '</b>') +
+          row('Mã số thuế', esc(c.mst)) +
+          row('Phân loại', esc(c.type)) +
+          row('Khu vực', esc(c.region)) +
+          row('Hạng đại lý', esc(c.rank)) +
+          row('Mua dàn máy chuyển giao', c.machine ? 'Có — dàn máy làm cửa nhôm WEIKE' : 'Không') +
+          row('Người liên hệ', esc(c.contact) + ' · ' + esc(c.contactRole)) +
+          row('NV phụ trách', esc(c.rep)) +
+          row('Doanh số luỹ kế', fmtM(c.ltv) + ' triệu ₫') +
+          row('Công nợ hiện tại', fmtM(c.debt) + ' triệu ₫ (quá hạn ' + fmtM(c.overdue) + ' triệu ₫)') +
+          row('Hạn mức công nợ', esc(c.credit)) +
+          row('Tỷ lệ trả đúng hạn', c.payOnTime + '%') +
+          row('Cảnh báo', esc(w.text)) +
+          row('Sản phẩm thường đặt', c.products) +
+          row('Ghi chú', esc(c.notes)) +
+        '</table>' +
+        '<div class="pdoc-sign">' +
+          '<div><b>Nhân viên phụ trách</b><i>(Ký, họ tên)</i><div class="sp"></div></div>' +
+          '<div><b>Trưởng phòng Kinh doanh dự án</b><i>(Ký, họ tên)</i><div class="sp"></div></div>' +
+        '</div>' +
+      '</div>';
+    ERPPrint.preview({ title: 'Xem trước — Hồ sơ khách hàng ' + c.id, printTitle: 'Ho-so-KH-' + c.id, bodyHtml: body });
+  }
+
+  function openDrawer(c, fullList) {
+    const w = c.warn || { cls: 'none', text: '—' };
+    $('#drawerPanel').innerHTML = `
+      <div class="dr-hero">
+        <div class="top-bar">
+          <div class="tier-tag"><i data-lucide="user" style="width:10px;height:10px"></i>${esc(c.type)}${c.rank !== '—' ? ' · Hạng ' + esc(c.rank) : ''}</div>
+          <div class="nav-arrows">
+            <button class="nav-btn" id="drPrev" data-no-interact="true" title="KH trước"><i data-lucide="chevron-up" style="width:14px;height:14px"></i></button>
+            <span class="nav-pos">${currentIdx + 1} / ${fullList.length}</span>
+            <button class="nav-btn" id="drNext" data-no-interact="true" title="KH sau"><i data-lucide="chevron-down" style="width:14px;height:14px"></i></button>
+            <button class="nav-btn close" id="drClose" data-no-interact="true" title="Đóng (ESC)"><i data-lucide="x" style="width:14px;height:14px"></i></button>
+          </div>
+        </div>
+
+        <div class="dr-idline">
+          <span class="dr-id">${esc(c.id)}</span>
+          <span class="st-chip ${statusCls(c.status)}">${esc(c.status)}</span>
+          ${w.cls === 'bad' ? `<span class="st-chip bad">${esc(w.text)}</span>` : ''}
+        </div>
+        <h2>${esc(c.name)}</h2>
+        <div class="meta">
+          <span>${c.mst === '—' ? 'Khách cá nhân' : 'MST: <b>' + esc(c.mst) + '</b>'}</span>
+          <span class="sep">·</span>
+          <span>Khu vực <b>${esc(c.region)}</b></span>
+          <span class="sep">·</span>
+          <span>KH từ <b>${esc(c.since)}</b></span>
+          <span class="sep">·</span>
+          <span>Doanh số luỹ kế <b>${money(c.ltv)}</b></span>
+        </div>
+        <div class="meta">
+          <span>Liên hệ: <b>${esc(c.contact)}</b></span>
+          <span class="sep">·</span>
+          <span>${esc(c.contactRole)}</span>
+          <span class="sep">·</span>
+          <span>NV phụ trách: <b>${esc(c.rep)}</b></span>
+        </div>
+        <div class="dr-tags">
+          ${tagChips(c.tags, 'on-dark')}
+          <button class="tag-add" id="drTagAdd" data-no-interact="true"><i data-lucide="tag" style="width:11px;height:11px"></i> Gắn thẻ</button>
+        </div>
+        <div class="actions">
+          <button class="primary" id="drEdit" data-no-interact="true"><i data-lucide="pencil" style="width:13px;height:13px"></i> Sửa</button>
+          <button id="drPrint" data-no-interact="true"><i data-lucide="printer" style="width:13px;height:13px"></i> In hồ sơ</button>
+          <button id="drQuote" data-no-interact="true"><i data-lucide="file-text" style="width:13px;height:13px"></i> Tạo báo giá</button>
+          <button id="drCall" data-no-interact="true"><i data-lucide="phone" style="width:13px;height:13px"></i> Gọi</button>
+          <span id="drEditBar" style="display:none">
+            <button class="primary" id="drSave" data-no-interact="true"><i data-lucide="check" style="width:13px;height:13px"></i> Lưu</button>
+            <button id="drCancel" data-no-interact="true"><i data-lucide="x" style="width:13px;height:13px"></i> Huỷ</button>
+          </span>
+        </div>
+      </div>
+
+      <div class="dr-body" id="drawerBody">${renderDrawerBody(c)}</div>
+    `;
+
+    $('#custDrawer').classList.add('is-open');
+    if (window.lucide) lucide.createIcons();
+
+    setTimeout(() => {
+      const el = document.getElementById('drChartRev');
+      if (el && window.ERPCharts) {
+        ERPCharts.bar('drChartRev', {
+          labels: ['T6','T7','T8','T9','T10','T11','T12','T1','T2','T3','T4','T5'],
+          values: c.revSpark,
+        }, { height: 180, color: '#c5400a' });
+      }
+    }, 50);
+
+    const tagAdd = $('#drTagAdd');
+    if (tagAdd) tagAdd.addEventListener('click', () => openTagEditor(c));
+
+    $('#drClose').addEventListener('click', closeDrawer);
+    $('#drPrev').addEventListener('click', () => navigateCustomer(-1, fullList));
+    $('#drNext').addEventListener('click', () => navigateCustomer(1, fullList));
+    $('#drPrint').addEventListener('click', () => printCustomer(c));
+
+    $('#drEdit').addEventListener('click', () => {
+      const bar = $('#drEditBar');
+      if (bar) bar.style.display = 'inline-flex';
+      setEditMode(true);
+    });
+    $('#drCancel').addEventListener('click', () => { setEditMode(false); openDrawer(c, fullList); });
+    $('#drSave').addEventListener('click', () => saveEdits(c, fullList));
+
+    $('#drQuote').addEventListener('click', () => {
+      ERPInteract.showToast('Tạo báo giá mới cho <b>' + esc(c.name) + '</b>', 'success');
+      setTimeout(() => { window.location.href = '02-bao-gia.html'; }, 1000);
+    });
+    $('#drCall').addEventListener('click', () => {
+      ERPInteract.showModal({
+        title: 'Gọi ' + c.name,
+        body: `<div style="background: var(--paper-2); padding: 14px; border-radius: var(--r-3); display: flex; flex-direction: column; gap: 10px;">
+            <div style="display: flex; justify-content: space-between;"><span style="color: var(--ash);">Liên hệ chính</span><b>${esc(c.contact)}</b></div>
+            <div style="display: flex; justify-content: space-between;"><span style="color: var(--ash);">Vai trò</span><b>${esc(c.contactRole)}</b></div>
+            <div style="display: flex; justify-content: space-between;"><span style="color: var(--ash);">Khu vực</span><b>${esc(c.region)}</b></div>
+          </div>
+          <p style="font-size: 12px; color: var(--ash); margin-top: 12px;">Hệ thống tự ghi lại cuộc gọi vào lịch sử khách hàng sau khi kết thúc.</p>`,
+        primaryText: 'Bắt đầu gọi',
+        secondaryText: 'Đóng',
+        onPrimary: () => ERPInteract.showToast('Đang kết nối với <b>' + esc(c.contact) + '</b>...', 'info'),
+      });
+    });
+
+    if (editing) setEditMode(true);
+  }
+
+  function navigateCustomer(dir, fullList) {
+    const newIdx = currentIdx + dir;
+    if (newIdx < 0 || newIdx >= fullList.length) return;
+    currentIdx = newIdx;
+    editing = false;
+    document.querySelectorAll('.cl-row').forEach((r) => {
+      r.classList.toggle('active', r.dataset.id === fullList[newIdx].id);
+    });
+    openDrawer(fullList[newIdx], fullList);
+  }
+
+  function closeDrawer() {
+    $('#custDrawer').classList.remove('is-open');
+    document.querySelectorAll('.cl-row').forEach(r => r.classList.remove('active'));
+    currentIdx = -1;
+    editing = false;
+  }
+
+  // ============================================================
+  // Init
+  // ============================================================
+  document.addEventListener('erp:ready', () => {
+    initTags();
+    renderCounts();
+    renderList();
+
+    // Lọc theo phân loại
+    document.querySelectorAll('#typeTabs .tab').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('#typeTabs .tab').forEach(b => b.classList.toggle('tab-active', b === btn));
+        currentType = btn.dataset.type;
+        closeDrawer();
+        renderList();
+      });
+    });
+
+    // Sắp xếp
+    document.querySelectorAll('.cl-head .sort-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const newSort = btn.dataset.sort;
+        if (sortBy === newSort) {
+          sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+        } else {
+          sortBy = newSort;
+          sortDir = (newSort === 'ltv' || newSort === 'debt' || newSort === 'machine') ? 'desc' : 'asc';
+        }
+        document.querySelectorAll('.cl-head .sort-btn').forEach(b => {
+          b.classList.toggle('active', b.dataset.sort === sortBy);
+          const icon = b.querySelector('.sort-icon');
+          if (!icon) return;
+          icon.innerHTML = (b.dataset.sort === sortBy)
+            ? (sortDir === 'asc' ? '<span>▲</span>' : '<span>▼</span>')
+            : '<span>▴</span>';
+        });
+        renderList();
+      });
+    });
+
+    // Tìm kiếm
+    $('#searchInput')?.addEventListener('input', (e) => {
+      const q = e.target.value.toLowerCase().trim();
+      document.querySelectorAll('.cl-row').forEach(row => {
+        const txt = row.textContent.toLowerCase();
+        row.style.display = (!q || txt.includes(q)) ? '' : 'none';
+      });
+    });
+
+    // Đóng drawer
+    $('#drawerOverlay').addEventListener('click', closeDrawer);
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && !document.querySelector('.pk-overlay') && !document.querySelector('.erp-print-overlay')) closeDrawer();
+      if ($('#custDrawer').classList.contains('is-open') && !editing) {
+        const sorted = getSorted();
+        if (e.key === 'ArrowDown') { e.preventDefault(); navigateCustomer(1, sorted); }
+        if (e.key === 'ArrowUp') { e.preventDefault(); navigateCustomer(-1, sorted); }
+      }
+    });
+
+    // Nút header
+    $('#btnImport').addEventListener('click', () => {
+      ERPInteract.showModal({
+        title: 'Import khách hàng từ Excel',
+        body: `<p>Tải file mẫu hoặc kéo thả file Excel hiện có. Cột bắt buộc: tên, MST, phân loại, khu vực, hạng đại lý, NV phụ trách.</p>
+          <div style="border: 2px dashed var(--rule); border-radius: var(--r-3); padding: 28px; text-align: center; margin-top: 12px; color: var(--ash);">
+            <i data-lucide="upload-cloud" style="width:36px;height:36px"></i>
+            <div style="margin-top: 8px;">Kéo file vào đây hoặc <b style="color: var(--ink);">click để chọn</b></div>
+            <div style="font-size: 11px; margin-top: 4px;">.xlsx · .csv · max 50MB</div>
+          </div>`,
+        primaryText: 'Tải file mẫu',
+        secondaryText: 'Đóng',
+        onPrimary: () => ERPInteract.showToast('<b>mau-khach-hang-owin.xlsx</b> đã tải', 'success'),
+      });
+      setTimeout(() => { if (window.lucide) lucide.createIcons(); }, 30);
+    });
+
+    $('#btnAdd').addEventListener('click', () => {
+      const inp = 'width:100%;padding:8px 10px;border:1px solid var(--rule,#d8d2c0);border-radius:8px;background:var(--canvas,#fff);font:inherit;font-size:13px;box-sizing:border-box;';
+      const lbl = 'display:block;font-size:11px;color:var(--ash,#6b665b);margin-bottom:4px;';
+      ERPInteract.showModal({
+        title: 'Thêm khách hàng mới',
+        body: `<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 14px;text-align:left;margin-top:6px">
+            <div style="grid-column:1/-1"><label style="${lbl}">Tên khách hàng *</label><input id="ncName" style="${inp}" placeholder="VD: ĐL OWIN THÁI BÌNH" /></div>
+            <div><label style="${lbl}">Mã số thuế</label><input id="ncMst" style="${inp}" placeholder="10 số" /></div>
+            <div><label style="${lbl}">Phân loại</label><select id="ncType" style="${inp}">${TYPE_OPTIONS.map(t => `<option>${t}</option>`).join('')}</select></div>
+            <div><label style="${lbl}">Khu vực</label><select id="ncRegion" style="${inp}">${REGION_OPTIONS.map(t => `<option>${t}</option>`).join('')}</select></div>
+            <div><label style="${lbl}">Hạng đại lý</label><select id="ncRank" style="${inp}">${RANK_OPTIONS.map(t => `<option>${t}</option>`).join('')}</select></div>
+            <div><label style="${lbl}">Mua dàn máy chuyển giao</label><select id="ncMachine" style="${inp}"><option>Không</option><option>Có</option></select></div>
+            <div><label style="${lbl}">NV phụ trách</label><select id="ncRep" style="${inp}">${REP_OPTIONS.map(t => `<option>${t}</option>`).join('')}</select></div>
+            <div style="grid-column:1/-1"><label style="${lbl}">Người liên hệ</label><input id="ncContact" style="${inp}" placeholder="VD: Anh Sơn · 0905-xxx" /></div>
+          </div>`,
+        primaryText: 'Thêm khách hàng',
+        secondaryText: 'Huỷ',
+        onPrimary: () => {
+          const g = (id) => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
+          const name = g('ncName');
+          if (!name) { ERPInteract.showToast('Chưa nhập <b>tên khách hàng</b>', 'warning'); return false; }
+          const id = 'KH-' + String(CUSTOMERS.length + 1).padStart(3, '0');
+          CUSTOMERS.push({
+            id, name, short: name.replace(/[^A-Za-zÀ-ỹ ]/g, '').split(' ').filter(Boolean).slice(0, 2).map(x => x[0]).join('').toUpperCase() || 'KH',
+            type: g('ncType') || TYPE_OPTIONS[0], region: g('ncRegion') || REGION_OPTIONS[0],
+            rank: g('ncRank') || '—', machine: g('ncMachine') === 'Có',
+            mst: g('ncMst') || '—', contact: g('ncContact') || '—', contactRole: '—', email: '—',
+            since: new Date().toLocaleDateString('vi-VN', { month: '2-digit', year: 'numeric' }).replace('/', '/'),
+            ltv: 0, revenue: 0, orders: 0, avg: 0, debt: 0, overdue: 0,
+            credit: '—', payOnTime: 100, payAvg: 0, payMaxLate: 0,
+            rep: g('ncRep') || REP_OPTIONS[0], status: 'Đang hợp tác',
+            warn: { cls: 'none', text: '—' },
+            revSpark: [0,0,0,0,0,0,0,0,0,0,0,0], products: '—', docs: [], tags: [],
+            notes: 'Khách hàng mới tạo.',
+          });
+          renderCounts();
+          renderList();
+          ERPInteract.showToast('<b>Đã thêm khách hàng</b> ' + esc(id) + ' — ' + esc(name), 'success');
+        },
+      });
+    });
+  });
+</script>
+</body>
+</html>

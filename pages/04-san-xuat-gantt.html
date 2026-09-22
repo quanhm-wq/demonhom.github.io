@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lệnh dạng Gantt — ERP NHÔM OWIN</title>
+  <link rel="stylesheet" href="../assets/css/style.css" />
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+  <style>
+    /* ============================================================
+       Gantt lệnh sản xuất — vẽ bằng HTML/CSS thuần (div + position)
+       ============================================================ */
+    .view-switch { display:inline-flex; gap:2px; padding:3px; background:var(--paper-2); border-radius:var(--r-3); width:fit-content; }
+    .view-switch button { padding:6px 12px; font-size:12px; font-weight:500; background:transparent; border:0; color:var(--ash); border-radius:var(--r-2); cursor:pointer; display:inline-flex; align-items:center; gap:6px; }
+    .view-switch button:hover { color:var(--ink); }
+    .view-switch button.active { background:var(--canvas); color:var(--ink); box-shadow:0 1px 0 var(--rule); }
+    .view-switch a { text-decoration:none; }
+
+    .filter-strip { background:var(--canvas); border:1px solid var(--rule-soft); border-radius:var(--r-5); padding:10px 14px; margin-bottom:12px; display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+    .filter-strip .gsel { padding:0 10px; height:32px; font-size:12.5px; background:var(--paper-2); border:1px solid var(--rule); border-radius:var(--r-3); color:var(--ink); cursor:pointer; }
+    .filter-strip .gdate { padding:0 10px; height:32px; font-size:12.5px; background:var(--paper-2); border:1px solid var(--rule); border-radius:var(--r-3); color:var(--ink); }
+    .filter-strip .search-wrap { flex:1; min-width:200px; display:flex; align-items:center; background:var(--paper-2); border-radius:var(--r-3); padding:0 12px; height:32px; }
+    .filter-strip .search-wrap input { flex:1; background:transparent; border:0; outline:none; font-size:12.5px; color:var(--ink); }
+
+    .gt-stats { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; margin-bottom:12px; }
+    .gt-stat { background:var(--canvas); border:1px solid var(--rule-soft); border-radius:var(--r-4); padding:10px 14px; position:relative; overflow:hidden; }
+    .gt-stat::before { content:""; position:absolute; left:0; top:0; bottom:0; width:3px; background:var(--steel); }
+    .gt-stat.a-rust::before { background:var(--rust); }
+    .gt-stat.a-moss::before { background:var(--moss); }
+    .gt-stat.a-amber::before { background:var(--amber); }
+    .gt-stat .l { font-family:var(--ff-mono); font-size:9.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--ash); }
+    .gt-stat .v { font-size:21px; font-weight:600; color:var(--ink); line-height:1.2; margin-top:3px; font-variant-numeric:tabular-nums; }
+    .gt-stat .v .u { font-size:12px; color:var(--ash); font-weight:400; }
+    .gt-stat .d { font-size:11px; color:var(--ash); margin-top:2px; }
+
+    /* Khung Gantt */
+    .gt-box { background:var(--canvas); border:1px solid var(--rule-soft); border-radius:var(--r-5); overflow:hidden; }
+    .gt-scroll { overflow-x:auto; overflow-y:auto; max-height:70vh; }
+    .gt-inner { min-width:max-content; position:relative; }
+    .gt-row { display:flex; align-items:stretch; border-bottom:1px solid var(--rule-hair); }
+    .gt-row:last-child { border-bottom:0; }
+    .gt-row:hover .gt-left { background:var(--paper-2); }
+
+    .gt-left { width:280px; min-width:280px; position:sticky; left:0; z-index:3; background:var(--canvas); border-right:1px solid var(--rule); padding:5px 12px; display:flex; flex-direction:column; justify-content:center; gap:1px; }
+    .gt-left .code { font-family:var(--ff-mono); font-size:11.5px; font-weight:700; color:var(--ink); letter-spacing:-.01em; text-decoration:none; }
+    .gt-left a.code:hover { color:var(--rust); text-decoration:underline; }
+    .gt-left .name { font-size:11.5px; color:var(--ash); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+    .gt-track { position:relative; height:38px; flex:1; }
+    .gt-row .gt-track { background-image:repeating-linear-gradient(to right, var(--rule-hair) 0 1px, transparent 1px var(--gt-day)); }
+    .gt-track .wk-end { position:absolute; top:0; bottom:0; background:rgba(20,19,15,.035); }
+
+    /* Header 2 tầng */
+    .gt-head { position:sticky; top:0; z-index:5; background:var(--paper-2); border-bottom:1px solid var(--rule); }
+    .gt-head .gt-left { background:var(--paper-2); z-index:6; justify-content:flex-end; }
+    .gt-head .gt-left .hl { font-family:var(--ff-mono); font-size:9.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--ash); }
+    .gt-head-track { position:relative; }
+    .gt-weeks, .gt-days { display:flex; }
+    .gt-week { height:22px; display:flex; align-items:center; justify-content:center; font-family:var(--ff-mono); font-size:9.5px; letter-spacing:.12em; text-transform:uppercase; color:var(--ash); border-right:1px solid var(--rule); border-bottom:1px solid var(--rule-hair); }
+    .gt-day { height:26px; display:flex; flex-direction:column; align-items:center; justify-content:center; border-right:1px solid var(--rule-hair); font-size:10px; color:var(--ash); line-height:1.15; }
+    .gt-day.we { background:rgba(20,19,15,.05); }
+    .gt-day b { font-size:11px; color:var(--ink); font-variant-numeric:tabular-nums; }
+    .gt-day.today { background:var(--rust-soft); }
+    .gt-day.today b { color:var(--rust-deep); }
+
+    /* Vạch hôm nay */
+    .gt-today { position:absolute; top:0; bottom:0; width:2px; background:var(--rust); z-index:4; pointer-events:none; }
+    .gt-today::before { content:"HÔM NAY"; position:absolute; top:2px; left:4px; font-family:var(--ff-mono); font-size:8.5px; letter-spacing:.12em; color:var(--rust-deep); background:var(--paper); padding:1px 4px; border-radius:3px; white-space:nowrap; }
+
+    /* Thanh lệnh = 6 đoạn công đoạn nối nhau */
+    .gt-bar { position:absolute; top:7px; height:24px; display:flex; border-radius:5px; overflow:hidden; cursor:pointer; box-shadow:0 1px 2px rgba(20,19,15,.14); }
+    .gt-bar:hover { box-shadow:0 3px 10px rgba(20,19,15,.22); }
+    .gt-bar.late { outline:2px solid #8a1f1f; outline-offset:1px; }
+    .gt-seg { height:100%; min-width:3px; display:flex; align-items:center; justify-content:center; font-family:var(--ff-mono); font-size:8.5px; color:#fff; letter-spacing:.04em; overflow:hidden; border-right:1px solid rgba(255,255,255,.35); }
+    .gt-seg:last-child { border-right:0; }
+    .gt-seg.over { background:#8a1f1f !important; }
+    .gt-seg.early { box-shadow:inset 0 0 0 2px #1f6b3a; }
+    .gt-flag { position:absolute; top:9px; font-family:var(--ff-mono); font-size:9.5px; font-weight:700; padding:2px 7px; border-radius:9999px; white-space:nowrap; }
+    .gt-flag.bad { background:#f6e3e3; color:#8a1f1f; }
+    .gt-flag.good { background:#e2efe6; color:#1f6b3a; }
+    .gt-flag.none { background:var(--paper-2); color:var(--ash); }
+
+    /* Tooltip */
+    #gtTip { position:fixed; z-index:9500; display:none; max-width:280px; background:var(--ink); color:#f5f1e8; border-radius:8px; padding:9px 11px; font-size:11.5px; line-height:1.5; box-shadow:0 10px 30px rgba(20,19,15,.34); pointer-events:none; }
+    #gtTip b { color:#fff; }
+    #gtTip .tl { font-family:var(--ff-mono); font-size:9px; letter-spacing:.14em; text-transform:uppercase; color:#e8a075; display:block; margin-bottom:3px; }
+    #gtTip .bad { color:#f0a79b; font-weight:700; }
+    #gtTip .good { color:#9ed3ae; font-weight:700; }
+
+    .gt-legend { display:flex; flex-wrap:wrap; gap:8px 16px; padding:10px 14px; border-top:1px solid var(--rule-hair); font-size:11px; color:var(--ash); align-items:center; }
+    .gt-legend i { width:11px; height:11px; border-radius:3px; display:inline-block; vertical-align:-1px; margin-right:5px; }
+    .gt-empty { padding:40px 20px; text-align:center; color:var(--ash); font-size:13px; }
+    @media (max-width: 900px) { .gt-stats { grid-template-columns:repeat(2,1fr); } }
+  </style>
+</head>
+<body>
+
+<div id="app-shell" data-active="sx-gantt" data-title="Lệnh dạng Gantt" data-crumb="<b>Sản xuất</b> · Lệnh dạng Gantt">
+
+  <div class="page-header">
+    <div>
+      <h1>Lệnh dạng Gantt</h1>
+      <p>Tiến độ 6 công đoạn của từng lệnh sản xuất cửa nhôm trên trục thời gian 28 ngày</p>
+    </div>
+    <div class="actions">
+      <a class="btn btn-secondary" href="04-san-xuat-kanban.html" data-no-interact="true">
+        <i data-lucide="kanban-square" style="width:14px;height:14px"></i> Kanban
+      </a>
+      <a class="btn btn-secondary" href="19-lsx-san-xuat.html" data-no-interact="true">
+        <i data-lucide="list" style="width:14px;height:14px"></i> Danh sách
+      </a>
+    </div>
+  </div>
+
+  <!-- 4 ô số nhỏ -->
+  <div class="gt-stats">
+    <div class="gt-stat a-moss"><span class="l">Lệnh trên biểu đồ</span><div class="v"><span id="kpiTotal">0</span><span class="u"> lệnh</span></div><div class="d" id="kpiTotalD">—</div></div>
+    <div class="gt-stat a-rust"><span class="l">Trễ hạn giao</span><div class="v"><span id="kpiLate">0</span><span class="u"> lệnh</span></div><div class="d" id="kpiLateD">—</div></div>
+    <div class="gt-stat a-amber"><span class="l">Công đoạn vượt giờ ĐM</span><div class="v"><span id="kpiOver">0</span><span class="u"> công đoạn</span></div><div class="d" id="kpiOverD">—</div></div>
+    <div class="gt-stat"><span class="l">Xong sớm tiến độ</span><div class="v"><span id="kpiEarly">0</span><span class="u"> lệnh</span></div><div class="d" id="kpiEarlyD">—</div></div>
+  </div>
+
+  <!-- Bộ lọc -->
+  <div class="filter-strip">
+    <div class="view-switch">
+      <a href="04-san-xuat-kanban.html" data-no-interact="true"><button data-no-interact="true"><i data-lucide="kanban-square" style="width:13px;height:13px"></i> Kanban</button></a>
+      <button class="active" data-no-interact="true"><i data-lucide="calendar-days" style="width:13px;height:13px"></i> Gantt</button>
+      <a href="19-lsx-san-xuat.html" data-no-interact="true"><button data-no-interact="true"><i data-lucide="list" style="width:13px;height:13px"></i> Danh sách</button></a>
+    </div>
+    <div class="search-wrap">
+      <i data-lucide="search" style="width:13px;height:13px"></i>
+      <input id="fSearch" placeholder="Tìm mã LSX, khách hàng..." />
+    </div>
+    <select class="gsel" id="fStatus">
+      <option value="">Mọi trạng thái</option>
+      <option value="running">Đang chạy</option>
+      <option value="late">Trễ hạn</option>
+      <option value="early">Xong sớm</option>
+      <option value="done">Đã hoàn thành</option>
+    </select>
+    <select class="gsel" id="fProduct"></select>
+    <select class="gsel" id="fManager"></select>
+    <input class="gdate" id="fFrom" type="date" title="Từ ngày" />
+    <input class="gdate" id="fTo" type="date" title="Đến ngày" />
+    <button class="btn btn-secondary btn-sm" id="btnReset" data-no-interact="true"><i data-lucide="rotate-ccw" style="width:13px;height:13px"></i> Đặt lại</button>
+  </div>
+
+  <div class="gt-box">
+    <div class="gt-scroll" id="gtScroll">
+      <div class="gt-inner" id="gtInner"></div>
+    </div>
+    <div class="gt-legend" id="gtLegend"></div>
+  </div>
+
+</div>
+
+<div id="gtTip"></div>
+
+<script src="../assets/js/layout.js"></script>
+<script src="../assets/js/loss-data.js"></script>
+<script src="../assets/js/loss-ui.js"></script>
+<script src="../assets/js/pricing-engine.js"></script>
+<script src="../assets/js/quote-data.js"></script>
+<script src="../assets/js/stock-data.js"></script>
+<script src="../assets/js/bom-data.js"></script>
+<script src="../assets/js/inventory.js"></script>
+<script>
+  // ============================================================
+  // 6 CÔNG ĐOẠN SẢN XUẤT CỬA NHÔM
+  // ============================================================
+  var STEPS = [
+    { key: 'tiep-nhan', name: 'Tiếp nhận & kiểm nhôm thanh', short: 'Kiểm nhôm', machine: 'Bàn kiểm · Giá rack', color: '#4a5560', w: 1 },
+    { key: 'cat-phay',  name: 'Cắt & phay đố (CNC)',          short: 'Cắt · Phay', machine: 'CAT-01 · CNC-03',   color: '#c5400a', w: 2 },
+    { key: 'uon-vom',   name: 'Uốn vòm / định hình',          short: 'Uốn vòm',    machine: 'UON-01 · UON-02',   color: '#9c7714', w: 1.5 },
+    { key: 'ep-goc',    name: 'Ép góc & lắp khung cánh',      short: 'Ép góc',     machine: 'EP-02 · DOT-01',    color: '#2f5d3a', w: 2 },
+    { key: 'lap-kinh',  name: 'Lắp kính & phụ kiện',          short: 'Lắp kính',   machine: 'LAP-01',            color: '#5b6b8a', w: 2 },
+    { key: 'qc-dong',   name: 'Bọc màng, QC & đóng kiện',     short: 'QC · Kiện',  machine: 'Tổ hoàn thiện · KCS', color: '#6b665b', w: 1 }
+  ];
+  var WORKERS = ['Trần Văn Tú', 'Lê Văn Khoa', 'Phạm Văn Thành', 'Nguyễn Văn Hải', 'Đỗ Minh Quân', 'Vũ Thị Nga'];
+
+  // Dữ liệu dự phòng khi store rỗng (file:// hoặc chưa seed)
+  var FALLBACK = [
+    { id: 'LSX-0319', customer: 'VINHOMES OCEAN PARK', product: 'Cửa thuỷ lực hệ 120 · 2 cánh vân gỗ trắc', qty: 24, unit: 'bộ', manager: 'Oanh', due: '27/06/2026' },
+    { id: 'LSX-0322', customer: 'SUN GROUP HẠ LONG',   product: 'Cửa trượt quay 93 · 4 cánh ghi xám',        qty: 18, unit: 'bộ', manager: 'Nga',  due: '29/06/2026' },
+    { id: 'LSX-0331', customer: 'ECOPARK',              product: 'Cửa sổ mở quay Luxanode 121 · 2 cánh',      qty: 96, unit: 'm²',  manager: 'Nga',  due: '25/06/2026' },
+    { id: 'LSX-0333', customer: 'NHÔM KÍNH NAM TIẾN',   product: 'Cửa vòm nhôm uốn hệ 120 · 2 cánh',          qty: 12, unit: 'bộ', manager: 'Oanh', due: '24/06/2026' },
+    { id: 'LSX-0335', customer: 'ĐL OWIN HẢI DƯƠNG',    product: 'Nhôm thanh hệ 120 (bán xá theo kg)',        qty: 3200, unit: 'kg', manager: 'Nga', due: '26/06/2026' },
+    { id: 'LSX-0340', customer: 'NHÔM KÍNH MINH AN',    product: 'Cửa đi mở lùa 121 Luxanode · 4 cánh',       qty: 14, unit: 'bộ', manager: 'Oanh', due: '30/06/2026' },
+    { id: 'LSX-0341', customer: 'NT XÂY DỰNG HOÀNG GIA',product: 'Vách kính khung nhôm Luxanode',             qty: 64, unit: 'm²', manager: 'Nga',  due: '28/06/2026' },
+    { id: 'LSX-0350', customer: 'NHÔM KÍNH PHƯƠNG TRANG', product: 'Tủ bếp nhôm nội thất Owin Luxury (bộ 3,2m)', qty: 6, unit: 'bộ', manager: 'Oanh', due: '01/07/2026' }
+  ];
+
+  var DAY_W = 44, DAYS = 28;
+  var TODAY = new Date(2026, 5, 20);          // 20/06/2026 — ngày demo của hệ thống
+  var WIN_START = addDays(mondayOf(TODAY), -7);
+  var ROWS = [], VIEW = [];
+
+  function addDays(d, n) { var x = new Date(d.getTime()); x.setDate(x.getDate() + n); return x; }
+  function mondayOf(d) { var x = new Date(d.getTime()); var w = (x.getDay() + 6) % 7; return addDays(x, -w); }
+  function dayDiff(a, b) { return Math.round((a.setHours(12, 0, 0, 0) - new Date(b).setHours(12, 0, 0, 0)) / 86400000); }
+  function dmy(d) { return String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0') + '/' + d.getFullYear(); }
+  function iso(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+  function hash(s) { var h = 0; s = String(s || ''); for (var i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0; return h; }
+  function fmt(n) { return (Number(n) || 0).toLocaleString('vi-VN'); }
+
+  // ============================================================
+  // Nạp lệnh sản xuất từ QuoteStore.allLSX() (fallback dữ liệu tĩnh)
+  // ============================================================
+  function loadLSX() {
+    var list = [];
+    try {
+      if (window.QuoteStore && QuoteStore.allLSX) {
+        list = QuoteStore.allLSX().filter(function (l) {
+          return ['da-huy', 'scrap'].indexOf(l.lifecycle || '') < 0;
+        }).map(function (l) {
+          var f = l.floor || {};
+          return {
+            id: l.id, customer: l.customer || '—', product: l.product || '—',
+            qty: l.qty || 0, unit: f.qtyUnit || (l.packaging && l.packaging.mode === 'roll' ? 'md' : 'bộ'),
+            manager: l.manager || f.worker || 'Quản đốc xưởng',
+            due: l.dateDelivery || '', machine: l.machine || ''
+          };
+        });
+      }
+    } catch (e) { list = []; }
+    if (!list.length) list = FALLBACK.slice();
+    return list.slice(0, 26).map(schedule);
+  }
+
+  // Lịch 6 công đoạn của 1 lệnh — deterministic theo mã lệnh
+  function schedule(o) {
+    var h = hash(o.id);
+    var totalDays = 6 + (h % 7);                       // 6–12 ngày
+    var start = addDays(TODAY, -(h % 12));             // rải quanh mốc hôm nay
+    var kind = (h % 10 < 3) ? 'late' : ((h % 10 < 5) ? 'early' : 'ontime');  // ~30% trễ, ~20% sớm
+    var flagDays = (h % 3) + 1;
+
+    var sumW = STEPS.reduce(function (s, st) { return s + st.w; }, 0);
+    var acc = 0, segs = [];
+    STEPS.forEach(function (st, i) {
+      var days = Math.max(0.6, totalDays * st.w / sumW);
+      var estH = Math.round(days * 8 * 10) / 10;
+      var over = (kind === 'late' && (i === ((h >> 3) % 6) || i === ((h >> 7) % 6)));
+      var fast = (kind === 'early' && i === ((h >> 5) % 6));
+      var realH = over ? Math.round(estH * (1.18 + (h % 5) / 40) * 10) / 10
+                : fast ? Math.round(estH * 0.82 * 10) / 10
+                : estH;
+      segs.push({
+        step: st, offset: acc, days: days, estH: estH, realH: realH,
+        over: over, fast: fast,
+        worker: WORKERS[(h + i) % WORKERS.length]
+      });
+      acc += days;
+    });
+
+    return {
+      id: o.id, customer: o.customer, product: o.product, qty: o.qty, unit: o.unit,
+      manager: o.manager, due: o.due, machine: o.machine,
+      start: start, days: acc, end: addDays(start, Math.round(acc)),
+      kind: kind, flagDays: flagDays,
+      done: dayDiff(new Date(addDays(start, Math.round(acc))), TODAY) < 0,
+      segs: segs
+    };
+  }
+
+  // ============================================================
+  // Render
+  // ============================================================
+  function render() {
+    var inner = document.getElementById('gtInner');
+    inner.style.setProperty('--gt-day', DAY_W + 'px');
+    var trackW = DAY_W * DAYS;
+
+    // ---- header 2 tầng (tuần / ngày) ----
+    var weeks = '', days = '';
+    for (var w = 0; w < DAYS / 7; w++) {
+      var ws = addDays(WIN_START, w * 7);
+      weeks += '<div class="gt-week" style="width:' + (DAY_W * 7) + 'px">Tuần ' + (w + 1) + ' · ' + dmy(ws).slice(0, 5) + '</div>';
+    }
+    var DOW = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
+    for (var i = 0; i < DAYS; i++) {
+      var d = addDays(WIN_START, i);
+      var we = (d.getDay() === 0 || d.getDay() === 6) ? ' we' : '';
+      var td = dayDiff(new Date(d), TODAY) === 0 ? ' today' : '';
+      days += '<div class="gt-day' + we + td + '" style="width:' + DAY_W + 'px">' + DOW[d.getDay()] + '<b>' + String(d.getDate()).padStart(2, '0') + '</b></div>';
+    }
+    var todayX = dayDiff(new Date(TODAY), WIN_START) * DAY_W;
+
+    var html =
+      '<div class="gt-row gt-head">' +
+        '<div class="gt-left"><span class="hl">Lệnh sản xuất · SL</span></div>' +
+        '<div class="gt-head-track" style="width:' + trackW + 'px">' +
+          '<div class="gt-weeks">' + weeks + '</div>' +
+          '<div class="gt-days">' + days + '</div>' +
+        '</div>' +
+      '</div>';
+
+    if (!VIEW.length) {
+      html += '<div class="gt-empty">Không có lệnh sản xuất nào khớp bộ lọc.</div>';
+      inner.innerHTML = html;
+      if (window.lucide) lucide.createIcons();
+      return;
+    }
+
+    VIEW.forEach(function (o, ri) {
+      var x0 = dayDiff(new Date(o.start), WIN_START) * DAY_W;
+      var barW = Math.max(DAY_W * 0.6, o.days * DAY_W);
+      var segHtml = o.segs.map(function (s, si) {
+        var w = Math.max(3, s.days * DAY_W);
+        var cls = 'gt-seg' + (s.over ? ' over' : '') + (s.fast ? ' early' : '');
+        return '<div class="' + cls + '" style="width:' + w + 'px;background:' + s.step.color + '" ' +
+          'data-row="' + ri + '" data-seg="' + si + '">' + (w > 46 ? esc(s.step.short) : '') + '</div>';
+      }).join('');
+
+      var flag = o.kind === 'late'
+        ? '<span class="gt-flag bad" style="left:' + (x0 + barW + 8) + 'px">Trễ ' + o.flagDays + ' ngày</span>'
+        : (o.kind === 'early' ? '<span class="gt-flag good" style="left:' + (x0 + barW + 8) + 'px">Sớm ' + o.flagDays + ' ngày</span>' : '');
+
+      html +=
+        '<div class="gt-row" data-row="' + ri + '">' +
+          '<div class="gt-left">' +
+            '<a class="code lnk" href="06-lsx-phieu-cong-nghe.html?id=' + encodeURIComponent(o.id) + '">' + esc(o.id) + '</a>' +
+            '<span class="name" title="' + esc(o.product) + '">' + esc(o.product) + '</span>' +
+            '<span class="name"><b>' + fmt(o.qty) + '</b> ' + esc(o.unit) + ' · ' + esc(o.manager) + '</span>' +
+          '</div>' +
+          '<div class="gt-track" style="width:' + trackW + 'px">' +
+            '<div class="gt-bar' + (o.kind === 'late' ? ' late' : '') + '" data-id="' + esc(o.id) + '" data-row="' + ri + '" style="left:' + x0 + 'px;width:' + barW + 'px">' + segHtml + '</div>' +
+            flag +
+          '</div>' +
+        '</div>';
+    });
+
+    inner.innerHTML = html + '<div class="gt-today" style="left:' + (280 + todayX) + 'px"></div>';
+    wireBars();
+    if (window.lucide) lucide.createIcons();
+  }
+
+  function renderLegend() {
+    document.getElementById('gtLegend').innerHTML =
+      STEPS.map(function (s) { return '<span><i style="background:' + s.color + '"></i>' + esc(s.name) + '</span>'; }).join('') +
+      '<span style="margin-left:auto"><i style="background:#8a1f1f"></i>Công đoạn vượt giờ định mức</span>' +
+      '<span><i style="background:transparent;box-shadow:inset 0 0 0 2px #1f6b3a"></i>Công đoạn xong sớm</span>';
+  }
+
+  // ---- tooltip + điều hướng ----
+  function wireBars() {
+    var tip = document.getElementById('gtTip');
+    document.querySelectorAll('#gtInner .gt-seg').forEach(function (el) {
+      el.addEventListener('mousemove', function (e) {
+        var o = VIEW[+el.dataset.row], s = o && o.segs[+el.dataset.seg];
+        if (!s) return;
+        var delta = Math.round((s.realH - s.estH) * 10) / 10;
+        var deltaTxt = delta > 0 ? '<span class="bad">vượt ' + delta + ' h</span>'
+          : (delta < 0 ? '<span class="good">sớm ' + Math.abs(delta) + ' h</span>' : 'đúng định mức');
+        tip.innerHTML = '<span class="tl">' + esc(o.id) + ' · công đoạn ' + (+el.dataset.seg + 1) + '/6</span>' +
+          '<b>' + esc(s.step.name) + '</b><br>' +
+          'Máy: <b>' + esc(s.step.machine) + '</b><br>' +
+          'Người thực hiện: <b>' + esc(s.worker) + '</b><br>' +
+          'Giờ ĐM / thực tế: <b>' + s.estH + ' h</b> / <b>' + s.realH + ' h</b> — ' + deltaTxt;
+        tip.style.display = 'block';
+        var x = Math.min(e.clientX + 14, window.innerWidth - 300);
+        var y = Math.min(e.clientY + 16, window.innerHeight - 140);
+        tip.style.left = x + 'px'; tip.style.top = y + 'px';
+      });
+      el.addEventListener('mouseleave', function () { tip.style.display = 'none'; });
+    });
+    document.querySelectorAll('#gtInner .gt-bar').forEach(function (bar) {
+      bar.addEventListener('click', function () {
+        document.getElementById('gtTip').style.display = 'none';
+        window.location.href = '06-lsx-phieu-cong-nghe.html?id=' + encodeURIComponent(bar.dataset.id);
+      });
+    });
+  }
+
+  // ============================================================
+  // Bộ lọc + KPI
+  // ============================================================
+  function applyFilters() {
+    var q = (document.getElementById('fSearch').value || '').toLowerCase().trim();
+    var st = document.getElementById('fStatus').value;
+    var pr = document.getElementById('fProduct').value;
+    var mg = document.getElementById('fManager').value;
+    var from = document.getElementById('fFrom').value;
+    var to = document.getElementById('fTo').value;
+
+    VIEW = ROWS.filter(function (o) {
+      if (q && (o.id + ' ' + o.customer + ' ' + o.product).toLowerCase().indexOf(q) < 0) return false;
+      if (pr && o.product !== pr) return false;
+      if (mg && o.manager !== mg) return false;
+      if (st === 'late' && o.kind !== 'late') return false;
+      if (st === 'early' && o.kind !== 'early') return false;
+      if (st === 'done' && !o.done) return false;
+      if (st === 'running' && o.done) return false;
+      if (from && iso(o.end) < from) return false;
+      if (to && iso(o.start) > to) return false;
+      return true;
+    });
+    renderKPI();
+    render();
+  }
+
+  function renderKPI() {
+    var set = function (id, v) { var e = document.getElementById(id); if (e) e.textContent = v; };
+    var late = VIEW.filter(function (o) { return o.kind === 'late'; });
+    var early = VIEW.filter(function (o) { return o.kind === 'early'; });
+    var over = VIEW.reduce(function (s, o) { return s + o.segs.filter(function (x) { return x.over; }).length; }, 0);
+    set('kpiTotal', VIEW.length);
+    set('kpiTotalD', dmy(WIN_START) + ' → ' + dmy(addDays(WIN_START, DAYS - 1)));
+    set('kpiLate', late.length);
+    set('kpiLateD', late.length ? late.slice(0, 3).map(function (o) { return o.id; }).join(', ') : 'Không có lệnh trễ');
+    set('kpiOver', over);
+    set('kpiOverD', over ? 'Vượt giờ định mức — cần rà máy/thợ' : 'Mọi công đoạn trong định mức');
+    set('kpiEarly', early.length);
+    set('kpiEarlyD', early.length ? early.slice(0, 3).map(function (o) { return o.id; }).join(', ') : '—');
+  }
+
+  function fillFilters() {
+    var prods = [], mans = [];
+    ROWS.forEach(function (o) {
+      if (prods.indexOf(o.product) < 0) prods.push(o.product);
+      if (mans.indexOf(o.manager) < 0) mans.push(o.manager);
+    });
+    document.getElementById('fProduct').innerHTML = '<option value="">Mọi sản phẩm</option>' +
+      prods.sort().map(function (p) { return '<option value="' + esc(p) + '">' + esc(p.length > 38 ? p.slice(0, 37) + '…' : p) + '</option>'; }).join('');
+    document.getElementById('fManager').innerHTML = '<option value="">Mọi quản đốc</option>' +
+      mans.sort().map(function (m) { return '<option value="' + esc(m) + '">' + esc(m) + '</option>'; }).join('');
+    document.getElementById('fFrom').value = iso(WIN_START);
+    document.getElementById('fTo').value = iso(addDays(WIN_START, DAYS - 1));
+  }
+
+  document.addEventListener('erp:ready', function () {
+    ROWS = loadLSX();
+    fillFilters();
+    renderLegend();
+    applyFilters();
+
+    ['fSearch', 'fStatus', 'fProduct', 'fManager', 'fFrom', 'fTo'].forEach(function (id) {
+      var el = document.getElementById(id);
+      el.addEventListener('input', applyFilters);
+      el.addEventListener('change', applyFilters);
+    });
+    document.getElementById('btnReset').addEventListener('click', function () {
+      document.getElementById('fSearch').value = '';
+      document.getElementById('fStatus').value = '';
+      document.getElementById('fProduct').value = '';
+      document.getElementById('fManager').value = '';
+      fillFilters();
+      applyFilters();
+      ERPInteract.showToast('Đã đặt lại bộ lọc Gantt', 'info', 1500);
+    });
+
+    // cuộn tới vạch hôm nay
+    var sc = document.getElementById('gtScroll');
+    if (sc) sc.scrollLeft = Math.max(0, dayDiff(new Date(TODAY), WIN_START) * DAY_W - 260);
+  });
+</script>
+</body>
+</html>

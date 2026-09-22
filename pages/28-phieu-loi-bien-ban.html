@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Phiếu lỗi & Biên bản — ERP NHÔM OWIN</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/css/style.css" />
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+  <style>
+    /* Luồng xử lý — flow ngang */
+    .flow { display:flex; align-items:stretch; gap:0; flex-wrap:wrap; }
+    .flow-step { flex:1; min-width:200px; border:1px solid var(--rule-soft); border-radius:12px; padding:14px 15px; background:var(--paper); position:relative; }
+    .flow-step .fs-ico { width:34px; height:34px; border-radius:9px; display:inline-flex; align-items:center; justify-content:center; color:#fff; margin-bottom:8px; }
+    .flow-step .fs-title { font-size:13px; font-weight:600; color:var(--ink); line-height:1.3; }
+    .flow-step .fs-desc { font-size:11.5px; color:var(--ash); margin-top:4px; line-height:1.4; }
+    .flow-arrow { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:0 6px; color:var(--ash-2); min-width:78px; }
+    .flow-arrow .fa-cond { font-size:10px; color:var(--rust-deep); font-weight:600; text-align:center; line-height:1.3; margin-bottom:4px; }
+    @media (max-width:820px){ .flow-arrow{ width:100%; padding:8px 0; } .flow-arrow i{ transform:rotate(90deg); } }
+
+    /* Detail card rows */
+    .bb-row { display:flex; justify-content:space-between; gap:12px; padding:8px 0; border-bottom:1px solid var(--rule-hair); font-size:13px; }
+    .bb-row:last-child{ border-bottom:0; }
+    .bb-row .k { color:var(--ash); }
+    .bb-row .v { font-weight:500; text-align:right; }
+
+    /* Rule box */
+    .rule-box { border:1px solid var(--rule-soft); border-radius:10px; padding:11px 12px; font-size:12.5px; margin-bottom:8px; }
+    .rule-box.internal { background:var(--steel-soft); border-color:rgba(74,85,96,.22); }
+    .rule-box.customer { background:var(--signal-soft); border-color:rgba(138,31,31,.22); }
+    .rule-box .rb-tag { font-size:10px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; }
+
+    /* small flag tag */
+    .flag-bb { display:inline-flex; align-items:center; gap:3px; font-size:10px; font-weight:600; color:var(--rust-deep); background:var(--rust-soft); border:1px solid rgba(197,64,10,.2); padding:1px 6px; border-radius:6px; margin-top:3px; }
+
+    /* Tabs */
+    .tab.active { background:var(--canvas); color:var(--ink); box-shadow:0 1px 0 var(--rule); }
+    .att-input { padding:8px 10px; border:1px solid var(--rule); border-radius:8px; font-size:13px; font-family:inherit; background:var(--canvas); color:var(--ink); }
+
+    /* Bảng danh sách: cuộn trong khung + header dính + hạn chế xuống dòng */
+    .bb-scroll thead th { position:sticky; top:0; background:var(--paper-2); z-index:1; }
+    #bbTbody tr { cursor:pointer; }
+    [data-tab-pane="tab-list"] .tbl { min-width:1040px; }
+    [data-tab-pane="tab-list"] .tbl td:nth-child(1),
+    [data-tab-pane="tab-list"] .tbl td:nth-child(4),
+    [data-tab-pane="tab-list"] .tbl td:nth-child(6),
+    [data-tab-pane="tab-list"] .tbl td:nth-child(7),
+    [data-tab-pane="tab-list"] .tbl td:nth-child(8) { white-space:nowrap; }
+    [data-tab-pane="tab-list"] .tbl td:nth-child(2),
+    [data-tab-pane="tab-list"] .tbl td:nth-child(3) { white-space:nowrap; }
+    [data-tab-pane="tab-list"] .tbl td:nth-child(5) { min-width:230px; }
+
+    /* Drawer chi tiết — trượt từ phải */
+    .drawer-overlay { position:fixed; inset:0; background:rgba(20,19,15,.42); backdrop-filter:blur(2px); z-index:80; opacity:0; pointer-events:none; transition:opacity .2s ease; }
+    .drawer-overlay.open { opacity:1; pointer-events:auto; }
+    .drawer { position:fixed; top:0; right:0; height:100vh; width:470px; max-width:94vw; background:var(--canvas); border-left:1px solid var(--rule); box-shadow:-12px 0 32px rgba(20,19,15,.16); z-index:81; transform:translateX(100%); transition:transform .26s cubic-bezier(.2,.8,.2,1); overflow-y:auto; padding:20px 22px 36px; }
+    .drawer.open { transform:translateX(0); }
+    .drawer::-webkit-scrollbar { width:8px; }
+    .drawer::-webkit-scrollbar-thumb { background:var(--rule); border-radius:9999px; }
+    .drawer-close { position:absolute; top:14px; right:14px; z-index:2; }
+  </style>
+</head>
+<body>
+
+<div id="app-shell" data-active="hr-bienban" data-title="Phiếu lỗi & Biên bản" data-crumb="<b>Nhân sự</b> · Phiếu lỗi & Biên bản">
+
+  <div class="page-header">
+    <div>
+      <h1>Phiếu lỗi & Biên bản</h1>
+      <p>Tháng 6: 14 phiếu lỗi · 5 đã chuyển biên bản · tổng phạt 6.8M · 3 đang trừ lương lũy kế</p>
+    </div>
+    <div class="actions">
+      <button class="btn btn-secondary"><i data-lucide="calendar-check" style="width:14px;height:14px"></i> Mở kỳ xét duyệt</button>
+      <button class="btn btn-primary"><i data-lucide="file-plus-2" style="width:14px;height:14px"></i> Tạo phiếu ghi nhận lỗi</button>
+    </div>
+  </div>
+
+  <!-- KPI -->
+  <div class="grid grid-4 mb-4">
+    <div class="card-feature-yellow">
+      <div class="t-micro-u" style="color:var(--amber)">PHIẾU LỖI THÁNG 6</div>
+      <div class="t-h2 mt-1">14</div>
+      <div class="t-caption" style="color:var(--amber)">9 chưa trừ tiền</div>
+    </div>
+    <div class="card-feature-blue">
+      <div class="t-micro-u" style="color:var(--steel)">ĐÃ CHUYỂN BIÊN BẢN</div>
+      <div class="t-h2 mt-1">5</div>
+      <div class="t-caption" style="color:var(--steel)">Giá trị > 300.000đ → có trừ tiền</div>
+    </div>
+    <div class="card-feature-coral">
+      <div class="t-micro-u" style="color:var(--rust-deep)">TỔNG GIÁ TRỊ PHẠT</div>
+      <div class="t-h2 mt-1">6.8M</div>
+      <div class="t-caption" style="color:var(--rust-deep)">Khấu trừ vào lương T6–T7</div>
+    </div>
+    <div class="card-feature-teal">
+      <div class="t-micro-u" style="color:var(--moss-deep)">ĐANG TRỪ LƯƠNG LŨY KẾ</div>
+      <div class="t-h2 mt-1">3 <span style="font-size:15px;font-weight:500">NV</span></div>
+      <div class="t-caption" style="color:var(--moss-deep)">Phần dư dồn sang kỳ sau</div>
+    </div>
+  </div>
+
+  <!-- ============================ TABS ============================ -->
+  <div data-tab-group>
+  <div class="tabs view-tabs mb-4">
+    <button class="tab active" data-tab="tab-list"><i data-lucide="file-warning" style="width:14px;height:14px;vertical-align:-2px"></i> Phiếu lỗi & Biên bản</button>
+    <button class="tab" data-tab="tab-baocao"><i data-lucide="bar-chart-3" style="width:14px;height:14px;vertical-align:-2px"></i> Tổng hợp & Báo cáo</button>
+  </div>
+
+  <!-- ===================== TAB 1: DANH SÁCH ===================== -->
+  <div data-tab-pane="tab-list">
+
+    <!-- Luồng xử lý -->
+    <div class="card mb-4">
+      <div class="flex-between mb-3">
+        <div>
+          <div class="t-h5">Luồng xử lý phiếu lỗi → biên bản → khấu trừ lương</div>
+          <div class="t-caption">Ngưỡng tự động chuyển biên bản: <b style="color:var(--rust-deep)">300.000đ</b></div>
+        </div>
+        <span class="badge badge-steel"><i data-lucide="info" style="width:12px;height:12px"></i> Quy tắc khấu trừ</span>
+      </div>
+      <div class="flow">
+        <div class="flow-step">
+          <span class="fs-ico" style="background:var(--amber)"><i data-lucide="clipboard-pen" style="width:18px;height:18px"></i></span>
+          <div class="fs-title">1 · Phiếu ghi nhận lỗi</div>
+          <div class="fs-desc">Ghi nhận lỗi + tổng giá trị thiệt hại / giá thành phải chi trả. <b>CHƯA trừ tiền</b> vào lương.</div>
+        </div>
+        <div class="flow-arrow">
+          <div class="fa-cond">nếu tổng &gt; 300.000đ<br>hoặc cần lập BB</div>
+          <i data-lucide="chevron-right" style="width:22px;height:22px"></i>
+        </div>
+        <div class="flow-step" style="border-color:rgba(138,31,31,.3)">
+          <span class="fs-ico" style="background:var(--signal)"><i data-lucide="file-warning" style="width:18px;height:18px"></i></span>
+          <div class="fs-title">2 · Biên bản</div>
+          <div class="fs-desc">Tự động chuyển từ phiếu lỗi. <b>CÓ trừ tiền</b> — áp cơ chế phạt theo bộ phận & ảnh hưởng (nội bộ / khách hàng).</div>
+        </div>
+        <div class="flow-arrow">
+          <div class="fa-cond">duyệt kỳ</div>
+          <i data-lucide="chevron-right" style="width:22px;height:22px"></i>
+        </div>
+        <div class="flow-step" style="border-color:rgba(47,93,58,.3)">
+          <span class="fs-ico" style="background:var(--moss)"><i data-lucide="banknote" style="width:18px;height:18px"></i></span>
+          <div class="fs-title">3 · Trừ vào lương</div>
+          <div class="fs-desc">Khấu trừ kỳ lương, đảm bảo <b>thực lĩnh ≥ 0</b>. Phần dư <b>dồn sang kỳ sau</b> trừ tiếp.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Danh sách phiếu lỗi / biên bản -->
+    <div class="card mb-4">
+      <div class="flex-between mb-3">
+        <div>
+          <div class="t-h5"><i data-lucide="list-checks" style="width:16px;height:16px"></i> Phiếu lỗi & Biên bản · T6/2026</div>
+          <div class="t-caption mt-1"><i data-lucide="mouse-pointer-click" style="width:12px;height:12px;vertical-align:-1px"></i> Nhấp một dòng để xem chi tiết biên bản (cơ chế phạt + kế hoạch trừ lương)</div>
+        </div>
+      </div>
+
+      <!-- Toolbar tìm kiếm / lọc -->
+      <div class="flex mb-3" style="gap:8px;flex-wrap:wrap">
+        <div style="position:relative;flex:1;min-width:200px">
+          <i data-lucide="search" style="width:14px;height:14px;position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--ash)"></i>
+          <input id="bbSearch" class="att-input" type="text" placeholder="Tìm theo mã, tên NV…" style="width:100%;padding-left:30px">
+        </div>
+        <select id="bbType" class="att-input">
+          <option value="">Tất cả loại</option>
+          <option value="Biên bản">Biên bản</option>
+          <option value="Phiếu lỗi">Phiếu lỗi</option>
+        </select>
+        <select id="bbImpact" class="att-input">
+          <option value="">Mọi ảnh hưởng</option>
+          <option value="Nội bộ">Nội bộ</option>
+          <option value="Khách hàng">Khách hàng</option>
+        </select>
+        <select id="bbDept" class="att-input"></select>
+      </div>
+
+      <div class="table-wrap bb-scroll" style="border:none;max-height:520px;overflow:auto">
+        <table class="tbl">
+          <thead>
+            <tr>
+              <th>Mã</th>
+              <th>NV bị lập</th>
+              <th>Người lập</th>
+              <th>Loại</th>
+              <th>Mô tả lỗi</th>
+              <th class="num">Giá trị (₫)</th>
+              <th>Ảnh hưởng</th>
+              <th>Trừ lương</th>
+            </tr>
+          </thead>
+          <tbody id="bbTbody"></tbody>
+        </table>
+      </div>
+      <div class="t-caption mt-2" id="bbCount"></div>
+      <div class="t-caption mt-1">
+        <i data-lucide="info" style="width:12px;height:12px;vertical-align:-2px"></i>
+        Phiếu lỗi giá trị &gt; 300.000đ tự động gắn cờ <b>"Sẽ chuyển biên bản"</b> · biên bản mới phát sinh khấu trừ lương.
+      </div>
+    </div>
+
+  </div><!-- /tab-list -->
+
+  <!-- ===================== TAB 2: TỔNG HỢP & BÁO CÁO ===================== -->
+  <div data-tab-pane="tab-baocao" style="display:none">
+
+    <!-- Kỳ xét duyệt -->
+    <div class="grid grid-12 mb-4">
+      <div class="card">
+        <div class="flex-between mb-3">
+          <div>
+            <div class="t-h5">Kỳ xét duyệt T6/2026</div>
+            <div class="t-caption">Tổng hợp biên bản & khấu trừ lương trong kỳ</div>
+          </div>
+          <span class="badge badge-orange">Đang mở</span>
+        </div>
+        <div class="grid grid-4 mb-3" style="gap:10px">
+          <div class="card" style="padding:11px 12px"><div class="t-micro-u" style="color:var(--ash)">BIÊN BẢN</div><div class="t-h4 mt-1">5</div></div>
+          <div class="card" style="padding:11px 12px"><div class="t-micro-u" style="color:var(--signal)">TỔNG PHẠT</div><div class="t-h4 mt-1" style="color:var(--signal)">6.8M</div></div>
+          <div class="card" style="padding:11px 12px"><div class="t-micro-u" style="color:var(--ash)">NV BỊ TRỪ</div><div class="t-h4 mt-1">5</div></div>
+          <div class="card" style="padding:11px 12px"><div class="t-micro-u" style="color:var(--moss-deep)">ĐÃ TRỪ KỲ T6</div><div class="t-h4 mt-1" style="color:var(--moss-deep)">4.0M</div></div>
+        </div>
+        <div class="table-wrap">
+          <table class="tbl">
+            <thead><tr><th>Bộ phận</th><th class="num">Số BB</th><th class="num">Tổng phạt</th><th class="num">Trừ T6</th><th class="num">Dồn T7</th></tr></thead>
+            <tbody>
+              <tr><td>KCS nhôm kính</td><td class="num">1</td><td class="num">900.000</td><td class="num">450.000</td><td class="num">450.000</td></tr>
+              <tr><td>Cắt CNC</td><td class="num">2</td><td class="num">1.820.000</td><td class="num">1.220.000</td><td class="num">600.000</td></tr>
+              <tr><td>Hoàn thiện</td><td class="num">1</td><td class="num">850.000</td><td class="num">850.000</td><td class="num">0</td></tr>
+              <tr><td>Uốn vòm</td><td class="num">1</td><td class="num">480.000</td><td class="num">480.000</td><td class="num">0</td></tr>
+              <tr style="font-weight:600;background:var(--paper-2)"><td>Tổng kỳ</td><td class="num">5</td><td class="num">4.050.000</td><td class="num">3.000.000</td><td class="num">1.050.000</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="flex" style="gap:8px;margin-top:12px">
+          <button class="btn btn-secondary btn-sm"><i data-lucide="printer" style="width:13px;height:13px"></i> In bảng kỳ để lưu trữ</button>
+          <button class="btn btn-primary btn-sm"><i data-lucide="check-check" style="width:13px;height:13px"></i> Duyệt & đẩy sang khấu trừ lương</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="t-h5 mb-1">Giá trị phạt theo bộ phận</div>
+        <div class="t-caption mb-3">Kỳ T6/2026 · đơn vị nghìn ₫</div>
+        <div id="chartDept" style="min-height:200px"></div>
+        <hr class="hr-soft">
+        <div class="t-h6 mb-2">Phân loại ảnh hưởng</div>
+        <div id="chartImpact" style="display:flex;justify-content:center"></div>
+        <div class="flex" style="gap:14px;flex-wrap:wrap;margin-top:8px;font-size:11px;color:var(--ash);justify-content:center">
+          <span><span class="badge-dot" style="background:var(--steel);margin-right:4px"></span>Nội bộ (4)</span>
+          <span><span class="badge-dot" style="background:var(--signal);margin-right:4px"></span>Khách hàng (1)</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bộ quy tắc phạt mẫu -->
+    <div class="t-h5 mb-1">Bộ quy tắc phạt mẫu theo bộ phận</div>
+    <div class="t-caption mb-3">Áp dụng tự động khi lập biên bản · phân biệt mức phạt nội bộ và ảnh hưởng khách hàng.</div>
+    <div class="grid grid-3 mb-4">
+      <div class="card">
+        <div class="flex mb-2" style="gap:8px;align-items:center">
+          <span class="fs-ico" style="background:var(--steel);width:30px;height:30px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;color:#fff"><i data-lucide="search-check" style="width:16px;height:16px"></i></span>
+          <div class="t-h6">KCS nhôm kính</div>
+        </div>
+        <div class="rule-box internal">
+          <div class="rb-tag" style="color:var(--steel)">Nội bộ</div>
+          <div style="margin-top:4px">Bỏ sót lỗi phát hiện trước khi giao → <b>10% lương cơ bản</b> hoặc trừ công bù kiểm lại.</div>
+        </div>
+        <div class="rule-box customer">
+          <div class="rb-tag" style="color:var(--signal)">Khách hàng</div>
+          <div style="margin-top:4px">Để lỗi lọt tới khách → phạt theo <b>10% lương CB</b> + xét theo mức độ giá trị thiệt hại, dồn nhiều kỳ.</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="flex mb-2" style="gap:8px;align-items:center">
+          <span class="fs-ico" style="background:var(--rust);width:30px;height:30px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;color:#fff"><i data-lucide="printer" style="width:16px;height:16px"></i></span>
+          <div class="t-h6">Cắt CNC</div>
+        </div>
+        <div class="rule-box internal">
+          <div class="rb-tag" style="color:var(--steel)">Nội bộ</div>
+          <div style="margin-top:4px">Hao hụt nhôm đầu mẩu vượt định mức → trừ <b>theo giá trị vật tư</b> vượt định mức.</div>
+        </div>
+        <div class="rule-box customer">
+          <div class="rb-tag" style="color:var(--signal)">Khách hàng</div>
+          <div style="margin-top:4px">Cắt sai kích thước / mối ép hở phải làm lại → <b>bồi thường giá thành loạt làm lại</b> (nhôm + kính + công).</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="flex mb-2" style="gap:8px;align-items:center">
+          <span class="fs-ico" style="background:var(--moss);width:30px;height:30px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;color:#fff"><i data-lucide="box" style="width:16px;height:16px"></i></span>
+          <div class="t-h6">Hoàn thiện – đóng kiện</div>
+        </div>
+        <div class="rule-box internal">
+          <div class="rb-tag" style="color:var(--steel)">Nội bộ</div>
+          <div style="margin-top:4px">Sai quy cách phải làm lại → trừ <b>công làm lại</b>; làm hỏng bán thành phẩm → bồi thường giá thành.</div>
+        </div>
+        <div class="rule-box customer">
+          <div class="rb-tag" style="color:var(--signal)">Khách hàng</div>
+          <div style="margin-top:4px">Lỗi quy cách lọt tới khách → <b>bồi thường giá thành thành phẩm</b> + chi phí làm lại/giao bù.</div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /tab-baocao -->
+  </div><!-- /tab-group -->
+
+  <!-- Drawer chi tiết biên bản -->
+  <div class="drawer-overlay" id="bb-overlay"></div>
+  <aside class="drawer" id="bb-drawer" aria-hidden="true">
+    <button class="btn-icon drawer-close" id="bb-close" title="Đóng"><i data-lucide="x" style="width:18px;height:18px"></i></button>
+    <div id="bb-body"></div>
+  </aside>
+
+  <div style="text-align:center;padding:16px">
+    <div class="sticky coral"><i data-lucide="link" style="width:14px;height:14px"></i> Phiếu lỗi & Biên bản liên thông Chấm công–Lương: biên bản được duyệt tự động đưa vào khấu trừ lương, đảm bảo thực lĩnh ≥ 0, phần dư dồn sang kỳ sau trừ tiếp.</div>
+  </div>
+
+</div>
+
+<script src="../assets/js/layout.js"></script>
+<script src="../assets/js/pricing-engine.js"></script>
+<script src="../assets/js/quote-data.js"></script>
+<script src="../assets/js/loss-data.js"></script>
+<script src="../assets/js/loss-ui.js"></script>
+<script>
+  document.addEventListener('erp:ready', () => {
+    const toast = (m,t) => window.ERPInteract && window.ERPInteract.showToast(m, t||'info');
+    const fmt = n => n ? n.toLocaleString('vi-VN') : '0';
+
+    /* ===== Dữ liệu phiếu lỗi / biên bản ===== */
+    const BB = [
+      { ma:'BB-2026-031', type:'Biên bản', nv:'Nguyễn Thị Mai', nvId:'NV-031', bp:'KCS nhôm kính',
+        creator:'Trần Thị Hồng', creatorRole:'Trưởng KCS', impact:'Khách hàng', date:'18/06/2026',
+        desc:'GIOANG-HO · Kiểm hàng sót lỗi hở gioăng, lô đã giao khách', ref:'DH-0312 · KH Nhôm kính Đại Phát',
+        value:4500000, phat:900000, status:'Đang trừ',
+        rule:{ cls:'customer', tag:'KCS · ẢNH HƯỞNG KHÁCH HÀNG',
+          text:'Kiểm hàng không trách nhiệm để lỗi tới khách → phạt <b>10% lương cơ bản</b> (giới hạn trần phạt/kỳ), không tính toàn bộ giá trị thiệt hại 4,5M.',
+          chot:'10% × 4.500.000đ lương CB = 450.000đ × 2 kỳ = 900.000đ' },
+        plan:[['T6/2026','450.000','450.000','Đang trừ','badge-orange'],['T7/2026','450.000','0','Dự kiến','badge']] },
+
+      { ma:'BB-2026-018', type:'Biên bản', nv:'Trần Văn Tú', nvId:'NV-018', bp:'Cắt CNC',
+        creator:'Đỗ Văn Minh', creatorRole:'Tổ trưởng cắt CNC', impact:'Nội bộ', date:'16/06/2026',
+        desc:'CAT-SAI-KT · Cắt sai kích thước (>2mm), phải cắt lại 48 cây', ref:'LSX-2206 · 48 cây nhôm 120',
+        value:1200000, phat:1200000, status:'Đang trừ',
+        rule:{ cls:'internal', tag:'CẮT CNC · NỘI BỘ',
+          text:'Cắt sai kích thước phải cắt lại → <b>bồi thường giá thành loạt cắt lại</b> (nhôm thanh + công).',
+          chot:'Giá thành cắt lại 48 cây nhôm 120 = 1.200.000đ, chia 2 kỳ để thực lĩnh ≥ 0' },
+        plan:[['T6/2026','600.000','600.000','Đang trừ','badge-orange'],['T7/2026','600.000','0','Dự kiến','badge']] },
+
+      { ma:'BB-2026-040', type:'Biên bản', nv:'Võ Minh Khôi', nvId:'NV-040', bp:'Ép góc',
+        creator:'Phạm Văn Nam', creatorRole:'Tổ trưởng hoàn thiện – đóng kiện', impact:'Nội bộ', date:'15/06/2026',
+        desc:'EP-HO-MOI · Mối ép góc hở, 26 khung cánh phải ép lại', ref:'LSX-2210',
+        value:850000, phat:850000, status:'Đang trừ',
+        rule:{ cls:'internal', tag:'ÉP GÓC · NỘI BỘ',
+          text:'Làm hỏng bán thành phẩm → <b>bồi thường giá thành</b> phần hỏng.',
+          chot:'Giá thành 26 khung cánh phải ép lại = 850.000đ' },
+        plan:[['T6/2026','850.000','0','Đang trừ','badge-orange']] },
+
+      { ma:'BB-2026-022', type:'Biên bản', nv:'Đỗ Văn Minh', nvId:'NV-022', bp:'Cắt CNC',
+        creator:'Lê Quốc Cường', creatorRole:'Quản đốc xưởng cửa nhôm', impact:'Nội bộ', date:'12/06/2026',
+        desc:'Hao hụt cắt nhôm (đầu mẩu) vượt định mức', ref:'LSX-2208 · +128 kg nhôm',
+        value:620000, phat:620000, status:'Đã trừ xong',
+        rule:{ cls:'internal', tag:'CẮT CNC · NỘI BỘ',
+          text:'Hao hụt nhôm đầu mẩu vượt định mức → trừ <b>theo giá trị vật tư</b> vượt định mức.',
+          chot:'Giá trị 128 kg nhôm vượt định mức = 620.000đ' },
+        plan:[['T6/2026','620.000','0','Đã trừ xong','badge-moss']] },
+
+      { ma:'BB-2026-035', type:'Biên bản', nv:'Hoàng Văn Sơn', nvId:'NV-035', bp:'Uốn vòm',
+        creator:'Lê Quốc Cường', creatorRole:'Quản đốc xưởng cửa nhôm', impact:'Nội bộ', date:'10/06/2026',
+        desc:'UON-NUT · Nứt/gãy 6 cây nhôm khi uốn vòm', ref:'LSX-2205',
+        value:480000, phat:480000, status:'Đã trừ xong',
+        rule:{ cls:'internal', tag:'UỐN VÒM · NỘI BỘ',
+          text:'Sai quy cách phải làm lại → bồi thường <b>giá thành lô</b> bị lỗi.',
+          chot:'Giá thành 6 cây nhôm hệ 120 hỏng = 480.000đ' },
+        plan:[['T6/2026','480.000','0','Đã trừ xong','badge-moss']] },
+
+      { ma:'PL-2026-051', type:'Phiếu lỗi', nv:'Nguyễn Thị Mai', nvId:'NV-031', bp:'KCS nhôm kính',
+        creator:'Trần Thị Hồng', creatorRole:'Trưởng KCS', impact:'Nội bộ', date:'17/06/2026',
+        desc:'Đếm thiếu 2 bộ khoá khi đóng kiện', ref:'đã bù nội bộ',
+        value:350000, phat:0, status:'Chưa trừ', willBB:true,
+        rule:{ cls:'internal', tag:'PHIẾU LỖI · CHƯA TRỪ TIỀN',
+          text:'Giá trị &gt; 300.000đ → <b>sẽ tự chuyển biên bản</b> ở kỳ xét duyệt và phát sinh khấu trừ.',
+          chot:'Dự kiến phạt 10% lương CB khi chuyển biên bản' },
+        plan:[] },
+
+      { ma:'PL-2026-049', type:'Phiếu lỗi', nv:'Trần Văn Tú', nvId:'NV-018', bp:'Cắt CNC',
+        creator:'Đỗ Văn Minh', creatorRole:'Tổ trưởng cắt CNC', impact:'Nội bộ', date:'14/06/2026',
+        desc:'Cài đặt máy cắt chậm gây trễ ca, chưa thiệt hại vật tư', ref:'nhắc nhở',
+        value:180000, phat:0, status:'Chưa trừ',
+        rule:{ cls:'internal', tag:'PHIẾU LỖI · NHẮC NHỞ',
+          text:'Giá trị &lt; 300.000đ → chỉ <b>ghi nhận nhắc nhở</b>, không trừ tiền.', chot:'Không phát sinh khấu trừ' },
+        plan:[] },
+
+      { ma:'PL-2026-047', type:'Phiếu lỗi', nv:'Võ Minh Khôi', nvId:'NV-040', bp:'Ép góc',
+        creator:'Phạm Văn Nam', creatorRole:'Tổ trưởng hoàn thiện – đóng kiện', impact:'Nội bộ', date:'13/06/2026',
+        desc:'Quên dán cảnh báo khu vực dao ép máy EP-02, an toàn LĐ', ref:'nhắc nhở',
+        value:120000, phat:0, status:'Chưa trừ',
+        rule:{ cls:'internal', tag:'PHIẾU LỖI · AN TOÀN LĐ',
+          text:'Vi phạm an toàn lao động → <b>nhắc nhở</b>, tái phạm sẽ lập biên bản.', chot:'Không phát sinh khấu trừ' },
+        plan:[] },
+
+      { ma:'PL-2026-044', type:'Phiếu lỗi', nv:'Hoàng Văn Sơn', nvId:'NV-035', bp:'Uốn vòm',
+        creator:'Lê Quốc Cường', creatorRole:'Quản đốc xưởng cửa nhôm', impact:'Nội bộ', date:'11/06/2026',
+        desc:'UON-MEO · Méo tiết diện 2,4 md thanh vòm, đã loại', ref:'nội bộ',
+        value:95000, phat:0, status:'Chưa trừ',
+        rule:{ cls:'internal', tag:'PHIẾU LỖI · NHẮC NHỞ',
+          text:'Lỗi nhẹ đã loại trong xưởng → <b>nhắc nhở</b>, không trừ tiền.', chot:'Không phát sinh khấu trừ' },
+        plan:[] },
+    ];
+
+    const typeBadge = t => t==='Biên bản' ? '<span class="badge status-overdue">Biên bản</span>' : '<span class="badge status-warning">Phiếu lỗi</span>';
+    const impactBadge = i => i==='Khách hàng' ? '<span class="badge status-overdue">Khách hàng</span>' : '<span class="badge badge-steel">Nội bộ</span>';
+    const statusBadge = s => s==='Đang trừ' ? '<span class="badge badge-orange">Đang trừ</span>'
+      : s==='Đã trừ xong' ? '<span class="badge badge-moss">Đã trừ xong</span>'
+      : '<span class="badge">Chưa trừ</span>';
+
+    /* ===== Bảng danh sách + tìm kiếm + lọc ===== */
+    const tbody  = document.getElementById('bbTbody');
+    const search = document.getElementById('bbSearch');
+    const fType  = document.getElementById('bbType');
+    const fImpact= document.getElementById('bbImpact');
+    const fDept  = document.getElementById('bbDept');
+    const count  = document.getElementById('bbCount');
+
+    if(fDept){
+      const depts = [...new Set(BB.map(b=>b.bp))].sort();
+      fDept.innerHTML = '<option value="">Tất cả bộ phận</option>' + depts.map(d=>`<option>${d}</option>`).join('');
+    }
+
+    /* Mã bản ghi trong ô tham chiếu → field link (ERPPeek bắt click) */
+    const refLink = t => String(t || '')
+      .replace(/(LSX-\d+)/g, '<a href="06-lsx-phieu-cong-nghe.html?lsx=$1" class="lnk">$1</a>')
+      .replace(/(DH-\d+)/g, '<a href="03-don-hang.html?order=$1" class="lnk">$1</a>')
+      .replace(/(CAT-\d+|CNC-\d+|EP-\d+|UON-\d+|LAP-\d+|DOT-\d+)/g, '<a href="17-may-moc.html?may=$1" class="lnk">$1</a>');
+    const nvLink = id => '<a href="22-nhan-su-ho-so.html?nv=' + id + '" class="lnk">' + id + '</a>';
+
+    function rowHtml(b){
+      const trCls = b.phat ? '<span class="text-danger" style="font-weight:600">−' + fmt(b.phat) + '</span>' : '<span style="color:var(--ash)">—</span>';
+      const flag = b.willBB ? '<div class="flag-bb"><i data-lucide="arrow-up-right" style="width:11px;height:11px"></i> Sẽ chuyển biên bản</div>' : '';
+      return `<tr data-bb="${b.ma}">
+        <td><b>${b.ma}</b></td>
+        <td>${b.nv}<div class="t-caption">${nvLink(b.nvId)} · ${b.bp}</div></td>
+        <td>${b.creator}<div class="t-caption">${b.creatorRole}</div></td>
+        <td>${typeBadge(b.type)}${flag}</td>
+        <td>${refLink(b.desc)}<div class="t-caption">${refLink(b.ref)}</div></td>
+        <td class="num">${fmt(b.value)}</td>
+        <td>${impactBadge(b.impact)}</td>
+        <td>${trCls}<div style="margin-top:3px">${statusBadge(b.status)}</div></td>
+      </tr>`;
+    }
+    function applyFilter(){
+      if(!tbody) return;
+      const q = (search?.value||'').toLowerCase().trim();
+      const t = fType?.value||'', im = fImpact?.value||'', d = fDept?.value||'';
+      const list = BB.filter(b =>
+        (!q || b.ma.toLowerCase().includes(q) || b.nv.toLowerCase().includes(q) || b.nvId.toLowerCase().includes(q)) &&
+        (!t || b.type===t) && (!im || b.impact===im) && (!d || b.bp===d));
+      tbody.innerHTML = list.length ? list.map(rowHtml).join('')
+        : `<tr><td colspan="8" style="text-align:center;color:var(--ash);padding:18px">Không có phiếu lỗi / biên bản phù hợp</td></tr>`;
+      tbody.querySelectorAll('tr[data-bb]').forEach(tr=>tr.addEventListener('click', ()=>{ renderBB(tr.dataset.bb); openBB(); }));
+      if(window.lucide) window.lucide.createIcons();
+      if(count){
+        const tongPhat = list.reduce((s,b)=>s+b.phat,0);
+        count.textContent = `Hiển thị ${list.length}/${BB.length} phiếu · tổng tiền phạt đang lọc: ${fmt(tongPhat)}₫`;
+      }
+    }
+    search?.addEventListener('input', applyFilter);
+    fType?.addEventListener('change', applyFilter);
+    fImpact?.addEventListener('change', applyFilter);
+    fDept?.addEventListener('change', applyFilter);
+    applyFilter();
+
+    /* ===== Drawer chi tiết ===== */
+    const body = document.getElementById('bb-body');
+    const drawer = document.getElementById('bb-drawer');
+    const overlay = document.getElementById('bb-overlay');
+    function openBB(){ drawer.classList.add('open'); overlay.classList.add('open'); drawer.setAttribute('aria-hidden','false'); }
+    function closeBB(){ drawer.classList.remove('open'); overlay.classList.remove('open'); drawer.setAttribute('aria-hidden','true'); document.querySelectorAll('#bbTbody tr').forEach(r=>r.classList.remove('row-selected')); }
+    function renderBB(ma){
+      const b = BB.find(x=>x.ma===ma); if(!b || !body) return;
+      const isBB = b.type==='Biên bản';
+      const planRows = b.plan.length
+        ? `<div class="table-wrap" style="margin-bottom:6px"><table class="tbl"><thead><tr><th>Kỳ</th><th class="num">Trừ kỳ này</th><th class="num">Còn lại dồn</th><th>Trạng thái</th></tr></thead><tbody>
+            ${b.plan.map(([ky,tru,con,st,cls])=>`<tr><td>${ky}</td><td class="num">${tru}</td><td class="num">${con}</td><td><span class="badge ${cls}">${st}</span></td></tr>`).join('')}
+          </tbody></table></div>`
+        : `<div class="t-caption">Phiếu lỗi chưa phát sinh khấu trừ lương${b.willBB?' — sẽ tạo kế hoạch trừ khi chuyển biên bản.':'.'}</div>`;
+      body.innerHTML = `
+        <div class="flex-between mb-2">
+          <div>
+            <div class="t-h5">${isBB?'Biên bản':'Phiếu lỗi'} ${b.ma}</div>
+            <div class="t-caption">Lập ngày ${b.date} · kỳ T6/2026</div>
+          </div>
+          ${b.phat ? '<span class="badge status-overdue">Có trừ tiền</span>' : '<span class="badge badge-steel">Chưa trừ tiền</span>'}
+        </div>
+
+        <div class="bb-row"><span class="k">NV bị lập</span><span class="v">${b.nv} · ${nvLink(b.nvId)}</span></div>
+        <div class="bb-row"><span class="k">Bộ phận</span><span class="v">${b.bp}</span></div>
+        <div class="bb-row"><span class="k">Người lập</span><span class="v">${b.creator}<div class="t-caption" style="font-weight:400">${b.creatorRole}</div></span></div>
+        <div class="bb-row"><span class="k">Loại</span><span class="v">${typeBadge(b.type)}</span></div>
+        <div class="bb-row"><span class="k">Ảnh hưởng</span><span class="v">${impactBadge(b.impact)}</span></div>
+        <div class="bb-row"><span class="k">Mô tả lỗi</span><span class="v" style="max-width:230px">${refLink(b.desc)} (${refLink(b.ref)})</span></div>
+        <div class="bb-row"><span class="k">Giá trị thiệt hại</span><span class="v" style="color:var(--signal)">${fmt(b.value)} ₫</span></div>
+        <div class="bb-row"><span class="k">Tiền phạt (trừ lương)</span><span class="v" style="color:${b.phat?'var(--signal)':'var(--ash)'}">${b.phat?fmt(b.phat)+' ₫':'—'}</span></div>
+
+        <hr class="hr-soft">
+        <div class="t-micro-u mb-1">Cơ chế phạt áp dụng</div>
+        <div class="rule-box ${b.rule.cls}">
+          <div class="rb-tag" style="color:${b.rule.cls==='customer'?'var(--signal)':'var(--steel)'}">${b.rule.tag}</div>
+          <div style="margin-top:5px">${b.rule.text}</div>
+          <div style="margin-top:6px;font-weight:600;color:${b.rule.cls==='customer'?'var(--signal)':'var(--ink)'}">${b.rule.chot}</div>
+        </div>
+
+        <hr class="hr-soft">
+        <div class="t-micro-u mb-1">Kế hoạch trừ lương (đảm bảo thực lĩnh ≥ 0)</div>
+        ${planRows}
+
+        <div class="flex" style="gap:8px;margin-top:14px">
+          <button class="btn btn-secondary btn-sm" style="flex:1" data-print><i data-lucide="printer" style="width:13px;height:13px"></i> In để lưu trữ</button>
+          <button class="btn btn-primary btn-sm" style="flex:1" data-approve><i data-lucide="check-circle-2" style="width:13px;height:13px"></i> ${isBB?'Duyệt biên bản':'Chuyển biên bản'}</button>
+        </div>`;
+      if(window.lucide) window.lucide.createIcons();
+      body.querySelector('[data-print]')?.addEventListener('click', ()=> toast(`Đang in <b>${b.ma}</b> để lưu trữ`, 'info'));
+      body.querySelector('[data-approve]')?.addEventListener('click', ()=> toast(`Đã ${isBB?'duyệt biên bản':'chuyển sang biên bản'} <b>${b.ma}</b>`, 'success'));
+      drawer.scrollTop = 0;
+      document.querySelectorAll('#bbTbody tr').forEach(r=>r.classList.toggle('row-selected', r.dataset.bb===ma));
+    }
+    overlay?.addEventListener('click', closeBB);
+    document.getElementById('bb-close')?.addEventListener('click', closeBB);
+    document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closeBB(); });
+
+    /* ===== Charts tab Báo cáo — vẽ lười khi mở tab ===== */
+    let drawn = false;
+    function drawCharts(){
+      if(drawn) return; drawn = true;
+      ERPCharts.bar('chartDept', {
+        labels: ['KCS','Cắt CNC','Ép góc','Uốn vòm'],
+        values: [900, 1820, 850, 480],
+        colors: ['#4a5560','#c5400a','#9c7714','#2f5d3a'],
+      }, { height: 200, unit:'k' });
+      ERPCharts.donut('chartImpact', {
+        labels: ['Nội bộ','Khách hàng'],
+        values: [4, 1],
+        colors: ['#4a5560','#8a1f1f'],
+      }, { centerLabel: 'Biên bản', centerValue: '5', size: 180 });
+    }
+    const baocaoTab = document.querySelector('[data-tab="tab-baocao"]');
+    if(baocaoTab) baocaoTab.addEventListener('click', ()=> setTimeout(drawCharts, 60));
+  });
+</script>
+</body>
+</html>

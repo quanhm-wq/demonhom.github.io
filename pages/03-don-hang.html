@@ -1,0 +1,2721 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Đơn hàng bán — ERP NHÔM OWIN</title>
+  <link rel="stylesheet" href="../assets/css/style.css" />
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+  <style>
+    /* ============================================================
+       Đơn hàng · Master-Detail
+       ============================================================ */
+
+    /* Filter strip — compact */
+    .filter-strip {
+      background: var(--canvas);
+      border: 1px solid var(--rule-soft);
+      border-radius: var(--r-5);
+      padding: 12px 14px;
+      margin-bottom: 12px;
+      display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+    }
+    .filter-strip .search-wrap {
+      flex: 1; min-width: 240px; position: relative;
+      display: flex; align-items: center;
+    }
+    .filter-strip .search-wrap i { position: absolute; left: 10px; color: var(--ash-2); pointer-events: none; }
+    .filter-strip .search-wrap input { padding-left: 32px; height: 32px; width: 100%; }
+    .filter-strip .filter-pill { padding: 5px 10px; font-size: 12px; }
+
+    /* Tabs strip */
+    .tabs-strip {
+      display: flex; gap: 4px; flex-wrap: wrap; align-items: center;
+      margin-bottom: 12px;
+    }
+    .tabs-strip .tab {
+      padding: 6px 12px;
+      background: transparent;
+      border: 1px solid transparent;
+      color: var(--ash);
+      font-size: 13px;
+      font-weight: 500;
+      border-radius: var(--r-3);
+      cursor: pointer;
+      transition: all 140ms ease;
+      display: inline-flex; align-items: center; gap: 6px;
+    }
+    .tabs-strip .tab:hover { color: var(--ink); }
+    .tabs-strip .tab .count {
+      font-family: var(--ff-mono);
+      font-size: 10px;
+      padding: 1px 6px;
+      background: var(--paper-2);
+      border-radius: 2px;
+      letter-spacing: 0.08em;
+    }
+    .tabs-strip .tab.tab-active {
+      background: var(--ink);
+      color: var(--paper);
+      box-shadow: none;
+    }
+    .tabs-strip .tab.tab-active .count { background: rgba(245, 241, 232, 0.15); color: var(--paper); }
+    .tabs-strip .tab.tab-danger { color: var(--signal); }
+    .tabs-strip .tab.tab-danger.tab-active { background: var(--signal); color: var(--paper); }
+    .tabs-strip .tab.tab-danger .count { background: var(--signal-soft); color: var(--signal); }
+
+    /* KPI strip — compact horizontal */
+    .kpi-strip {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 0;
+      background: var(--canvas);
+      border: 1px solid var(--rule-soft);
+      border-radius: var(--r-5);
+      padding: 14px 0;
+      margin-bottom: 12px;
+    }
+    .kpi-strip .kpi-mini {
+      padding: 0 20px;
+      border-right: 1px solid var(--rule-hair);
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .kpi-strip .kpi-mini:last-child { border-right: 0; }
+    .kpi-strip .kpi-mini .l {
+      font-family: var(--ff-mono);
+      font-size: 9px; font-weight: 500;
+      letter-spacing: 0.16em; text-transform: uppercase;
+      color: var(--ash);
+    }
+    .kpi-strip .kpi-mini .v {
+      font-size: 20px;
+      font-weight: 500;
+      letter-spacing: -0.015em;
+      color: var(--ink);
+      font-variant-numeric: tabular-nums;
+      line-height: 1.1;
+    }
+    .kpi-strip .kpi-mini .delta {
+      font-size: 11px;
+      color: var(--ash);
+      margin-top: 2px;
+    }
+    .kpi-strip .kpi-mini .delta.up { color: var(--moss); }
+    .kpi-strip .kpi-mini .delta.down { color: var(--signal); }
+
+    /* Order list — compact rows */
+    .order-list {
+      background: var(--canvas);
+      border: 1px solid var(--rule-soft);
+      border-radius: var(--r-5);
+      overflow: hidden;
+    }
+    .ol-head, .ol-row {
+      display: grid;
+      grid-template-columns: 32px 128px minmax(0, 1.15fr) minmax(0, 1.3fr) 92px 108px 96px 120px 156px 30px;
+      gap: 12px;
+      align-items: center;
+      padding: 12px 16px;
+      min-width: 0;
+    }
+    .ol-head {
+      background: var(--paper);
+      border-bottom: 1px solid var(--rule);
+      font-family: var(--ff-mono);
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--ash);
+    }
+    .ol-head .num, .ol-head .right { text-align: right; }
+    .ol-row {
+      border-bottom: 1px solid var(--rule-hair);
+      cursor: pointer;
+      transition: background 140ms ease;
+      font-size: 13px;
+    }
+    .ol-row:hover { background: var(--paper-2); }
+    .ol-row.active { background: var(--rust-soft); border-left: 3px solid var(--rust); padding-left: 13px; }
+    .ol-row:last-child { border-bottom: 0; }
+
+    .ol-row .ord-code { font-family: var(--ff-mono); font-weight: 600; color: var(--ink); font-size: 13px; letter-spacing: -0.005em; }
+    .ol-row .ord-date { font-family: var(--ff-mono); font-size: 10px; color: var(--ash-2); letter-spacing: 0.1em; margin-top: 2px; }
+    .ol-row .ord-cust { font-weight: 500; color: var(--ink); }
+    .ol-row .ord-cust-meta { font-size: 11px; color: var(--ash); margin-top: 2px; display: flex; align-items: center; gap: 4px; }
+    .ol-row .ord-prod { color: var(--ink); font-weight: 500; }
+    .ol-row .ord-prod-meta { font-size: 11px; color: var(--ash); margin-top: 2px; }
+    /* trạng thái lên Lệnh SX của đơn */
+    .lsx-stat { display: inline-flex; align-items: center; gap: 4px; font-family: var(--ff-mono); font-size: 9px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; padding: 2px 8px; border-radius: var(--r-pill); margin-top: 6px; }
+    .lsx-stat i { width: 11px; height: 11px; }
+    .lsx-stat.none { background: var(--paper-2); color: var(--ash); }
+    .lsx-stat.part { background: var(--amber-soft); color: var(--amber); }
+    .lsx-stat.full { background: var(--moss-soft); color: var(--moss-deep); }
+    /* nút đẩy đơn/SP sang Lệnh sản xuất (trên dòng đơn chưa lên đủ lệnh) */
+    .btn-make-lsx {
+      display: inline-flex; align-items: center; gap: 4px; margin-top: 6px; margin-left: 6px;
+      padding: 2px 8px; border: 1px solid var(--rule); border-radius: var(--r-pill);
+      background: var(--canvas); font-family: var(--ff-mono); font-size: 9px; font-weight: 600;
+      letter-spacing: 0.04em; text-transform: uppercase; color: var(--rust); cursor: pointer;
+      transition: background 120ms ease, border-color 120ms ease;
+    }
+    .btn-make-lsx:hover { background: var(--rust-soft); border-color: var(--rust); }
+    .btn-make-lsx i { width: 11px; height: 11px; }
+    /* popup "Tổng hợp sản phẩm → Lệnh sản xuất" */
+    .erp-modal:has(.lsxp-wrap) { max-width: 860px; }
+    .lsxp-wrap { max-height: 52vh; overflow: auto; border: 1px solid var(--rule); border-radius: var(--r-3); margin-top: 10px; }
+    .lsxp-wrap .tbl { width: 100%; }
+    .lsxp-wrap .tbl td { vertical-align: middle; }
+    .lsxp-wrap .lsx-stat { margin-top: 0; white-space: nowrap; }
+    .lsxp-code { font-family: var(--ff-mono); font-weight: 600; font-size: 12px; color: var(--ink); }
+    .lsxp-sub { font-size: 11px; color: var(--ash); margin-top: 4px; }
+    .lsxp-foot { display: flex; align-items: center; margin-top: 10px; font-size: 12.5px; color: var(--ash); }
+    .lsxp-foot b { color: var(--ink); font-variant-numeric: tabular-nums; }
+    .ol-row .ord-qty, .ol-row .ord-val { text-align: right; font-variant-numeric: tabular-nums; }
+    .ol-row .ord-qty { color: var(--ash); }
+    .ol-row .ord-val { color: var(--ink); font-weight: 600; }
+    .ol-row .ord-rep { color: var(--ash); }
+    .ol-row .ord-rep b { color: var(--ink); font-weight: 500; }
+
+    .ol-row .ord-due {
+      display: flex; flex-direction: column; gap: 4px;
+      align-items: stretch;
+    }
+    .ol-row .ord-due-tag {
+      font-family: var(--ff-mono);
+      font-size: 9px; font-weight: 600;
+      letter-spacing: 0.14em; text-transform: uppercase;
+      padding: 2px 6px;
+      border-radius: 2px;
+      align-self: flex-start;
+    }
+    .ol-row .ord-due-date { font-size: 10px; color: var(--ash); font-family: var(--ff-mono); letter-spacing: 0.08em; }
+    .due-overdue { background: var(--signal-soft); color: var(--signal); }
+    .due-warning { background: var(--amber-soft); color: var(--amber); }
+    .due-due     { background: var(--steel-soft); color: var(--steel); }
+    .due-safe    { background: var(--moss-soft); color: var(--moss-deep); }
+    .due-done    { background: var(--paper-2); color: var(--ash); }
+
+    /* 5-stage progress dots */
+    .stage-dots { display: inline-flex; align-items: center; gap: 3px; }
+    .stage-dots .sd {
+      width: 8px; height: 8px;
+      border-radius: 9999px;
+      background: var(--rule);
+    }
+    .stage-dots .sd.done { background: var(--moss); }
+    .stage-dots .sd.active {
+      background: var(--rust);
+      animation: pulse 2.4s ease-in-out infinite;
+      box-shadow: 0 0 0 0 rgba(197, 64, 10, 0.4);
+    }
+    .stage-dots .sd.fail { background: var(--signal); }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.55; transform: scale(1.4); }
+    }
+
+    /* Cột cảnh báo Công nợ / Trễ giao */
+    .ol-row .ord-alert, .ol-head .col-alert { font-size: 11.5px; line-height: 1.35; }
+    .ol-row .ord-alert.is-bad { color: #8a1f1f; font-weight: 600; }
+    .ol-row .ord-alert.is-good { color: #1f6b3a; font-weight: 600; }
+    .ol-row .ord-alert.is-none { color: var(--ash-2); }
+    /* Hợp đồng gắn trên dòng đơn */
+    .ol-row .ord-hd { font-family: var(--ff-mono); font-size: 10px; letter-spacing: .06em; margin-top: 3px; }
+    .ol-row .ord-hd a.lnk { color: var(--rust); text-decoration: none; border-bottom: 1px dotted var(--rust); }
+    .ol-row .ord-hd .no-hd { color: var(--ash-2); }
+
+    /* Dải nút hành động trong drawer */
+    .dr-ops { display: flex; flex-wrap: wrap; gap: 8px; padding: 12px 20px 4px; }
+    .dr-ops button {
+      display: inline-flex; align-items: center; gap: 6px; min-height: 36px;
+      padding: 0 14px; border-radius: var(--r-3); border: 1px solid var(--rule);
+      background: var(--canvas); color: var(--ink); font-size: 12.5px; font-weight: 500; cursor: pointer;
+      transition: border-color 120ms ease, background 120ms ease;
+    }
+    .dr-ops button:hover { border-color: var(--rust); color: var(--rust); }
+    .dr-ops button.is-primary { background: var(--rust); border-color: var(--rust); color: var(--paper); }
+    .dr-ops button.is-primary:hover { background: var(--rust-2, var(--rust)); color: var(--paper); }
+    .dr-ops button i { width: 14px; height: 14px; }
+
+    /* Nhóm trường chuẩn ERP (sửa tại chỗ) */
+    .fld-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 14px; }
+    .fld-grid .fld.wide { grid-column: 1 / -1; }
+    .fld .fk { display: block; font-family: var(--ff-mono); font-size: 9px; letter-spacing: .14em;
+      text-transform: uppercase; color: var(--ash); margin-bottom: 3px; }
+    .fld .fv { display: block; font-size: 13px; font-weight: 600; color: var(--ink); line-height: 1.45; }
+    .fld .fv a.lnk { color: var(--rust); text-decoration: none; border-bottom: 1px dotted var(--rust); }
+    .fld input.fe, .fld select.fe { width: 100%; box-sizing: border-box; font: inherit; font-size: 13px;
+      font-weight: 600; color: var(--ink); background: #fff; border: 1px solid var(--rust);
+      border-radius: 6px; padding: 4px 8px; outline: none; }
+    .fld-bar { display: flex; gap: 8px; justify-content: flex-end; margin-top: 12px; }
+
+    /* Màn soạn đơn theo tồn kho */
+    .erp-modal:has(#ocForm) { max-width: 1040px; }
+    #ocForm .oc-top { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 10px 14px; margin-bottom: 12px; }
+    #ocForm .oc-f { display: flex; flex-direction: column; gap: 4px; }
+    #ocForm .oc-f span { font-family: var(--ff-mono); font-size: 9px; letter-spacing: .14em; text-transform: uppercase; color: var(--ash); }
+    #ocForm .oc-f input, #ocForm .oc-f select { font: inherit; font-size: 13px; padding: 7px 9px;
+      border: 1px solid var(--rule); border-radius: var(--r-3); background: var(--canvas); color: var(--ink); }
+    #ocForm .oc-wrap { max-height: 40vh; overflow: auto; border: 1px solid var(--rule); border-radius: var(--r-3); }
+    #ocForm table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+    #ocForm th { position: sticky; top: 0; background: var(--paper-2); font-family: var(--ff-mono);
+      font-size: 9px; letter-spacing: .1em; text-transform: uppercase; color: var(--ash);
+      text-align: left; padding: 7px 9px; border-bottom: 1px solid var(--rule); }
+    #ocForm td { padding: 6px 9px; border-bottom: 1px solid var(--rule-hair); vertical-align: middle; }
+    #ocForm td.num, #ocForm th.num { text-align: right; font-variant-numeric: tabular-nums; }
+    #ocForm input.oc-qty, #ocForm input.oc-price { width: 92px; font: inherit; font-size: 12.5px; text-align: right;
+      padding: 4px 6px; border: 1px solid var(--rule); border-radius: 5px; }
+    #ocForm tr.oc-over td { background: rgba(138,31,31,.07); }
+    #ocForm tr.oc-over input.oc-qty { border-color: #8a1f1f; color: #8a1f1f; font-weight: 700; }
+    #ocForm .oc-err { color: #8a1f1f; font-size: 11.5px; font-weight: 600; margin-top: 8px; min-height: 16px; }
+    #ocForm .oc-sum { display: flex; justify-content: flex-end; gap: 22px; margin-top: 10px; font-size: 13px; }
+    #ocForm .oc-sum b { font-variant-numeric: tabular-nums; }
+
+    /* Bulk action bar */
+    .bulk-bar {
+      display: none;
+      padding: 10px 16px;
+      background: var(--ink);
+      color: var(--paper);
+      border-radius: var(--r-3);
+      margin-bottom: 8px;
+      align-items: center;
+      gap: 12px;
+      font-size: 13px;
+    }
+    .bulk-bar.is-show { display: flex; }
+    .bulk-bar .b-count { font-weight: 600; }
+    .bulk-bar .b-act {
+      margin-left: auto;
+      display: inline-flex; gap: 6px;
+    }
+    .bulk-bar .b-act button {
+      background: rgba(245, 241, 232, 0.1);
+      border: 1px solid rgba(245, 241, 232, 0.18);
+      color: var(--paper);
+      padding: 5px 10px;
+      border-radius: var(--r-2);
+      font-size: 12px; cursor: pointer;
+      transition: background 140ms ease;
+    }
+    .bulk-bar .b-act button:hover { background: rgba(245, 241, 232, 0.18); }
+
+    /* Pagination */
+    .pagination {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 4px;
+      font-size: 12px;
+      color: var(--ash);
+    }
+    .pagination .pg-controls { display: flex; gap: 4px; align-items: center; }
+    .pagination .pg-controls button {
+      min-width: 28px; height: 28px;
+      padding: 0 8px;
+      background: var(--canvas);
+      border: 1px solid var(--rule);
+      border-radius: var(--r-2);
+      font-size: 12px;
+      cursor: pointer;
+      color: var(--ink);
+      font-family: var(--ff-mono);
+      font-variant-numeric: tabular-nums;
+    }
+    .pagination .pg-controls button:hover { border-color: var(--ink); }
+    .pagination .pg-controls button.is-active { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+
+    /* ============================================================
+       Drawer
+       ============================================================ */
+    .order-drawer {
+      position: fixed; inset: 0;
+      z-index: 100;
+      pointer-events: none;
+      --drawer-w: 560px;
+    }
+    .drawer-overlay {
+      position: absolute; inset: 0;
+      background: rgba(20, 19, 15, 0.42);
+      opacity: 0;
+      transition: opacity 240ms ease;
+    }
+    /* Thanh kéo giãn panel (mép trái) */
+    .drawer-resizer {
+      position: absolute; top: 0; bottom: 0;
+      right: min(var(--drawer-w), 94vw);
+      width: 12px; margin-right: -6px;
+      cursor: ew-resize; z-index: 103;
+      display: none;
+    }
+    .order-drawer.is-open .drawer-resizer { display: block; }
+    .drawer-resizer::before {
+      content: ''; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      width: 4px; height: 46px; border-radius: 4px; background: var(--rule);
+      transition: background 120ms ease, height 120ms ease;
+    }
+    .drawer-resizer:hover::before, .drawer-resizer.dragging::before { background: var(--rust); height: 76px; }
+    .drawer-panel {
+      position: absolute; right: 0; top: 0; bottom: 0;
+      width: min(var(--drawer-w), 94vw); max-width: 94vw;
+      background: var(--paper);
+      border-left: 1px solid var(--rule);
+      transform: translateX(100%);
+      transition: transform 280ms cubic-bezier(.2,.8,.2,1);
+      overflow-y: auto;
+      display: flex; flex-direction: column;
+      box-shadow: -16px 0 48px rgba(20, 19, 15, 0.15);
+    }
+    .order-drawer.is-open { pointer-events: auto; }
+    .order-drawer.is-open .drawer-overlay { opacity: 1; }
+    .order-drawer.is-open .drawer-panel { transform: translateX(0); }
+
+    /* Drawer header */
+    .dr-head {
+      padding: 18px 22px;
+      background: var(--ink);
+      color: var(--paper);
+      position: sticky; top: 0; z-index: 5;
+      flex-shrink: 0;
+    }
+    .dr-head .dr-top {
+      display: flex; justify-content: space-between; align-items: flex-start;
+      gap: 16px;
+      margin-bottom: 14px;
+    }
+    .dr-head .dr-code-row {
+      display: flex; align-items: baseline; gap: 10px;
+    }
+    .dr-head .dr-code {
+      font-family: var(--ff-mono);
+      font-size: 18px; font-weight: 600;
+      letter-spacing: -0.005em;
+      color: var(--paper);
+    }
+    .dr-head .dr-status {
+      font-family: var(--ff-mono);
+      font-size: 9px; font-weight: 600;
+      letter-spacing: 0.16em; text-transform: uppercase;
+      padding: 3px 8px;
+      background: rgba(245, 241, 232, 0.12);
+      color: var(--rust-2);
+      border-radius: 2px;
+      border: 1px solid rgba(232, 90, 42, 0.3);
+    }
+    .dr-head .dr-cust {
+      font-size: 13px; color: rgba(245, 241, 232, 0.65);
+      margin-top: 4px;
+      display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    }
+    .dr-head .dr-cust b { color: var(--paper); font-weight: 500; }
+    .dr-head .dr-close {
+      background: rgba(245, 241, 232, 0.08);
+      border: 0; color: var(--paper);
+      width: 32px; height: 32px;
+      border-radius: var(--r-2);
+      display: inline-flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      transition: background 140ms ease;
+      flex-shrink: 0;
+    }
+    .dr-head .dr-close:hover { background: rgba(245, 241, 232, 0.16); }
+
+    .dr-head .dr-value {
+      display: flex; align-items: baseline; gap: 8px;
+      margin-top: 6px;
+    }
+    .dr-head .dr-value .val {
+      font-size: 28px; font-weight: 500;
+      letter-spacing: -0.02em; color: var(--paper);
+      font-variant-numeric: tabular-nums;
+    }
+    .dr-head .dr-value .val-sub {
+      font-family: var(--ff-mono);
+      font-size: 10px; font-weight: 500;
+      letter-spacing: 0.14em; text-transform: uppercase;
+      color: rgba(245, 241, 232, 0.5);
+    }
+
+    .dr-quick-actions {
+      display: grid; grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+      margin-top: 16px;
+    }
+    .dr-quick-actions button {
+      padding: 8px 6px;
+      background: rgba(245, 241, 232, 0.08);
+      border: 1px solid rgba(245, 241, 232, 0.14);
+      border-radius: var(--r-2);
+      color: var(--paper);
+      font-size: 11px;
+      cursor: pointer;
+      display: flex; flex-direction: column; align-items: center; gap: 4px;
+      transition: background 140ms ease, border-color 140ms ease;
+    }
+    .dr-quick-actions button:hover { background: rgba(245, 241, 232, 0.16); border-color: rgba(245, 241, 232, 0.3); }
+    .dr-quick-actions button i { color: var(--rust-2); }
+
+    /* Drawer body */
+    .dr-body { padding: 18px 22px; display: flex; flex-direction: column; gap: 20px; }
+
+    .dr-section { display: flex; flex-direction: column; gap: 10px; }
+    .dr-section-head {
+      font-family: var(--ff-mono);
+      font-size: 10px; font-weight: 500;
+      letter-spacing: 0.16em; text-transform: uppercase;
+      color: var(--ash);
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .dr-section-head .h-extra { color: var(--ash-2); font-size: 10px; letter-spacing: 0.14em; }
+
+    /* Timeline (5 stage horizontal) */
+    .dr-timeline {
+      background: var(--canvas);
+      border: 1px solid var(--rule-soft);
+      border-radius: var(--r-3);
+      padding: 18px 16px 14px;
+    }
+    .timeline-track {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 0;
+      position: relative;
+    }
+    .timeline-track::before {
+      content: ""; position: absolute;
+      top: 10px; left: 10%; right: 10%; height: 2px;
+      background: var(--rule);
+      z-index: 0;
+    }
+    .tl-step {
+      display: flex; flex-direction: column; align-items: center;
+      position: relative; z-index: 1;
+      font-size: 11px;
+    }
+    .tl-step .tl-dot {
+      width: 22px; height: 22px;
+      border-radius: 9999px;
+      background: var(--paper);
+      border: 2px solid var(--rule);
+      display: inline-flex; align-items: center; justify-content: center;
+      margin-bottom: 6px;
+    }
+    .tl-step.done .tl-dot { background: var(--moss); border-color: var(--moss); color: var(--paper); }
+    .tl-step.done .tl-dot::after { content: "✓"; font-size: 12px; font-weight: 700; }
+    .tl-step.active .tl-dot {
+      background: var(--rust); border-color: var(--rust); color: var(--paper);
+      box-shadow: 0 0 0 4px rgba(197, 64, 10, 0.18);
+    }
+    .tl-step.active .tl-dot::after { content: ""; width: 6px; height: 6px; background: var(--paper); border-radius: 9999px; }
+    .tl-step.fail .tl-dot { background: var(--signal); border-color: var(--signal); color: var(--paper); }
+    .tl-step.fail .tl-dot::after { content: "✕"; font-size: 11px; font-weight: 700; }
+    .tl-step .tl-name { font-size: 11px; font-weight: 500; color: var(--ink); margin-bottom: 2px; }
+    .tl-step.pending .tl-name { color: var(--ash-2); }
+    .tl-step .tl-meta { font-family: var(--ff-mono); font-size: 9px; letter-spacing: 0.1em; color: var(--ash); }
+
+    /* Info table */
+    .dr-info {
+      background: var(--canvas);
+      border: 1px solid var(--rule-soft);
+      border-radius: var(--r-3);
+      padding: 14px 16px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px 24px;
+      font-size: 13px;
+    }
+    .dr-info .field-pair {
+      display: flex; flex-direction: column; gap: 2px;
+    }
+    .dr-info .fp-key {
+      font-family: var(--ff-mono);
+      font-size: 9px; font-weight: 500;
+      letter-spacing: 0.16em; text-transform: uppercase;
+      color: var(--ash);
+    }
+    .dr-info .fp-val { color: var(--ink); font-weight: 500; font-size: 13px; }
+
+    /* Thông tin đơn hàng dạng bản ghi (bảng dòng sản phẩm) */
+    .ord-rec-wrap { border: 1px solid var(--rule); border-radius: var(--r-3); overflow-x: auto; }
+    table.ord-rec { width: 100%; border-collapse: collapse; font-size: 11.5px; min-width: 560px; }
+    table.ord-rec th, table.ord-rec td { border: 1px solid var(--rule-soft); padding: 6px 8px; vertical-align: top; text-align: left; }
+    table.ord-rec th { background: var(--paper-2); font-family: var(--ff-mono); font-size: 8.5px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ash); line-height: 1.35; white-space: nowrap; }
+    table.ord-rec th .en { display: block; font-weight: 400; text-transform: none; letter-spacing: 0; color: var(--ash-2); }
+    table.ord-rec td.c { text-align: center; }
+    table.ord-rec td.r { text-align: right; font-variant-numeric: tabular-nums; }
+    table.ord-rec td .pcode { font-family: var(--ff-mono); font-weight: 600; color: var(--ink); }
+    table.ord-rec td .pdesc b { color: var(--ink); }
+    table.ord-rec td .pdesc small { display: block; color: var(--ash); margin-top: 2px; }
+    .ord-rec-meta { display: flex; flex-wrap: wrap; gap: 6px 18px; margin-top: 8px; font-size: 12px; color: var(--ash); }
+    .ord-rec-meta b { color: var(--ink); font-weight: 500; }
+
+    /* LSX section card */
+    .dr-lsx {
+      background: var(--canvas);
+      border: 1px solid var(--rule-soft);
+      border-radius: var(--r-3);
+      padding: 14px 16px;
+    }
+    .dr-lsx .lsx-head {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 10px;
+    }
+    .dr-lsx .lsx-id {
+      font-family: var(--ff-mono);
+      font-weight: 600;
+      color: var(--ink);
+      font-size: 14px;
+    }
+    .dr-lsx .lsx-stage {
+      font-family: var(--ff-mono);
+      font-size: 10px; font-weight: 500;
+      letter-spacing: 0.14em; text-transform: uppercase;
+      color: var(--moss);
+      display: inline-flex; align-items: center; gap: 6px;
+    }
+    .dr-lsx .lsx-stage::before {
+      content: ""; width: 6px; height: 6px; background: var(--moss); border-radius: 9999px;
+      animation: pulse 2.4s ease-in-out infinite;
+    }
+    .dr-lsx .lsx-meta {
+      font-size: 12px;
+      color: var(--ash);
+      margin-bottom: 10px;
+    }
+    .dr-lsx .lsx-meta b { color: var(--ink); font-weight: 500; }
+    .dr-lsx .lsx-progress-track {
+      height: 6px;
+      background: var(--paper-2);
+      border-radius: 9999px;
+      overflow: hidden;
+    }
+    .dr-lsx .lsx-progress-track > div {
+      height: 100%;
+      background: var(--rust);
+      transition: width 320ms ease;
+    }
+    .dr-lsx .lsx-progress-meta {
+      display: flex; justify-content: space-between;
+      margin-top: 6px;
+      font-size: 11px;
+      color: var(--ash);
+      font-family: var(--ff-mono);
+      letter-spacing: 0.08em;
+    }
+    .dr-lsx .lsx-progress-meta b { color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; }
+    .dr-lsx .lsx-link {
+      margin-top: 12px;
+      font-size: 12px;
+      color: var(--rust);
+      font-weight: 500;
+      display: inline-flex; align-items: center; gap: 4px;
+    }
+    .dr-lsx .lsx-empty {
+      padding: 18px 0;
+      text-align: center;
+      color: var(--ash);
+      font-size: 13px;
+    }
+
+    /* Payment grid */
+    .dr-payment {
+      background: var(--canvas);
+      border: 1px solid var(--rule-soft);
+      border-radius: var(--r-3);
+      padding: 14px 16px;
+    }
+    .pay-row {
+      display: flex; justify-content: space-between; align-items: baseline;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--rule-hair);
+      font-size: 13px;
+    }
+    .pay-row:last-child { border-bottom: 0; }
+    .pay-row .pk { color: var(--ash); }
+    .pay-row .pv { font-weight: 500; color: var(--ink); font-variant-numeric: tabular-nums; }
+    .pay-row.pay-total { padding-top: 12px; margin-top: 4px; border-top: 2px solid var(--ink); border-bottom: 0; }
+    .pay-row.pay-total .pk { color: var(--ink); font-weight: 600; }
+    .pay-row.pay-total .pv { font-size: 16px; color: var(--rust); font-weight: 600; }
+
+    /* Activity log */
+    .dr-activity {
+      background: var(--canvas);
+      border: 1px solid var(--rule-soft);
+      border-radius: var(--r-3);
+      padding: 14px 16px;
+    }
+    .act-item {
+      display: grid; grid-template-columns: 100px minmax(0, 1fr);
+      gap: 14px;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--rule-hair);
+      font-size: 12px;
+    }
+    .act-item:last-child { border-bottom: 0; }
+    .act-item:first-child { padding-top: 0; }
+    .act-item .at-time {
+      font-family: var(--ff-mono);
+      color: var(--ash);
+      font-size: 11px;
+      letter-spacing: 0.08em;
+    }
+    .act-item .at-body {
+      color: var(--ink);
+      line-height: 1.5;
+    }
+    .act-item .at-body b { font-weight: 500; }
+    .act-item .at-by { color: var(--ash); font-size: 11px; margin-top: 2px; }
+
+    /* Empty state when no drawer */
+    .dr-empty {
+      padding: 80px 24px;
+      text-align: center;
+      color: var(--ash);
+    }
+    .dr-empty i { color: var(--ash-2); margin-bottom: 12px; }
+    .dr-empty .dr-empty-title { font-size: 16px; font-weight: 500; color: var(--ink); margin-bottom: 6px; }
+    .dr-empty .dr-empty-sub { font-size: 13px; max-width: 320px; margin: 0 auto; line-height: 1.5; }
+
+    /* Giao hàng — hạn giao + countdown */
+    .dr-deliver-card {
+      background: var(--canvas);
+      border: 1px solid var(--rule-soft);
+      border-radius: var(--r-3);
+      padding: 14px 16px;
+    }
+    .dr-deliver-card .ddc-row { display: flex; align-items: flex-end; gap: 12px; }
+    .dr-deliver-card .ddc-field { display: flex; flex-direction: column; gap: 7px; flex: 1; min-width: 0; }
+    .dr-deliver-card .ddc-key {
+      font-family: var(--ff-mono);
+      font-size: 9px; font-weight: 500;
+      letter-spacing: 0.16em; text-transform: uppercase;
+      color: var(--ash);
+    }
+    .dr-deliver-card input[type="date"] {
+      width: 100%; height: 38px;
+      padding: 0 10px;
+      font-size: 13px;
+      font-family: var(--ff-mono);
+      color: var(--ink);
+      background: var(--paper);
+      border: 1px solid var(--rule);
+      border-radius: var(--r-2);
+    }
+    .dr-deliver-card input[type="date"]:focus {
+      outline: none; border-color: var(--rust);
+      box-shadow: 0 0 0 3px rgba(197, 64, 10, 0.12);
+    }
+    .dr-deliver-card .ddc-countdown {
+      flex-shrink: 0; height: 38px;
+      display: inline-flex; align-items: center; white-space: nowrap;
+      font-family: var(--ff-mono);
+      font-size: 11px; font-weight: 700; letter-spacing: 0.06em;
+      padding: 0 14px; border-radius: var(--r-pill);
+    }
+    .dr-deliver-card .ddc-hint {
+      font-size: 11px; color: var(--ash); margin-top: 10px; line-height: 1.45;
+    }
+
+    /* Hợp đồng action */
+    .dr-contract {
+      background: var(--canvas);
+      border: 1px solid var(--rule-soft);
+      border-radius: var(--r-3);
+      padding: 14px 16px;
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 12px; flex-wrap: wrap;
+    }
+    .dr-contract .dc-info { font-size: 13px; color: var(--ink); }
+    .dr-contract .dc-info .dc-sub { font-size: 11px; color: var(--ash); margin-top: 3px; }
+    .dr-contract .dc-info .dc-id { font-family: var(--ff-mono); font-weight: 600; }
+    .dr-contract a.dc-btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 8px 12px;
+      border-radius: var(--r-2);
+      font-size: 12px; font-weight: 500;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+    .dr-contract a.dc-btn.is-primary { background: var(--rust); color: var(--paper); border: 1px solid var(--rust); }
+    .dr-contract a.dc-btn.is-secondary { background: var(--paper); color: var(--ink); border: 1px solid var(--rule); }
+
+    /* BG reference badge */
+    .dr-bg-ref {
+      display: inline-flex; align-items: center; gap: 6px;
+      margin-top: 8px;
+      font-size: 11px;
+      color: rgba(245, 241, 232, 0.75);
+      font-family: var(--ff-mono);
+      letter-spacing: 0.04em;
+    }
+    .dr-bg-ref a { color: var(--rust-2); text-decoration: none; display: inline-flex; align-items: center; gap: 3px; }
+    .dr-bg-ref a:hover { text-decoration: underline; }
+
+    /* Responsive */
+    @media (max-width: 1280px) {
+      .ol-head, .ol-row {
+        grid-template-columns: 32px 100px minmax(0, 1.4fr) minmax(0, 1.2fr) 100px 110px 130px 36px;
+      }
+      .ol-row .col-rep, .ol-head .col-rep { display: none; }
+    }
+    @media (max-width: 980px) {
+      .ol-head, .ol-row {
+        grid-template-columns: 100px minmax(0, 1fr) 110px 130px;
+      }
+      .ol-row .col-cb, .ol-head .col-cb,
+      .ol-row .col-prod, .ol-head .col-prod,
+      .ol-row .col-qty, .ol-head .col-qty,
+      .ol-row .col-more, .ol-head .col-more {
+        display: none;
+      }
+    }
+    @media (max-width: 720px) {
+      .kpi-strip { grid-template-columns: 1fr 1fr; }
+      .kpi-strip .kpi-mini { padding: 8px 16px; border-right: 0; border-bottom: 1px solid var(--rule-hair); }
+      .filter-strip { padding: 10px; }
+      .ol-head, .ol-row { padding: 12px; }
+      .drawer-panel { max-width: 100%; }
+      .dr-quick-actions { grid-template-columns: repeat(2, 1fr); }
+      .dr-info { grid-template-columns: 1fr; }
+    }
+    /* Phase 2 — sản phẩm trong đơn + form hoàn thiện spec */
+    .ps-tbl { width:100%; border-collapse:collapse; font-size:13px; }
+    .ps-tbl td { padding:8px 6px; border-bottom:1px solid var(--rule-hair); vertical-align:middle; }
+    .ps-tbl td.ps-c { text-align:center; width:34px; }
+    .ps-pick { width:16px; height:16px; accent-color:var(--rust); cursor:pointer; }
+    .ps-name { font-weight:600; color:var(--ink); }
+    .ps-sub { font-family:var(--ff-mono); font-size:10.5px; color:var(--ash); margin-top:2px; }
+    .ps-badge { font-family:var(--ff-mono); font-size:9px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; padding:3px 7px; border-radius:9999px; white-space:nowrap; }
+    .ps-badge.ps-ok { background:var(--moss-soft); color:var(--moss-deep); }
+    .ps-badge.ps-wait { background:var(--amber-soft); color:var(--amber); }
+    .ps-badge.ps-lsx { background:var(--steel-soft); color:var(--steel); text-decoration:none; cursor:pointer; }
+    a.ps-badge.ps-lsx:hover { background:var(--ink); color:var(--paper); }
+    .ps-complete { font:inherit; font-size:11.5px; padding:5px 10px; border:1px solid var(--rule); border-radius:var(--r-pill); background:var(--canvas); color:var(--ink); cursor:pointer; white-space:nowrap; }
+    .ps-complete:hover { border-color:var(--ink); }
+    .ps-lsxlinks { font-size:12px; color:var(--ash); margin-top:8px; }
+    .ps-lsxlinks .lsx-link { margin-left:4px; }
+    .ps-foot { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:12px; padding-top:10px; border-top:1px solid var(--rule); }
+    .ps-cnt { font-size:12.5px; color:var(--ash); }
+    .cf-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px 14px; max-height:48vh; overflow-y:auto; }
+    .cf-row { display:flex; flex-direction:column; gap:3px; }
+    .cf-k { font-family:var(--ff-mono); font-size:9.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--ash); }
+    .cf-in { padding:7px 9px; border:1px solid var(--rule); border-radius:var(--r-3); font-size:13px; background:var(--canvas); }
+    .cf-sample { font:inherit; font-size:12px; padding:6px 11px; border:1px dashed var(--rule); border-radius:var(--r-pill); background:var(--canvas); color:var(--rust); cursor:pointer; }
+    .cf-known { background:var(--paper-2); border:1px solid var(--rule); border-radius:var(--r-3); padding:11px 13px; margin-bottom:14px; }
+    .cf-known-h { font-family:var(--ff-mono); font-size:9.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--ash); margin-bottom:8px; }
+    .cf-known-grid { display:grid; grid-template-columns:auto 1fr; gap:5px 12px; font-size:12.5px; align-items:baseline; }
+    .cf-kk { color:var(--ash); white-space:nowrap; }
+    .cf-kv { color:var(--ink); font-weight:600; text-align:right; }
+    .cf-fill-h { display:flex; align-items:center; justify-content:space-between; gap:10px; font-family:var(--ff-mono); font-size:9.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--ash); margin-bottom:10px; }
+  </style>
+</head>
+<body>
+
+<div id="app-shell" data-active="don-hang" data-title="Đơn hàng" data-crumb="<b>Kinh doanh</b> · Đơn hàng bán">
+
+  <div class="page-header">
+    <div>
+      <h1>Đơn hàng bán</h1>
+      <p>
+        Cửa nhôm hệ · nhôm thanh định hình ·
+        <span style="color: var(--signal);"><b>3</b> đơn trễ giao / quá hạn công nợ</span> ·
+        <span style="color: var(--moss);"><b>12</b> đơn đang sản xuất tại xưởng</span>
+      </p>
+    </div>
+    <div class="actions">
+      <button class="btn btn-secondary" id="btnExport" data-no-interact="true">
+        <i data-lucide="download" style="width:14px;height:14px"></i> Xuất Excel
+      </button>
+      <button class="btn btn-primary" id="btnCreate" data-no-interact="true">
+        <i data-lucide="plus" style="width:14px;height:14px"></i> Đơn hàng mới
+      </button>
+    </div>
+  </div>
+
+  <!-- KPI strip — 4 ô số nhỏ -->
+  <div class="kpi-strip" id="kpiStrip"></div>
+
+  <!-- Filter strip -->
+  <div class="filter-strip">
+    <div class="search-wrap">
+      <i data-lucide="search" style="width:14px;height:14px"></i>
+      <input class="input" placeholder="Tìm theo mã đơn, hợp đồng, khách hàng, hệ nhôm..." />
+    </div>
+    <button class="filter-pill"><i data-lucide="user" style="width:12px;height:12px"></i> Khách hàng <i data-lucide="chevron-down" style="width:11px;height:11px"></i></button>
+    <button class="filter-pill"><i data-lucide="package" style="width:12px;height:12px"></i> Hệ nhôm <i data-lucide="chevron-down" style="width:11px;height:11px"></i></button>
+    <button class="filter-pill"><i data-lucide="user-circle" style="width:12px;height:12px"></i> NV KD <i data-lucide="chevron-down" style="width:11px;height:11px"></i></button>
+    <button class="filter-pill"><i data-lucide="calendar" style="width:12px;height:12px"></i> Tháng 5/2026 <i data-lucide="chevron-down" style="width:11px;height:11px"></i></button>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs-strip">
+    <button class="tab tab-active">Tất cả <span class="count">142</span></button>
+    <button class="tab">Đang sản xuất <span class="count">47</span></button>
+    <button class="tab">Đang giao – lắp <span class="count">12</span></button>
+    <button class="tab">Hoàn thành <span class="count">80</span></button>
+    <button class="tab tab-danger">
+      <i data-lucide="alert-triangle" style="width:12px;height:12px"></i>
+      Quá hạn <span class="count">3</span>
+    </button>
+  </div>
+
+  <!-- Bulk bar (hidden by default) -->
+  <div class="bulk-bar" id="bulkBar">
+    <span><b id="bulkCount">0</b> đơn được chọn</span>
+    <div class="b-act">
+      <button data-no-interact="true" id="bulkCopy" hidden><i data-lucide="copy" style="width:12px;height:12px"></i> Sao chép đơn</button>
+      <button data-no-interact="true" id="bulkMakeLsx"><i data-lucide="factory" style="width:12px;height:12px"></i> Sản xuất</button>
+      <button data-no-interact="true" onclick="ERPInteract.showToast('Đang xuất Excel <b>'+document.getElementById('bulkCount').textContent+'</b> đơn...', 'info')"><i data-lucide="download" style="width:12px;height:12px"></i> Xuất</button>
+      <button data-no-interact="true" onclick="ERPInteract.showToast('Đang in phiếu giao hàng...', 'info')"><i data-lucide="printer" style="width:12px;height:12px"></i> In phiếu giao – lắp</button>
+      <button data-no-interact="true" onclick="ERPInteract.showToast('Mở form yêu cầu thu tiền cho <b>'+document.getElementById('bulkCount').textContent+'</b> đơn', 'info')"><i data-lucide="banknote" style="width:12px;height:12px"></i> YC thu tiền</button>
+    </div>
+  </div>
+
+  <!-- Order list -->
+  <div class="order-list">
+    <div class="ol-head">
+      <div class="col-cb"><input type="checkbox" id="checkAll" data-no-interact="true" /></div>
+      <div>Mã đơn · Hợp đồng</div>
+      <div>Khách hàng</div>
+      <div class="col-prod">Sản phẩm · Hệ nhôm</div>
+      <div class="num col-qty">Khối lượng</div>
+      <div class="num">Giá trị</div>
+      <div class="col-rep">NV KD</div>
+      <div>Hạn giao – lắp</div>
+      <div class="col-alert">Công nợ / Trễ giao</div>
+      <div class="col-more"></div>
+    </div>
+
+    <div id="orderListBody"><!-- rendered by JS --></div>
+  </div>
+
+  <!-- Pagination -->
+  <div class="pagination">
+    <div>Hiển thị <b style="color: var(--ink); font-family: var(--ff-mono);">1–10</b> trong 142 đơn hàng bán</div>
+    <div class="pg-controls">
+      <button data-no-interact="true"><i data-lucide="chevron-left" style="width:13px;height:13px"></i></button>
+      <button class="is-active" data-no-interact="true">1</button>
+      <button data-no-interact="true">2</button>
+      <button data-no-interact="true">3</button>
+      <span style="padding:0 4px;color:var(--ash-2)">…</span>
+      <button data-no-interact="true">15</button>
+      <button data-no-interact="true"><i data-lucide="chevron-right" style="width:13px;height:13px"></i></button>
+    </div>
+  </div>
+
+</div>
+
+<!-- ===== Drawer ===== -->
+<div class="order-drawer" id="orderDrawer">
+  <div class="drawer-overlay" id="drawerOverlay"></div>
+  <div class="drawer-resizer" id="drawerResizer" title="Kéo để mở rộng / thu hẹp"></div>
+  <div class="drawer-panel" id="drawerPanel">
+    <!-- populated by JS -->
+  </div>
+</div>
+
+<script src="../assets/js/layout.js"></script>
+<script src="../assets/js/loss-data.js"></script>
+<script src="../assets/js/loss-ui.js"></script>
+<script src="../assets/js/pricing-engine.js"></script>
+<script src="../assets/js/quote-data.js"></script>
+<script src="../assets/js/vpp-data.js"></script>
+<script src="../assets/js/order-composer.js"></script>
+<script src="../assets/js/stock-data.js"></script>
+<script src="../assets/js/bom-data.js"></script>
+<script src="../assets/js/inventory.js"></script>
+<script src="../assets/js/accounting.js"></script>
+<script>
+  // ============================================================
+  // Mock order data
+  // ============================================================
+  const ORDERS = [
+    {
+      id: 'DH-0312', createdDate: '17/05/2026',
+      customer: 'Nhôm kính Đại Phát', tier: '★★★★', mst: '0123456789',
+      contact: 'Anh Tuấn · 0909-xxx',
+      site: 'Toà A2 KĐT Vinhomes Smart City, Nam Từ Liêm, Hà Nội',
+      contractId: 'HD-2026-001',
+      product: 'Cửa thuỷ lực hệ 120 · 2 cánh vân gỗ trắc',
+      productNote: 'Nhôm 120 · kính hộp 5-9-5 · bản lề thuỷ lực sàn',
+      unit: 'm²', qty: 4, value: 16760000,
+      salesRep: 'Nguyễn Văn A',
+      dueDate: '25/05/2026', daysLeft: 2,
+      currentStage: 'Cắt & phay đố (CNC)', stageType: 'production',
+      progress: [1, 1, 0.5, 0, 0],
+      lsx: { id: 'LSX-0312', machine: 'CNC-03 · Máy phay khoá WEIKE', worker: 'Trần Văn Tú', progress: 85, current: 'Phay rãnh khoá – bản lề', done: '3,4 / 4 m²', eta: '17:30 hôm nay' },
+      kcs: null,
+      alert: { kind: 'bad', text: 'Quá hạn 22 ngày · 8,4 tr' },
+      payment: { total: 16760000, deposit: 8380000, paid: 8380000, remaining: 8380000, paymentTerm: '50% đặt cọc · 50% sau nghiệm thu lắp đặt', dueDate: '30/05/2026', overdue: true },
+      timeline: [
+        { stage: 'Báo giá', status: 'done', date: '15/05 09:30', by: 'NV Nguyễn Văn A' },
+        { stage: 'Đặt cọc', status: 'done', date: '17/05 09:30', by: 'KH Đại Phát' },
+        { stage: 'Sản xuất', status: 'active', date: '18/05 08:00', by: 'Xưởng SX' },
+        { stage: 'QC', status: 'pending', date: '—', by: '—' },
+        { stage: 'Giao – lắp', status: 'pending', date: '—', by: '—' },
+      ],
+      activity: [
+        { time: '18/05 14:30', by: 'CN Tú', action: 'Cập nhật tiến độ phay đố: <b>3,4 / 4 m²</b>' },
+        { time: '18/05 08:15', by: 'CN Tú', action: 'Bắt đầu phay khoá · scan QR <b>LSX-0312</b>' },
+        { time: '17/05 15:10', by: 'CN Hùng', action: 'Hoàn thành cắt 45° · <b>58 kg nhôm hệ 120</b>' },
+        { time: '17/05 14:22', by: 'CN Hùng', action: 'Nhận nhôm thanh từ kho, kiểm CO/CQ 6063-T5' },
+        { time: '17/05 09:30', by: 'KH Đại Phát', action: 'Đã chuyển khoản đặt cọc <b>8.380.000₫</b>' },
+        { time: '17/05 08:45', by: 'NV Nguyễn Văn A', action: 'Tạo đơn từ báo giá <b>BG-2026-0517</b>' },
+      ],
+    },
+    {
+      id: 'DH-0308', createdDate: '15/05/2026',
+      customer: 'ĐL Nhôm kính Minh Anh', tier: '', mst: '0234567890',
+      contact: 'Chị Hà · 0908-xxx',
+      site: 'Showroom Minh Anh, QL5 Như Quỳnh, Hưng Yên',
+      contractId: 'HD-2026-002',
+      product: 'Cửa trượt quay 93 · 4 cánh ghi xám',
+      productNote: 'Nhôm hệ 93 · kính cường lực 8mm · ray êm',
+      unit: 'm²', qty: 14, value: 38500000,
+      salesRep: 'Trần Thị B',
+      dueDate: '23/05/2026', daysLeft: 3,
+      currentStage: 'Ép góc & lắp khung cánh', stageType: 'production',
+      progress: [1, 1, 0.6, 0, 0],
+      lsx: { id: 'LSX-0308', machine: 'EP-02 · Máy ép góc cơ WEIKE', worker: 'Phạm Văn Nam', progress: 64, current: 'Ép góc khung cánh', done: '9 / 14 m²', eta: '19:30 hôm nay' },
+      kcs: null,
+      alert: { kind: 'good', text: 'Thanh toán sớm · chiết khấu 1%' },
+      payment: { total: 38500000, deposit: 19250000, paid: 38500000, remaining: 0, paymentTerm: '50% đặt cọc · 50% trước giao', dueDate: '—' },
+      timeline: [
+        { stage: 'Báo giá', status: 'done', date: '13/05 10:15', by: 'NV Trần Thị B' },
+        { stage: 'Đặt cọc', status: 'done', date: '15/05 11:00', by: 'ĐL Minh Anh' },
+        { stage: 'Sản xuất', status: 'active', date: '16/05 08:00', by: 'Xưởng SX' },
+        { stage: 'QC', status: 'pending', date: '—', by: '—' },
+        { stage: 'Giao – lắp', status: 'pending', date: '—', by: '—' },
+      ],
+      activity: [
+        { time: '17/05 13:00', by: 'CN Nam', action: 'Bắt đầu ép góc trên máy EP-02' },
+        { time: '17/05 11:45', by: 'CN Bình', action: 'Hoàn thành cắt – phay · <b>14 m² khung cánh</b>' },
+        { time: '16/05 08:00', by: 'CN Bình', action: 'Bắt đầu cắt nhôm 2 đầu trên CAT-02' },
+        { time: '15/05 16:23', by: 'ĐL Minh Anh', action: 'Thanh toán <b>đầy đủ trước hạn</b> · ghi nhận 38.500.000₫' },
+        { time: '15/05 14:00', by: 'NV Trần Thị B', action: 'Chuyển từ báo giá BG-0498 sang đơn hàng' },
+      ],
+    },
+    {
+      id: 'DH-0305', createdDate: '13/05/2026',
+      customer: 'ĐL Owin Hoàng Long', tier: '★★★', mst: '0345678901',
+      contact: 'Anh Hùng · 0907-xxx',
+      site: 'Kho ĐL Hoàng Long, TP Hải Dương',
+      contractId: 'HD-2026-003',
+      product: 'Cửa sổ mở quay Luxanode 121 · 2 cánh',
+      productNote: 'Nhôm Luxanode anod ≥15µm · kính hộp 5-9-5',
+      unit: 'm²', qty: 6, value: 12300000,
+      salesRep: 'Lê Văn C',
+      dueDate: '20/05/2026', daysLeft: 0,
+      currentStage: 'Bọc màng, QC & đóng kiện', stageType: 'production',
+      progress: [1, 1, 0.84, 0, 0],
+      lsx: { id: 'LSX-0298', machine: 'LAP-01 · Bàn lắp kính & bơm keo', worker: 'Nguyễn Văn Hải', progress: 84, current: 'Bọc màng & đóng kiện', done: '5 / 6 m²', eta: '17:15 hôm nay' },
+      kcs: null,
+      alert: { kind: 'none', text: '—' },
+      payment: { total: 12300000, deposit: 6150000, paid: 6150000, remaining: 6150000, paymentTerm: '50/50', dueDate: '25/05/2026' },
+      timeline: [
+        { stage: 'Báo giá', status: 'done', date: '11/05', by: 'NV Lê Văn C' },
+        { stage: 'Đặt cọc', status: 'done', date: '13/05', by: 'ĐL Hoàng Long' },
+        { stage: 'Sản xuất', status: 'active', date: '14/05', by: 'Xưởng SX' },
+        { stage: 'QC', status: 'pending', date: '—', by: '—' },
+        { stage: 'Giao – lắp', status: 'pending', date: '—', by: '—' },
+      ],
+      activity: [
+        { time: '18/05 15:00', by: 'CN Hải', action: 'Bắt đầu bọc màng bảo vệ & đóng kiện gỗ' },
+        { time: '18/05 11:00', by: 'CN Nam', action: 'Hoàn thành lắp kính & bơm keo silicon' },
+        { time: '17/05 09:00', by: 'CN Tú', action: 'Hoàn thành ép góc khung cánh' },
+        { time: '13/05 14:00', by: 'ĐL Hoàng Long', action: 'Đặt cọc <b>6.150.000₫</b>' },
+      ],
+    },
+    {
+      id: 'DH-0302', createdDate: '12/05/2026',
+      customer: 'VINHOMES OCEAN PARK', tier: '★★★★★', mst: '0456789012',
+      contact: 'Chị Lan · 0906-xxx',
+      site: 'Phân khu Sapphire 3, Vinhomes Ocean Park, Gia Lâm, Hà Nội',
+      contractId: 'HD-2026-001',
+      product: 'Vách kính khung nhôm Luxanode',
+      productNote: 'Vách cố định · kính cường lực 10mm · nẹp Luxanode',
+      unit: 'm²', qty: 4, value: 8450000,
+      salesRep: 'Nguyễn Văn A',
+      dueDate: '19/05/2026', daysLeft: -1,
+      currentStage: 'QC nhôm kính', stageType: 'kcs',
+      progress: [1, 1, 1, 0.6, 0],
+      lsx: { id: 'LSX-0287', machine: 'KCS · Bàn kiểm 2', worker: 'Nguyễn Thị Hoa', progress: 97, current: 'Kiểm KCS lô #042', done: '3,9 / 4 m²', eta: 'Hoàn thành 17:00' },
+      kcs: { checked: 40, passed: 38, failed: 2, passRate: 95.0, dev: 1.8, reason: '2 cánh lỗi CANH-VENH — cong vênh quá dung sai 1,5mm/m' },
+      alert: { kind: 'bad', text: 'Trễ giao 1 ngày · phạt 0,4 tr' },
+      payment: { total: 8450000, deposit: 4225000, paid: 4225000, remaining: 4225000, paymentTerm: '50/50', dueDate: '24/05/2026', overdue: true },
+      timeline: [
+        { stage: 'Báo giá', status: 'done', date: '10/05', by: 'NV Nguyễn Văn A' },
+        { stage: 'Đặt cọc', status: 'done', date: '12/05', by: 'Vinhomes Ocean Park' },
+        { stage: 'Sản xuất', status: 'done', date: '15/05', by: 'Xưởng SX' },
+        { stage: 'QC', status: 'active', date: '18/05 14:00', by: 'KCS Hoa' },
+        { stage: 'Giao – lắp', status: 'pending', date: '—', by: '—' },
+      ],
+      activity: [
+        { time: '18/05 16:30', by: 'KCS Hoa', action: 'KCS phát hiện <b>2 cánh cong vênh quá dung sai</b> · trả lại xưởng' },
+        { time: '18/05 14:00', by: 'KCS Hoa', action: 'Bắt đầu kiểm KCS lô #042' },
+        { time: '17/05 11:00', by: 'CN Bình', action: 'Hoàn thành lắp kính · chuyển KCS' },
+      ],
+    },
+    {
+      id: 'DH-0298', createdDate: '10/05/2026',
+      customer: 'ĐL Owin Hưng Yên', tier: '', mst: '0567890123',
+      contact: 'Anh Phú · 0905-xxx',
+      site: 'Kho ĐL Owin Hưng Yên, Văn Lâm, Hưng Yên',
+      contractId: '',
+      product: 'Cửa sổ mở lùa 76 Luxanode · 2 cánh',
+      productNote: 'Hệ 76 · kính cường lực 8mm · lưới chống muỗi',
+      unit: 'm²', qty: 3, value: 6200000,
+      salesRep: 'Phạm Văn D',
+      dueDate: '18/05/2026', daysLeft: -2,
+      currentStage: 'Tiếp nhận & kiểm nhôm thanh', stageType: 'production',
+      progress: [1, 1, 0.3, 0, 0],
+      lsx: { id: 'LSX-0299', machine: 'CAT-01 · Máy cắt 2 đầu WEIKE', worker: 'Trần Văn Tú', progress: 30, current: 'Chờ nhôm thanh hệ 76 về kho', done: '0,9 / 3 m²', eta: 'Trễ — đợi nhôm thanh nhập kho' },
+      kcs: null,
+      alert: { kind: 'bad', text: 'Quá hạn 22 ngày · 3,1 tr' },
+      payment: { total: 6200000, deposit: 3100000, paid: 3100000, remaining: 3100000, paymentTerm: '50/50', dueDate: '20/05/2026', overdue: true },
+      timeline: [
+        { stage: 'Báo giá', status: 'done', date: '08/05', by: 'NV Phạm Văn D' },
+        { stage: 'Đặt cọc', status: 'done', date: '10/05', by: 'ĐL Hưng Yên' },
+        { stage: 'Sản xuất', status: 'active', date: '12/05', by: 'Xưởng SX' },
+        { stage: 'QC', status: 'pending', date: '—', by: '—' },
+        { stage: 'Giao – lắp', status: 'pending', date: '—', by: '—' },
+      ],
+      activity: [
+        { time: '17/05 10:00', by: 'BP Kho', action: '<b>Hết nhôm thanh hệ 76</b> · đề nghị mua khẩn · Đùn ép Nhôm Đông Anh giao 19/05' },
+        { time: '16/05 09:00', by: 'CN Tú', action: 'Dừng máy cắt do hết phôi nhôm · báo bp Kho' },
+        { time: '15/05 14:00', by: 'CN Tú', action: 'Cắt được 0,9 m² khung cánh' },
+        { time: '12/05 08:00', by: 'CN Tú', action: 'Bắt đầu cắt nhôm 2 đầu' },
+      ],
+    },
+    {
+      id: 'DH-0295', createdDate: '08/05/2026',
+      customer: 'ECOPARK', tier: '★★★★', mst: '0678901234',
+      contact: 'Anh Việt · 0904-xxx',
+      site: 'Khu Aquabay, Ecopark, Văn Giang, Hưng Yên',
+      contractId: 'HD-2026-001',
+      product: 'Cửa đi mở lùa 121 Luxanode · 4 cánh',
+      productNote: 'Hệ 121 Luxanode · kính hộp 5-9-5 · khoá đa điểm',
+      unit: 'm²', qty: 9, value: 22500000,
+      salesRep: 'Trần Thị B',
+      dueDate: '30/05/2026', daysLeft: 10,
+      currentStage: 'Đang sản xuất', stageType: 'production',
+      progress: [1, 1, 0.2, 0, 0],
+      lsx: { id: 'LSX-0315', machine: 'CNC-21 · Máy phay đố kẹp bàn', worker: 'Đỗ Văn Minh', progress: 20, current: 'Phay đố ngang', done: '1,8 / 9 m²', eta: '28/05' },
+      kcs: null,
+      alert: { kind: 'none', text: '—' },
+      payment: { total: 22500000, deposit: 11250000, paid: 11250000, remaining: 11250000, paymentTerm: '50/50', dueDate: '04/06/2026' },
+      timeline: [
+        { stage: 'Báo giá', status: 'done', date: '06/05', by: 'NV Trần Thị B' },
+        { stage: 'Đặt cọc', status: 'done', date: '08/05', by: 'Ecopark' },
+        { stage: 'Sản xuất', status: 'active', date: '16/05', by: 'Xưởng SX' },
+        { stage: 'QC', status: 'pending', date: '—', by: '—' },
+        { stage: 'Giao – lắp', status: 'pending', date: '—', by: '—' },
+      ],
+      activity: [
+        { time: '17/05 09:00', by: 'CN Minh', action: 'Bắt đầu phay đố ngang trên CNC-21' },
+        { time: '08/05 10:00', by: 'Ecopark', action: 'Đặt cọc 11.250.000₫' },
+      ],
+    },
+    {
+      id: 'DH-0290', createdDate: '05/05/2026',
+      customer: 'NT Xây dựng Hoàng Gia', tier: '', mst: '0789012345',
+      contact: 'Chị Hà · 0903-xxx',
+      site: 'Công trình nhà phố Hoàng Gia, Thanh Trì, Hà Nội',
+      contractId: '',
+      product: 'Hệ chấn song kết hợp phào Owin',
+      productNote: 'Chấn song + phào trang trí · sơn tĩnh điện đen',
+      unit: 'm²', qty: 2, value: 4800000,
+      salesRep: 'Lê Văn C',
+      dueDate: '22/05/2026', daysLeft: 4,
+      currentStage: 'Đang giao – lắp', stageType: 'shipping',
+      progress: [1, 1, 1, 1, 0.5],
+      lsx: { id: 'LSX-0285', machine: 'Đội lắp đặt công trình', worker: 'Tổ lắp: Trần Văn E', progress: 50, current: 'Đang vận chuyển tới công trình', done: 'Xuất kho 09:00 · ETA 12:00', eta: 'Hôm nay 12:00' },
+      kcs: { checked: 20, passed: 20, failed: 0, passRate: 100, dev: 0.6, reason: 'Đạt 100% · kín khít gioăng, vuông góc trong dung sai' },
+      alert: { kind: 'good', text: 'Xong trước hạn 3 ngày' },
+      payment: { total: 4800000, deposit: 2400000, paid: 2400000, remaining: 2400000, paymentTerm: '50/50', dueDate: '22/05/2026' },
+      timeline: [
+        { stage: 'Báo giá', status: 'done', date: '03/05', by: 'NV Lê Văn C' },
+        { stage: 'Đặt cọc', status: 'done', date: '05/05', by: 'NT Hoàng Gia' },
+        { stage: 'Sản xuất', status: 'done', date: '14/05', by: 'Xưởng SX' },
+        { stage: 'QC', status: 'done', date: '15/05', by: 'KCS Hoa' },
+        { stage: 'Giao – lắp', status: 'active', date: '18/05 09:00', by: 'Đội lắp đặt' },
+      ],
+      activity: [
+        { time: '18/05 09:00', by: 'Xe E', action: 'Xuất kho · giao tới công trình NT Hoàng Gia · ETA 12:00' },
+        { time: '15/05 11:00', by: 'KCS Hoa', action: 'KCS đạt 100% · nhập kho thành phẩm' },
+      ],
+    },
+    {
+      id: 'DH-0285', createdDate: '02/05/2026',
+      customer: 'SUN GROUP HẠ LONG', tier: '★★★★', mst: '0890123456',
+      contact: 'Anh Đức · 0902-xxx',
+      site: 'Dự án Sun Grand Marina, Bãi Cháy, Hạ Long, Quảng Ninh',
+      contractId: 'HD-2026-002',
+      product: 'Cửa thuỷ lực hệ 180 · 4 cánh vân gỗ hương',
+      productNote: 'Nhôm 180 dày 2,5mm · kính hộp Low-E · khoá vân tay',
+      unit: 'm²', qty: 11, value: 45200000,
+      salesRep: 'Nguyễn Văn A',
+      dueDate: '15/05/2026', daysLeft: -3,
+      currentStage: 'Hoàn thành', stageType: 'done',
+      progress: [1, 1, 1, 1, 1],
+      lsx: null,
+      kcs: { checked: 44, passed: 43, failed: 1, passRate: 97.7, dev: 1.2, reason: '1 cánh lỗi SON-XUOC — xước sơn khi vận chuyển, đã sơn dặm' },
+      alert: { kind: 'none', text: '—' },
+      payment: { total: 45200000, deposit: 22600000, paid: 45200000, remaining: 0, paymentTerm: '50/50', dueDate: '—' },
+      timeline: [
+        { stage: 'Báo giá', status: 'done', date: '28/04', by: 'NV Nguyễn Văn A' },
+        { stage: 'Đặt cọc', status: 'done', date: '02/05', by: 'Sun Group Hạ Long' },
+        { stage: 'Sản xuất', status: 'done', date: '10/05', by: 'Xưởng SX' },
+        { stage: 'QC', status: 'done', date: '13/05', by: 'KCS Hoa' },
+        { stage: 'Giao – lắp', status: 'done', date: '15/05', by: 'Đội lắp đặt' },
+      ],
+      activity: [
+        { time: '15/05 11:00', by: 'Sun Group Hạ Long', action: 'Nghiệm thu lắp đặt · thanh toán nốt 22.600.000₫' },
+        { time: '15/05 08:00', by: 'Xe E', action: 'Giao & lắp hoàn tất 11 m² cửa thuỷ lực hệ 180' },
+      ],
+    },
+    {
+      id: 'DH-0280', createdDate: '28/04/2026',
+      customer: 'ĐL Owin Nghệ An', tier: '', mst: '0901234567',
+      contact: 'Cô Lan · 0901-xxx',
+      site: 'Kho ĐL Owin Nghệ An, TP Vinh',
+      contractId: '',
+      product: 'Tủ bếp nhôm nội thất Owin Luxury (bộ 3,2m)',
+      productNote: 'Nhôm nội thất vân gỗ · phụ kiện Kinlong',
+      unit: 'm²', qty: 6, value: 14400000,
+      salesRep: 'Phạm Văn D',
+      dueDate: '12/05/2026', daysLeft: -6,
+      currentStage: 'Hoàn thành', stageType: 'done',
+      progress: [1, 1, 1, 1, 1],
+      lsx: null,
+      kcs: { checked: 24, passed: 24, failed: 0, passRate: 100, dev: 0.5, reason: 'Đạt 100%' },
+      alert: { kind: 'good', text: 'Thanh toán sớm · chiết khấu 1%' },
+      payment: { total: 14400000, deposit: 7200000, paid: 14400000, remaining: 0, paymentTerm: '50/50', dueDate: '—' },
+      timeline: [
+        { stage: 'Báo giá', status: 'done', date: '25/04', by: 'NV Phạm Văn D' },
+        { stage: 'Đặt cọc', status: 'done', date: '28/04', by: 'ĐL Nghệ An' },
+        { stage: 'Sản xuất', status: 'done', date: '06/05', by: 'Xưởng SX' },
+        { stage: 'QC', status: 'done', date: '10/05', by: 'KCS Hoa' },
+        { stage: 'Giao – lắp', status: 'done', date: '12/05', by: 'Đội lắp đặt' },
+      ],
+      activity: [],
+    },
+    {
+      id: 'DH-0276', createdDate: '25/04/2026',
+      customer: 'Nhôm kính Nam Tiến', tier: '★★★★', mst: '0012345678',
+      contact: 'Anh Cường · 0900-xxx',
+      site: 'Xưởng Nam Tiến, Thường Tín, Hà Nội',
+      contractId: 'HD-2026-003',
+      product: 'Nhôm thanh hệ 120 (bán xá theo kg)',
+      productNote: 'Cây 5,8m · dày 2,0mm · 6063-T5 · bán buôn đại lý',
+      unit: 'kg', qty: 160, value: 18500000,
+      salesRep: 'Trần Thị B',
+      dueDate: '10/05/2026', daysLeft: -8,
+      currentStage: 'Hoàn thành', stageType: 'done',
+      progress: [1, 1, 1, 1, 1],
+      lsx: null,
+      kcs: { checked: 160, passed: 158, failed: 2, passRate: 98.8, dev: 1.0, reason: '2 kg lỗi ANOD-MONG — lớp anod < 15µm, đã đổi cây' },
+      alert: { kind: 'bad', text: 'Quá hạn 35 ngày · 18,5 tr' },
+      payment: { total: 18500000, deposit: 9250000, paid: 9250000, remaining: 9250000, paymentTerm: '50% đặt cọc · 50% công nợ 30 ngày', dueDate: '10/06/2026', overdue: true },
+      timeline: [
+        { stage: 'Báo giá', status: 'done', date: '22/04', by: 'NV Trần Thị B' },
+        { stage: 'Đặt cọc', status: 'done', date: '25/04', by: 'Nhôm kính Nam Tiến' },
+        { stage: 'Sản xuất', status: 'done', date: '03/05', by: 'Xưởng SX' },
+        { stage: 'QC', status: 'done', date: '08/05', by: 'KCS Hoa' },
+        { stage: 'Giao – lắp', status: 'done', date: '10/05', by: 'Vận chuyển' },
+      ],
+      activity: [],
+    },
+  ];
+
+  const fmt = (n) => Number(n || 0).toLocaleString('vi-VN');
+  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const $ = (sel) => document.querySelector(sel);
+  // Bỏ nhãn "VIP" khỏi hạng khách, giữ phần đánh giá sao (nếu có)
+  const cleanTier = (t) => String(t || '').replace(/VIP/gi, '').trim();
+
+  // ---- Liên kết bản ghi (anchor class="lnk" → ERPPeek mở drawer xếp lớp) ----
+  function orderContractId(o) {
+    if (o.contractId) return o.contractId;
+    if (window.QuoteStore && QuoteStore.getContractByOrder) {
+      var c = QuoteStore.getContractByOrder(o.id);
+      if (c) return c.id;
+    }
+    return '';
+  }
+  function lnk(href, label) {
+    return '<a href="' + href + '" class="lnk" onclick="event.stopPropagation()">' + esc(label) + '</a>';
+  }
+  function hdLink(id) {
+    return id ? lnk('18-hop-dong.html?hd=' + encodeURIComponent(id), id)
+              : '<span class="no-hd">Không theo HĐ</span>';
+  }
+  function bgLink(id) { return id ? lnk('02-bao-gia.html?bg=' + encodeURIComponent(id), id) : '—'; }
+  function khLink(name) { return name ? lnk('07-crm.html?kh=' + encodeURIComponent(name), name) : '—'; }
+  function lsxLink(id) { return id ? lnk('06-lsx-phieu-cong-nghe.html?id=' + encodeURIComponent(id), id) : '—'; }
+
+  // ---- Cột cảnh báo Công nợ / Trễ giao (chỉ ~30% dòng đỏ, vài dòng xanh) ----
+  function alertCell(o) {
+    var a = o.alert;
+    if (!a || !a.text || a.text === '—') return '<div class="ord-alert is-none">—</div>';
+    var cls = a.kind === 'bad' ? 'is-bad' : (a.kind === 'good' ? 'is-good' : 'is-none');
+    return '<div class="ord-alert ' + cls + '">' + esc(a.text) + '</div>';
+  }
+
+  // ---- 4 ô số nhỏ: Đơn tháng · Chưa giao · Doanh thu · Công nợ quá hạn ----
+  function renderKpi(rows) {
+    const el = $('#kpiStrip'); if (!el) return;
+    const total = rows.length;
+    const pending = rows.filter(o => o.stageType !== 'done').length;
+    const revenue = rows.reduce((a, o) => a + (o.value || 0), 0);
+    const overdue = rows.reduce((a, o) => a + ((o.payment && o.payment.overdue) ? (o.payment.remaining || 0) : 0), 0);
+    const nOver = rows.filter(o => o.payment && o.payment.overdue).length;
+    const tr = n => (n / 1000000).toLocaleString('vi-VN', { maximumFractionDigits: 1 });
+    el.innerHTML =
+      '<div class="kpi-mini"><span class="l">Đơn tháng</span><span class="v">' + total + '</span>' +
+        '<span class="delta">Đơn bán cửa nhôm &amp; nhôm thanh</span></div>' +
+      '<div class="kpi-mini"><span class="l">Chưa giao</span><span class="v">' + pending + '</span>' +
+        '<span class="delta">Đang SX &middot; chờ giao – lắp</span></div>' +
+      '<div class="kpi-mini"><span class="l">Doanh thu</span><span class="v">' + tr(revenue) +
+        '<span style="font-size:14px;color:var(--ash);margin-left:4px">tr ₫</span></span>' +
+        '<span class="delta up">Tổng giá trị đơn trong kỳ</span></div>' +
+      '<div class="kpi-mini"><span class="l">Công nợ quá hạn</span><span class="v" style="color:#8a1f1f">' + tr(overdue) +
+        '<span style="font-size:14px;color:var(--ash);margin-left:4px">tr ₫</span></span>' +
+        '<span class="delta down">' + nOver + ' đơn quá hạn thanh toán</span></div>';
+  }
+
+  // dd/mm/yyyy  ->  yyyy-mm-dd  (for <input type="date">). Returns '' if not parseable.
+  function toInputDate(d) {
+    if (!d) return '';
+    const m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(String(d).trim());
+    if (!m) return '';
+    const pad = (x) => (x.length === 1 ? '0' + x : x);
+    return m[3] + '-' + pad(m[2]) + '-' + pad(m[1]);
+  }
+  // yyyy-mm-dd  ->  dd/mm/yyyy
+  function fromInputDate(v) {
+    if (!v) return '';
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(v).trim());
+    if (!m) return v;
+    return m[3] + '/' + m[2] + '/' + m[1];
+  }
+
+  function dueClass(daysLeft, stageType) {
+    if (stageType === 'new') return { cls: 'due-due', label: 'Chưa đặt hạn' };
+    if (stageType === 'done') return { cls: 'due-done', label: 'Hoàn thành' };
+    if (daysLeft < 0) return { cls: 'due-overdue', label: `Quá hạn ${Math.abs(daysLeft)}d` };
+    if (daysLeft === 0) return { cls: 'due-due', label: 'Đến hạn' };
+    if (daysLeft <= 3) return { cls: 'due-warning', label: `Còn ${daysLeft}d` };
+    return { cls: 'due-safe', label: `Còn ${daysLeft}d` };
+  }
+
+  function stageDots(progress) {
+    return progress.map(p => {
+      if (p === 1) return '<span class="sd done"></span>';
+      if (p > 0) return '<span class="sd active"></span>';
+      return '<span class="sd"></span>';
+    }).join('');
+  }
+  // Chip trạng thái lên Lệnh SX của đơn: chưa lên / lên 1 phần / lên đủ
+  function lsxStatusChip(o) {
+    var s = QuoteStore.orderLsxStatus(o);
+    var icon = s.state === 'full' ? 'check-circle-2' : (s.state === 'part' ? 'loader' : 'circle-dashed');
+    var txt = s.state === 'none' ? 'Chưa lên lệnh' : (s.state === 'full' ? 'Đã lên đủ lệnh' : 'Lên ' + s.made + '/' + s.total + ' SP');
+    return '<span class="lsx-stat ' + s.state + '"><i data-lucide="' + icon + '"></i>' + txt + '</span>';
+  }
+
+  // ============================================================
+  // Nhận đơn từ Báo giá (?bg=<id> [&order=<id>])
+  // Tổng hợp 1 đơn "vừa tạo" từ BG và prepend vào ORDERS.
+  // ============================================================
+  function ingestFromBG() {
+    if (!window.QuoteStore) return null;
+    const params = new URLSearchParams(location.search);
+    const bgId = params.get('bg');
+    if (!bgId) return null;
+
+    const bg = QuoteStore.getBG(bgId);
+    if (!bg) return null;
+
+    // Không nhân đôi nếu đơn này đã có sẵn trong danh sách
+    const orderParam = params.get('order');
+    const orderId = orderParam || bg.orderId || ('DH-' + bg.id.replace(/^BG-2026-/, ''));
+    if (window.QuoteStore && QuoteStore.getOrder(orderId)) return orderId; // đã lưu ở store, không tổng hợp lại
+    if (ORDERS.some(o => o.id === orderId)) return orderId;
+
+    const ver = QuoteStore.currentVersion(bg);
+    const value = QuoteStore.grandOfVersion(bg, ver);
+    const ptg = QuoteStore.getPTG(bg.ptgId);
+    const qty = (ptg && ptg.state && ptg.state.quantity) ? ptg.state.quantity : 0;
+
+    const order = {
+      id: orderId,
+      createdDate: 'hôm nay',
+      customer: bg.customer,
+      tier: '',
+      mst: '',
+      contact: '—',
+      product: bg.product,
+      productNote: 'Tạo từ báo giá ' + bg.id,
+      qty: qty,
+      value: value,
+      salesRep: 'Sales',
+      dueDate: '',
+      daysLeft: 99,
+      currentStage: 'Mới tạo',
+      stageType: 'new',
+      progress: [1, 0, 0, 0, 0],
+      lsx: null,
+      kcs: null,
+      bgId: bg.id,
+      ptgId: bg.ptgId,
+      payment: {
+        total: value, deposit: 0, paid: 0, remaining: value,
+        paymentTerm: (ver && ver.terms) ? ver.terms : '—', dueDate: '—'
+      },
+      timeline: [
+        { stage: 'Báo giá', status: 'done', date: 'hôm nay', by: 'Sales' },
+        { stage: 'Đặt cọc', status: 'pending', date: '—', by: '—' },
+        { stage: 'Sản xuất', status: 'pending', date: '—', by: '—' },
+        { stage: 'QC', status: 'pending', date: '—', by: '—' },
+        { stage: 'Giao hàng', status: 'pending', date: '—', by: '—' },
+      ],
+      activity: [
+        { time: 'hôm nay', by: 'Sales', action: 'Tạo đơn từ báo giá <b>' + bg.id + '</b>' },
+      ],
+    };
+
+    ORDERS.unshift(order);
+    return orderId;
+  }
+
+  // Đơn sinh từ BG (QuoteStore) + đơn seed tĩnh, dedup theo id, đơn sinh ra lên đầu.
+  function allOrdersMerged() {
+    var gen = (window.QuoteStore ? QuoteStore.allOrders() : []);
+    var seen = {}, out = [];
+    gen.concat(ORDERS).forEach(function (o) { if (seen[o.id]) return; seen[o.id] = true; out.push(o); });
+    return out;
+  }
+
+  // ============================================================
+  // Render list
+  // ============================================================
+  function renderList() {
+    const body = $('#orderListBody');
+    let html = '';
+    const rows = allOrdersMerged();
+    renderKpi(rows);
+    rows.forEach(o => {
+      const due = dueClass(o.daysLeft, o.stageType);
+      html += `
+        <div class="ol-row" data-id="${o.id}">
+          <div class="col-cb"><input type="checkbox" class="row-cb" data-no-interact="true" onclick="event.stopPropagation()" /></div>
+          <div>
+            <div class="ord-code">${o.id}</div>
+            <div class="ord-date">${QuoteStore.poCode(o)} · ${o.createdDate}</div>
+            <div class="ord-hd">${hdLink(orderContractId(o))}</div>
+          </div>
+          <div>
+            <div class="ord-cust">${khLink(o.customer)}</div>
+            <div class="ord-cust-meta">${cleanTier(o.tier) ? `<span style="color: var(--rust); font-weight: 600;">${cleanTier(o.tier)}</span>` : `<span style="color: var(--ash-2);">${o.mst}</span>`}</div>
+          </div>
+          <div class="col-prod">
+            <div class="ord-prod">${o.product}</div>
+            <div class="ord-prod-meta">${o.productNote}</div>
+            ${lsxStatusChip(o)}${makeLsxBtn(o)}
+          </div>
+          <div class="num col-qty ord-qty">${fmt(o.qty)} <span style="font-size:10px;color:var(--ash-2)">${o.unit || 'bộ'}</span></div>
+          <div class="num ord-val">${fmt(o.value)}₫</div>
+          <div class="col-rep ord-rep"><b>${o.salesRep}</b></div>
+          <div class="ord-due">
+            <span class="ord-due-tag ${due.cls}">${due.label}</span>
+            <span class="stage-dots">${stageDots(o.progress)}</span>
+            <span class="ord-due-date">${o.dueDate}</span>
+          </div>
+          ${alertCell(o)}
+          <div class="col-more">
+            <button class="btn-icon" style="width:24px;height:24px" data-no-interact="true" onclick="event.stopPropagation()">
+              <i data-lucide="more-horizontal" style="width:13px;height:13px"></i>
+            </button>
+          </div>
+        </div>
+      `;
+    });
+    body.innerHTML = html;
+    if (window.lucide) lucide.createIcons();
+
+    // Nút "Sản xuất" trên dòng → đẩy đơn/SP sang Lệnh sản xuất
+    body.querySelectorAll('[data-make-lsx]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        onMakeLsx(btn.getAttribute('data-make-lsx'));
+      });
+    });
+
+    // Row click → open drawer
+    body.querySelectorAll('.ol-row').forEach(row => {
+      row.addEventListener('click', (e) => {
+        if (e.target.closest('a')) return;
+        if (e.target.closest('input[type="checkbox"]')) return;
+        if (e.target.closest('.btn-icon')) return;
+        if (e.target.closest('[data-make-lsx]')) return;
+        const id = row.dataset.id;
+        body.querySelectorAll('.ol-row').forEach(r => r.classList.remove('active'));
+        row.classList.add('active');
+        openDrawer(id);
+      });
+    });
+  }
+
+  // ============================================================
+  // Đẩy sản phẩm từ ĐƠN HÀNG sang LỆNH SẢN XUẤT
+  // ============================================================
+  // Nút "Sản xuất" trên dòng đơn — chỉ hiện khi đơn chưa lên đủ lệnh
+  function makeLsxBtn(o) {
+    if (QuoteStore.orderLsxStatus(o).state === 'full') return '';
+    return '<button class="btn-make-lsx" data-make-lsx="' + esc(o.id) + '" data-no-interact="true" title="Đẩy sang lệnh sản xuất">' +
+      '<i data-lucide="factory"></i> Sản xuất</button>';
+  }
+  // Bung MỖI SẢN PHẨM của 1 đơn thành 1 dòng (đơn nhiều SP → từng SP con; không thì 1 dòng/đơn)
+  // existing = mã LSX đã có của dòng đó ('' nếu chưa lên lệnh)
+  function orderLsxRows(o) {
+    return QuoteStore.orderProducts(o).map(p => {
+      let existing = p.lsxId || '';
+      if (!existing && !(o.products && o.products.length)) existing = o.lsxId || (o.lsx && o.lsx.id) || '';
+      return { order: o, orderId: o.id, customer: o.customer, code: p.code || '', name: p.name || o.product || '', qty: p.qty || o.qty || 0, due: o.dueDate || '', existing };
+    });
+  }
+  // Sau khi tạo LSX: toast (kèm link Kế hoạch SX) + refresh danh sách + reset bulk bar
+  function afterLsxCreated(msg, lsxId) {
+    const href = '11-ke-hoach-san-xuat.html' + (lsxId ? '?lsx=' + encodeURIComponent(lsxId) : '');
+    const label = lsxId ? 'mở lệnh dự thảo' : 'mở Kế hoạch SX';
+    ERPInteract.showToast(msg + ' — <a href="' + href + '" style="color:inherit;text-decoration:underline;font-weight:600">' + label + '</a>', 'success', 5200);
+    renderList();
+    const ca = $('#checkAll'); if (ca) ca.checked = false;
+    $('#bulkCount').textContent = '0';
+    $('#bulkBar').classList.remove('is-show');
+    const cb = $('#bulkCopy'); if (cb) cb.hidden = true;
+  }
+  // Nút "Sản xuất" trên 1 dòng đơn
+  function onMakeLsx(orderId) {
+    const o = allOrdersMerged().find(x => x.id === orderId);
+    if (!o) return;
+    const pending = orderLsxRows(o).filter(r => !r.existing);
+    if (!pending.length) { ERPInteract.showToast('Đơn <b>' + esc(o.id) + '</b> đã lên đủ lệnh sản xuất', 'info', 2400); return; }
+    // đơn nhiều SP → popup tổng hợp (chỉ của đơn này); đơn 1 SP → confirm nhanh
+    if (o.products && o.products.length > 1) { openLsxBulkPopup([o.id]); return; }
+    const r = pending[0];
+    ERPInteract.showModal({
+      title: 'Đẩy sang lệnh sản xuất',
+      body: `<p>Tạo lệnh sản xuất (dự thảo) cho đơn <b class="lsxp-code">${esc(o.id)}</b> · ${esc(o.customer)}?</p>
+        <div class="lsxp-wrap"><table class="tbl">
+          <thead><tr><th>Sản phẩm</th><th class="num">SL</th><th>Hạn giao</th></tr></thead>
+          <tbody><tr><td>${esc(r.name)}</td><td class="num">${fmt(r.qty)}</td><td>${esc(r.due || '—')}</td></tr></tbody>
+        </table></div>`,
+      primaryText: 'Tạo lệnh SX',
+      secondaryText: 'Huỷ',
+      onPrimary: () => {
+        const lsx = QuoteStore.createLSXFromOrder(o.id, { order: o, product: r.name, productCode: r.code || undefined, qty: r.qty });
+        if (!lsx) { ERPInteract.showToast('Không tạo được lệnh sản xuất', 'warning', 2400); return false; }
+        afterLsxCreated('Đã tạo <b>' + esc(lsx.id) + '</b> cho đơn <b>' + esc(o.id) + '</b>', lsx.id);
+      },
+    });
+  }
+  // Popup "Tổng hợp sản phẩm từ N đơn hàng" → tạo LSX hàng loạt cho các dòng tích
+  function openLsxBulkPopup(orderIds) {
+    const orders = orderIds.map(id => allOrdersMerged().find(x => x.id === id)).filter(Boolean);
+    if (!orders.length) return;
+    let rows = [];
+    orders.forEach(o => { rows = rows.concat(orderLsxRows(o)); });
+    const trs = rows.map((r, i) => {
+      const stat = r.existing
+        ? '<span class="lsx-stat full"><i data-lucide="check-circle-2"></i>' + esc(r.existing) + '</span>'
+        : '<span class="lsx-stat none"><i data-lucide="circle-dashed"></i>Chưa lên lệnh</span>';
+      return '<tr>' +
+        '<td class="center"><input type="checkbox" class="lsxp-pick" data-i="' + i + '" data-no-interact="true" ' + (r.existing ? 'disabled' : 'checked') + ' /></td>' +
+        '<td><span class="lsxp-code">' + esc(r.orderId) + '</span></td>' +
+        '<td>' + esc(r.customer) + '</td>' +
+        '<td>' + esc(r.name) + '</td>' +
+        '<td class="num">' + fmt(r.qty) + '</td>' +
+        '<td>' + esc(r.due || '—') + '</td>' +
+        '<td>' + stat + '</td>' +
+        '</tr>';
+    }).join('');
+    ERPInteract.showModal({
+      title: 'Tổng hợp sản phẩm từ ' + orders.length + ' đơn hàng',
+      body: `<p class="lsxp-sub"><b>Tất cả sản phẩm được chọn</b> sẽ gộp chung vào <b>1 lệnh sản xuất</b> duy nhất (dự thảo). Dòng đã có LSX bị khoá.</p>
+        <div class="lsxp-wrap"><table class="tbl">
+          <thead><tr><th></th><th>Đơn hàng</th><th>Khách</th><th>Sản phẩm</th><th class="num">SL</th><th>Hạn giao</th><th>Trạng thái LSX</th></tr></thead>
+          <tbody>${trs}</tbody>
+        </table></div>
+        <div class="lsxp-foot"><b id="lsxpCount">0</b>&nbsp;sản phẩm đã chọn</div>`,
+      primaryText: 'Đẩy sang lệnh sản xuất',
+      secondaryText: 'Huỷ',
+      onPrimary: () => {
+        const picked = [...document.querySelectorAll('.lsxp-pick:checked')].map(c => rows[+c.dataset.i]).filter(Boolean);
+        if (!picked.length) { ERPInteract.showToast('Chưa chọn sản phẩm nào để đẩy sang sản xuất', 'warning', 2400); return false; }
+        // TẤT CẢ sản phẩm được chọn → gộp chung ĐÚNG 1 lệnh sản xuất
+        const lsx = QuoteStore.createLSXCombined(picked.map(r => ({ orderId: r.orderId, code: r.code, name: r.name, qty: r.qty, order: r.order })));
+        const made = lsx ? [lsx.id] : [];
+        if (!made.length) { ERPInteract.showToast('Không tạo được lệnh sản xuất nào', 'warning', 2400); return false; }
+        const links = made.map(id => '<a href="11-ke-hoach-san-xuat.html?lsx=' + encodeURIComponent(id) + '" style="color:inherit;text-decoration:underline;font-weight:600">' + esc(id) + '</a>').join(', ');
+        afterLsxCreated('Đã tạo <b>' + made.length + '</b> lệnh sản xuất: ' + links);
+      },
+    });
+    // đếm dòng đã tích (modal đã gắn vào DOM ngay sau showModal)
+    const sync = () => {
+      const el = document.getElementById('lsxpCount');
+      if (el) el.textContent = document.querySelectorAll('.lsxp-pick:checked').length;
+    };
+    document.querySelectorAll('.lsxp-pick').forEach(c => c.addEventListener('change', sync));
+    sync();
+    if (window.lucide) lucide.createIcons();
+  }
+
+  // ============================================================
+  // Thông tin đơn hàng dạng bản ghi (bảng dòng sản phẩm — như mẫu báo giá)
+  // ============================================================
+  // Quy cách kỹ thuật: KT phủ bì · màu · kính · phụ kiện
+  function ordSize(name) {
+    var m = String(name || '').match(/\d+(?:[.,]\d+)?\s*[×x*]\s*\d+(?:[.,]\d+)?(?:\s*[×x*]\s*\d+(?:[.,]\d+)?)?/);
+    if (!m) return '—';
+    return m[0].replace(/\s/g, '').replace(/[x*]/gi, '×') + ' mm';
+  }
+  function ordSpec(o, p) {
+    var n = String((p && p.name) || '').toLowerCase();
+    var size = ordSize(p && p.name);
+    var parts = [];
+    if (size !== '—') parts.push('KT ' + size);
+    if (/vân gỗ/.test(n)) parts.push('màu vân gỗ');
+    else if (/ghi xám/.test(n)) parts.push('màu ghi xám');
+    else if (/luxanode|anod/.test(n)) parts.push('anod ≥15µm');
+    else parts.push('sơn tĩnh điện');
+    if (/vách|hộp|thuỷ lực|thủy lực|mở quay|mở lùa/.test(n)) parts.push('kính hộp 5-9-5');
+    else if (/trượt quay/.test(n)) parts.push('kính CL 8mm');
+    if (/thuỷ lực|thủy lực/.test(n)) parts.push('bản lề thuỷ lực + khoá');
+    else if (/thanh|profile|xá/.test(n)) parts.push('cây 5,8m · 6063-T5');
+    else parts.push('phụ kiện Kinlong');
+    return parts.join(' · ');
+  }
+  function ordUnit(name) {
+    var n = String(name || '').toLowerCase();
+    if (/thanh|profile|xá|kg/.test(n)) return 'kg';
+    if (/uốn vòm|gia công theo mét/.test(n)) return 'md';
+    if (/tủ bếp|dàn máy|bộ\b/.test(n)) return 'bộ';
+    return 'm²';
+  }
+  function ordCode(o) {
+    if (o.productCode) return o.productCode;
+    return 'OW-' + String(o.id || '').replace(/^DH-?/, '') + '-01';
+  }
+  function orderRecordTable(o) {
+    var prods = QuoteStore.orderProducts(o);
+    var rowsHTML = prods.map(function (p, i) {
+      var pUnit = (p.lineTotal && p.qty) ? Math.round(p.lineTotal / 1.08 / p.qty) : (o.qty ? Math.round((o.value || 0) / 1.08 / o.qty) : 0);
+      return '<tr>' +
+        '<td class="c">' + (i + 1) + '</td>' +
+        '<td><span class="pcode">' + (esc(p.code) || ordCode(o)) + '</span></td>' +
+        '<td><div class="pdesc"><b>' + esc(p.name) + '</b></div></td>' +
+        '<td class="c">' + esc(ordSpec(o, p)) + '</td>' +
+        '<td class="c">' + (o.unit || ordUnit(p.name)) + '</td>' +
+        '<td class="r">' + fmt(p.qty) + '</td>' +
+        '<td class="r">' + fmt(pUnit) + '</td>' +
+        '<td class="r">' + fmt(Math.round(pUnit * (p.qty || 0))) + '</td>' +
+      '</tr>';
+    }).join('');
+    return '<div class="ord-rec-wrap"><table class="ord-rec">' +
+      '<thead><tr>' +
+        '<th>STT<span class="en">No</span></th>' +
+        '<th>Mã hàng<span class="en">Code</span></th>' +
+        '<th>Sản phẩm / hệ nhôm<span class="en">Description</span></th>' +
+        '<th>Quy cách (KT phủ bì · màu · kính · phụ kiện)<span class="en">Specification</span></th>' +
+        '<th>ĐVT<span class="en">Unit</span></th>' +
+        '<th>SL<span class="en">Qty</span></th>' +
+        '<th>Đơn giá (chưa VAT)<span class="en">Unit price</span></th>' +
+        '<th>Thành tiền<span class="en">Amount</span></th>' +
+      '</tr></thead><tbody>' + rowsHTML + '</tbody></table></div>' +
+      '<div class="ord-rec-meta"><span>NV kinh doanh: <b>' + (o.salesRep || '—') + '</b></span><span>Ngày tạo: <b>' + (o.createdDate || '—') + '</b></span><span>Tổng giá trị (đã VAT): <b>' + fmt(o.value || 0) + '₫</b></span></div>';
+  }
+
+  // ============================================================
+  // Phase 2 — Sản phẩm trong đơn: hoàn thiện thông tin + pick → tạo LSX
+  // ============================================================
+  const SPEC_SAMPLE = {
+    nvl: 'Nhôm hệ thuỷ lực 120 · 6063-T5 · LOT0416F', phu: 'Bản lề thuỷ lực sàn + khoá vân tay', fsc: 'Có CO/CQ', quyCach: 'Cây 5,8m · dày 2,0mm', loi: '76mm',
+    cnIn: 'Ép góc (máy EP-02)', cnBe: 'Cắt 2 đầu + phay CNC', soMau: '5', soBan: '5', maKhuon: 'F01383', buocNhay: '178',
+    soKhuonKho: '1', soKhuonBuoc: '1', kcKhuon: '3', khoGiay: '178', bienGiay: '5', pcsCuon: '4000',
+    metCuon: '304', pcsKho: '1', linkFile: 'drive.google.com/file/…', ngayXuatBan: 'hôm nay', mucIn: 'Sơn tĩnh điện vân gỗ trắc',
+    khoTP: '1200×2400 mm', khoTrai: '1350×2550 mm', giay: 'Nhôm hệ 120', tayKe: '2 cánh/kiện', soKem: '4', giaCong: 'Lắp kính · hoàn thiện · đóng kiện'
+  };
+  // LSX dự thảo → sang Kế hoạch SX (cấu hình routing); đã phát hành → chi tiết LSX
+  function lsxHref(id) {
+    const L = QuoteStore.getLSX(id);
+    const draft = L && QuoteStore.lsxLifecycle(L) === 'du-thao';
+    return (draft ? '11-ke-hoach-san-xuat.html?lsx=' : '19-lsx-san-xuat.html?lsx=') + encodeURIComponent(id);
+  }
+  function prodSectionHTML(o) {
+    const prods = QuoteStore.orderProducts(o);
+    const rows = prods.map(p => {
+      const master = QuoteStore.getProduct(p.code);
+      const complete = master ? QuoteStore.isProductComplete(master) : false;
+      const assigned = p.lsxId;
+      const draft = assigned && QuoteStore.getLSX(assigned) && QuoteStore.lsxLifecycle(QuoteStore.getLSX(assigned)) === 'du-thao';
+      const badge = assigned
+        ? `<a class="ps-badge ps-lsx lnk" href="${lsxHref(assigned)}" title="${draft ? 'Cấu hình routing ở Kế hoạch SX' : 'Mở chi tiết lệnh'}">${esc(assigned)}${draft ? ' · cấu hình ⚙' : ''}</a>`
+        : (complete ? '<span class="ps-badge ps-ok">Đủ thông tin</span>' : '<span class="ps-badge ps-wait">Chưa đủ TT</span>');
+      const pick = !assigned ? `<input type="checkbox" class="ps-pick" data-pick-prod="${esc(p.code)}" data-no-interact="true" />` : '';
+      const btn = assigned ? '' : `<button class="ps-complete" data-complete-prod="${esc(p.code)}" data-no-interact="true">${complete ? 'Sửa TT' : 'Hoàn thiện'}</button>`;
+      return `<tr><td class="ps-c">${pick}</td>` +
+        `<td><div class="ps-name">${esc(p.name)}</div><div class="ps-sub">${esc(p.code || '—')} · ${fmt(p.qty)} sp</div></td>` +
+        `<td>${badge}</td><td class="ps-c">${btn}</td></tr>`;
+    }).join('');
+    const lsxLinks = (o.lsxIds || []).filter(Boolean).map(id =>
+      `<a href="${lsxHref(id)}" class="lsx-link lnk">${esc(id)} <i data-lucide="arrow-up-right" style="width:11px;height:11px"></i></a>`).join(' · ');
+    return `<div class="dr-section">
+        <div class="dr-section-head">Sản phẩm &amp; Lệnh sản xuất <span class="h-extra">${prods.length} SP</span></div>
+        <table class="ps-tbl"><tbody>${rows}</tbody></table>
+        ${lsxLinks ? `<div class="ps-lsxlinks">LSX đã tạo: ${lsxLinks}</div>` : ''}
+        <div class="ps-foot"><span class="ps-cnt" id="psCount">0 sản phẩm đã chọn</span>
+          <button class="btn btn-primary btn-sm" id="psMakeLsx" data-no-interact="true" disabled><i data-lucide="clipboard-list" style="width:13px;height:13px"></i> Tạo lệnh SX</button></div>
+      </div>`;
+  }
+  function fxFinishes(state) {
+    if (!state || !state.finishes) return '';
+    return Object.keys(state.finishes).filter(k => state.finishes[k] && state.finishes[k].on).map(k => state.finishes[k].name).join(' · ');
+  }
+  // suy giá trị ô spec từ state báo giá (để điền sẵn, khỏi nhập lại cái đã biết)
+  function deriveSpec(state, k) {
+    if (!state) return '';
+    switch (k) {
+      case 'khoTP': return state.finishedW ? (state.finishedW + '×' + state.finishedH + (state.finishedD ? '×' + state.finishedD : '') + ' cm') : (state.labelL ? state.labelL + '×' + state.labelW + ' mm' : '');
+      case 'khoTrai': return state.spreadW ? (state.spreadW + '×' + state.spreadH + ' cm') : '';
+      case 'giay': return state.paperName || '';
+      case 'soMau': return (state.colors != null) ? String(state.colors) : '';
+      case 'soKem': return (state.plates != null) ? String(state.plates) : '';
+      case 'tayKe': return (state.ke != null && state.ke !== '') ? String(state.ke) : '';
+      case 'giaCong': return fxFinishes(state);
+      case 'khoGiay': return state.sheetW ? (state.sheetW + '×' + state.sheetH + ' cm') : '';
+      case 'nvl': return state.decalName || '';
+      case 'phu': return state.coatName || '';
+      default: return '';
+    }
+  }
+  function openCompleteForm(o, code) {
+    const p = QuoteStore.getProduct(code); if (!p) return;
+    const fields = QuoteStore.prodSpecFields(p.type);
+    const prod = p.prod || {};
+    const state = p.state;
+    const op = (o.products || []).find(x => x.code === code) || {};
+    const PE = window.PricingEngine;
+    const specSummary = (PE && state) ? PE.specText(state) : '';
+    const known = [
+      ['Khách hàng', o.customer], ['Sản phẩm', p.name], ['Mã SP', p.code],
+      ['Công nghệ', p.typeLabel || p.type], ['Số lượng', fmt(op.qty || 0) + ' sp'], ['Quy cách (báo giá)', specSummary || '—']
+    ];
+    const knownHTML = '<div class="cf-known"><div class="cf-known-h">Thông tin đã có (từ báo giá)</div><div class="cf-known-grid">' +
+      known.map(r => `<div class="cf-kk">${esc(r[0])}</div><div class="cf-kv">${esc(r[1] || '—')}</div>`).join('') + '</div></div>';
+    const body = knownHTML +
+      '<div class="cf-fill-h"><span>Thông tin sản xuất cần điền</span><button type="button" class="cf-sample" data-no-interact="true"><i data-lucide="wand-2" style="width:13px;height:13px;vertical-align:middle"></i> Điền mẫu nhanh</button></div>' +
+      '<div class="cf-grid">' + fields.map(f => {
+        const val = (prod[f.k] != null && prod[f.k] !== '') ? prod[f.k] : deriveSpec(state, f.k);
+        return `<label class="cf-row"><span class="cf-k">${esc(f.l)}${f.req ? ' <b style="color:var(--rust)">*</b>' : ''}</span>` +
+          `<input class="cf-in" data-cf="${f.k}" value="${esc(val)}" /></label>`;
+      }).join('') + '</div>';
+    ERPInteract.showModal({
+      title: 'Hoàn thiện thông tin SX · ' + p.name,
+      body: body,
+      primaryText: 'Lưu thông tin', secondaryText: 'Đóng',
+      onPrimary: function () {
+        const patch = {};
+        document.querySelectorAll('[data-cf]').forEach(i => { patch[i.getAttribute('data-cf')] = i.value; });
+        const saved = QuoteStore.saveProductSpec(code, patch);
+        openDrawer(o.id);
+        ERPInteract.showToast(QuoteStore.isProductComplete(saved) ? '<b>Đủ thông tin</b> — sẵn sàng tạo LSX' : 'Đã lưu · còn thiếu trường bắt buộc (*)', QuoteStore.isProductComplete(saved) ? 'success' : 'info', 2600);
+      }
+    });
+    setTimeout(function () {
+      const sb = document.querySelector('.cf-sample');
+      if (sb) sb.addEventListener('click', function () {
+        document.querySelectorAll('[data-cf]').forEach(i => { const k = i.getAttribute('data-cf'); if (SPEC_SAMPLE[k] != null) i.value = SPEC_SAMPLE[k]; });
+      });
+      if (window.lucide) lucide.createIcons();
+    }, 30);
+  }
+
+  // ============================================================
+  // LÊN ĐƠN THEO TỒN KHO THÀNH PHẨM  (ERPInv → StockStore → danh mục SP)
+  // ============================================================
+  function stockGoods() {
+    var out = [];
+    try {
+      if (window.ERPInv && ERPInv.allItems) {
+        out = ERPInv.allItems().filter(function (i) { return i.kind === 'tp'; }).map(function (i) {
+          return { code: i.code, name: i.name, unit: i.unit || 'bộ', onHand: Number(i.onHand) || 0, price: Number(i.price) || 0, src: 'inv' };
+        });
+      }
+    } catch (e) {}
+    if (!out.length && window.StockStore && StockStore.MATERIALS) {
+      out = StockStore.MATERIALS.map(function (m) {
+        return { code: m.code, name: m.name, unit: m.unit || 'kg', onHand: Number(m.onHand) || 0, price: Number(m.price) || 0, src: 'stock' };
+      });
+    }
+    if (!out.length && window.QuoteStore && QuoteStore.allProducts) {
+      out = QuoteStore.allProducts().map(function (p) {
+        return { code: p.code, name: p.name, unit: 'bộ', onHand: 0, price: 0, src: 'cat' };
+      });
+    }
+    return out;
+  }
+
+  function openOrderComposer(opts) {
+    opts = opts || {};
+    const goods = stockGoods();
+    const custs = (window.QuoteStore && QuoteStore.allCustomers) ? QuoteStore.allCustomers() : [];
+    const contracts = (window.QuoteStore && QuoteStore.allContracts) ? QuoteStore.allContracts() : [];
+    const custOpts = custs.map(c => `<option value="${esc(c.name)}">${esc(c.name)}</option>`).join('');
+    const hdOpts = '<option value="__">— Chọn hợp đồng —</option><option value="none">Không theo HĐ</option>' +
+      contracts.map(c => `<option value="${esc(c.id)}">${esc(c.id)} · ${esc(c.customer)}</option>`).join('');
+    const rowsHtml = goods.map((g, i) => `
+      <tr data-i="${i}">
+        <td><span style="font-family:var(--ff-mono);font-size:11px">${esc(g.code)}</span></td>
+        <td>${esc(g.name)}</td>
+        <td>${esc(g.unit)}</td>
+        <td class="num oc-avail"><b>${fmt(g.onHand)}</b></td>
+        <td class="num"><input class="oc-qty" data-i="${i}" type="number" min="0" step="0.01" placeholder="0" data-no-interact="true" /></td>
+        <td class="num"><input class="oc-price" data-i="${i}" type="number" min="0" value="${g.price}" data-no-interact="true" /></td>
+        <td class="num oc-amt">0</td>
+      </tr>`).join('');
+
+    ERPInteract.showModal({
+      title: 'Đơn hàng mới — lên đơn theo tồn kho thành phẩm',
+      body: `<div id="ocForm">
+        <div class="oc-top">
+          <label class="oc-f"><span>Khách hàng *</span><input id="ocCust" list="ocCustList" placeholder="Chọn hoặc nhập tên khách" /><datalist id="ocCustList">${custOpts}</datalist></label>
+          <label class="oc-f"><span>Hợp đồng *</span><select id="ocHd">${hdOpts}</select></label>
+          <label class="oc-f"><span>Hạn giao – lắp</span><input id="ocDue" type="date" /></label>
+          <label class="oc-f"><span>Người liên hệ</span><input id="ocContact" placeholder="Anh/Chị · SĐT" /></label>
+          <label class="oc-f"><span>NV kinh doanh</span><input id="ocRep" value="Nguyễn Văn A" /></label>
+          <label class="oc-f"><span>Điều khoản thanh toán</span><input id="ocTerm" value="50% đặt cọc · 50% sau nghiệm thu lắp đặt" /></label>
+          <label class="oc-f" style="grid-column: span 3"><span>Địa chỉ công trình</span><input id="ocSite" placeholder="Số nhà, đường, phường/xã, quận/huyện, tỉnh/TP" /></label>
+          <label class="oc-f" style="grid-column: span 3"><span>Tìm hàng trong kho thành phẩm</span><input id="ocSearch" placeholder="Gõ tên hoặc mã hàng…" /></label>
+        </div>
+        <div class="oc-wrap">
+          <table>
+            <thead><tr>
+              <th>Mã hàng</th><th>Tên hàng (kho thành phẩm)</th><th>ĐVT</th>
+              <th class="num">Tồn khả dụng</th><th class="num">SL đặt</th><th class="num">Đơn giá</th><th class="num">Thành tiền</th>
+            </tr></thead>
+            <tbody>${rowsHtml || '<tr><td colspan="7" style="text-align:center;padding:18px;color:var(--ash)">Kho thành phẩm chưa có mặt hàng nào.</td></tr>'}</tbody>
+          </table>
+        </div>
+        <div class="oc-err" id="ocErr"></div>
+        <div class="oc-sum">
+          <span>Cộng tiền hàng: <b id="ocSub">0</b>₫</span>
+          <span>VAT 8%: <b id="ocVat">0</b>₫</span>
+          <span>Tổng thanh toán: <b id="ocTot">0</b>₫</span>
+        </div>
+      </div>`,
+      primaryText: 'Xác nhận đơn &amp; trừ tồn kho',
+      secondaryText: 'Huỷ',
+      onPrimary: function () { return ocSubmit(); }
+    });
+
+    function ocLines() {
+      const out = [];
+      document.querySelectorAll('#ocForm .oc-qty').forEach(inp => {
+        const i = +inp.dataset.i, q = Number(inp.value) || 0;
+        if (q > 0) {
+          const pe = document.querySelector('#ocForm .oc-price[data-i="' + i + '"]');
+          out.push({ g: goods[i], qty: q, price: Number(pe && pe.value) || 0 });
+        }
+      });
+      return out;
+    }
+    function ocRecalc() {
+      let sub = 0, over = 0;
+      document.querySelectorAll('#ocForm tbody tr[data-i]').forEach(tr => {
+        const i = +tr.dataset.i;
+        const q = Number(tr.querySelector('.oc-qty').value) || 0;
+        const p = Number(tr.querySelector('.oc-price').value) || 0;
+        const amt = Math.round(q * p);
+        tr.querySelector('.oc-amt').textContent = fmt(amt);
+        const bad = q > goods[i].onHand;
+        tr.classList.toggle('oc-over', bad);
+        if (bad) over++;
+        sub += amt;
+      });
+      const vat = Math.round(sub * 0.08);
+      const sE = $('#ocSub'), vE = $('#ocVat'), tE = $('#ocTot'), eE = $('#ocErr');
+      if (sE) sE.textContent = fmt(sub);
+      if (vE) vE.textContent = fmt(vat);
+      if (tE) tE.textContent = fmt(sub + vat);
+      if (eE) eE.textContent = over ? ('⚠ ' + over + ' dòng vượt TỒN KHẢ DỤNG — không lưu được đơn. Giảm số lượng hoặc chọn mặt hàng khác.') : '';
+      return { sub: sub, vat: vat, over: over };
+    }
+
+    function ocSubmit() {
+      const cust = ($('#ocCust').value || '').trim();
+      const hd = $('#ocHd').value;
+      const r = ocRecalc();
+      const ls = ocLines();
+      if (!cust) { ERPInteract.showToast('Chưa nhập <b>khách hàng</b>', 'warning', 2600); return false; }
+      if (hd === '__') { ERPInteract.showToast('Bắt buộc chọn <b>Hợp đồng</b> (hoặc "Không theo HĐ")', 'warning', 3000); return false; }
+      if (!ls.length) { ERPInteract.showToast('Chưa nhập số lượng cho mặt hàng nào', 'warning', 2600); return false; }
+      if (r.over) { ERPInteract.showToast('Có dòng <b>vượt tồn khả dụng</b> — không thể lưu đơn', 'error', 3200); return false; }
+
+      // 1) Trừ tồn kho bán hàng — all-or-nothing
+      let res = { ok: true, txn: null };
+      if (window.ERPInv && ERPInv.post) {
+        res = ERPInv.post({
+          kind: 'out', type: 'xuat_ban', partner: cust, ref: '',
+          note: 'Xuất bán thành phẩm theo đơn lập tại màn Đơn hàng bán',
+          lines: ls.map(l => ({ code: l.g.code, name: l.g.name, unit: l.g.unit, qty: l.qty, price: l.price }))
+        });
+      }
+      if (!res.ok) {
+        const det = (res.errors || []).map(e => '• ' + esc(e.name || e.code) + ': cần ' + fmt(e.need) + ', còn ' + fmt(e.have)).join('<br>');
+        ERPInteract.showToast('Không trừ được tồn kho — <b>giữ nguyên dữ liệu</b><br>' + (det || esc(res.message || '')), 'error', 6000);
+        return false;
+      }
+
+      // 2) Ghi đơn hàng
+      const payload = {
+        orderType: 'sx', customer: cust, mst: '', contact: $('#ocContact').value || '—',
+        salesRep: $('#ocRep').value || 'Sales', createdDate: 'hôm nay',
+        deliveryDate: fromInputDate($('#ocDue').value), paymentTerm: $('#ocTerm').value || '—',
+        note: 'Lên đơn theo tồn kho thành phẩm',
+        lines: ls.map(l => ({ code: l.g.code, name: l.g.name, qty: l.qty, unit: l.g.unit, price: l.price,
+          discountPct: 0, vatPct: 8, lineTotal: Math.round(l.qty * l.price * 1.08), source: 'kho-tp' })),
+        financials: { subtotal: r.sub, orderDiscountPct: 0, orderDiscount: 0, vat: r.vat,
+          grandTotal: r.sub + r.vat, depositPct: 50, deposit: Math.round((r.sub + r.vat) * 0.5) }
+      };
+      const order = QuoteStore.createOrderManual(payload);
+      order.contractId = (hd === 'none') ? '' : hd;
+      order.site = $('#ocSite').value || '';
+      order.unit = ls[0].g.unit;
+      order.alert = { kind: 'none', text: '—' };
+      if (order.contractId) {
+        const c = QuoteStore.getContract(order.contractId);
+        if (c && c.contractType === 'nguyen_tac') QuoteStore.linkOrderToContract(c.id, order.id, order.value);
+        else if (c) QuoteStore.saveContract(c.id, { orderId: order.id });
+        order.activity.unshift({ time: 'hôm nay', by: order.salesRep, action: 'Gắn đơn vào hợp đồng <b>' + esc(order.contractId) + '</b>' });
+      }
+      order.activity.unshift({ time: 'hôm nay', by: 'Kho TP', action: 'Trừ tồn kho bán hàng · phiếu xuất <b>' + esc(res.txn ? res.txn.id : '—') + '</b>' });
+      QuoteStore.save();
+      if (res.txn) { res.txn.ref = order.id; if (ERPInv.save) ERPInv.save(); }
+
+      ERPInteract.showToast('Đã tạo đơn <b>' + esc(order.id) + '</b> · đã trừ tồn kho bán hàng' +
+        (res.txn ? ' (phiếu xuất <b>' + esc(res.txn.id) + '</b>)' : '') +
+        ' — <a href="05-kho.html?pxk=' + encodeURIComponent(res.txn ? res.txn.id : '') + '" class="lnk" style="color:inherit;text-decoration:underline;font-weight:600">xem sổ kho</a>',
+        'success', 6500);
+      if (opts.onCreated) opts.onCreated(order);
+      return true;
+    }
+
+    // wiring (modal đã gắn vào DOM ngay sau showModal)
+    document.querySelectorAll('#ocForm .oc-qty, #ocForm .oc-price').forEach(el => el.addEventListener('input', ocRecalc));
+    const ocSearch = $('#ocSearch');
+    if (ocSearch) ocSearch.addEventListener('input', function () {
+      const q = this.value.toLowerCase().trim();
+      document.querySelectorAll('#ocForm tbody tr[data-i]').forEach(tr => {
+        tr.style.display = (q && tr.textContent.toLowerCase().indexOf(q) < 0) ? 'none' : '';
+      });
+    });
+    const ocHd = $('#ocHd');
+    if (ocHd) ocHd.addEventListener('change', function () {
+      const c = (window.QuoteStore && QuoteStore.getContract) ? QuoteStore.getContract(this.value) : null;
+      if (!c) return;
+      if (c.customer) $('#ocCust').value = c.customer;
+      if (c.priceTerms) $('#ocTerm').value = c.priceTerms;
+      if (c.contractType === 'mua_ban' && c.product) {
+        const key = String(c.product).toLowerCase().slice(0, 10);
+        const idx = goods.findIndex(g => g.name.toLowerCase().indexOf(key) >= 0);
+        if (idx >= 0) {
+          const qi = document.querySelector('#ocForm .oc-qty[data-i="' + idx + '"]');
+          if (qi) qi.value = Math.min(Number(c.qty) || 1, goods[idx].onHand);
+        }
+      }
+      ocRecalc();
+      ERPInteract.showToast('Đã tự điền khách hàng, dòng hàng &amp; điều khoản thanh toán từ <b>' + esc(c.id) + '</b>', 'info', 3200);
+    });
+    if (opts.contractId && ocHd) { ocHd.value = opts.contractId; ocHd.dispatchEvent(new Event('change')); }
+    ocRecalc();
+    if (window.lucide) lucide.createIcons();
+  }
+
+  // ============================================================
+  // Bản in: ĐƠN HÀNG / XÁC NHẬN ĐƠN HÀNG (chuẩn ngành nhôm kính)
+  // ============================================================
+  function orderPrintBody(o) {
+    const prods = QuoteStore.orderProducts(o);
+    const hd = orderContractId(o);
+    let sub = 0;
+    const rowsHtml = prods.map((p, i) => {
+      const up = (p.lineTotal && p.qty) ? Math.round(p.lineTotal / 1.08 / p.qty)
+        : (o.qty ? Math.round((o.value || 0) / 1.08 / o.qty) : 0);
+      const amt = Math.round(up * (p.qty || 0)); sub += amt;
+      return '<tr><td class="c">' + (i + 1) + '</td>' +
+        '<td><b>' + esc(p.name) + '</b></td>' +
+        '<td>' + esc(ordSpec(o, p)) + '</td>' +
+        '<td class="c">' + esc(o.unit || ordUnit(p.name)) + '</td>' +
+        '<td class="r">' + fmt(p.qty) + '</td>' +
+        '<td class="r">' + fmt(up) + '</td>' +
+        '<td class="r">' + fmt(amt) + '</td></tr>';
+    }).join('');
+    // Giữ tổng tiền khớp giá trị đơn (tránh lệch do làm tròn đơn giá)
+    const total = o.value || (sub + Math.round(sub * 0.08));
+    const vat = Math.max(0, total - sub);
+    const words = (window.ERPCash && ERPCash.toWords) ? ERPCash.toWords(total) : '';
+    const tien = o.timeline.map(t => t.stage + ': ' + (t.date || '—')).join(' · ');
+    return ERPPrint.docHead() +
+      '<div class="pdoc"><div class="pdoc-title">ĐƠN HÀNG / XÁC NHẬN ĐƠN HÀNG</div>' +
+      '<div class="pdoc-sub">Số: ' + esc(o.id) + ' · Ngày: ' + esc(o.createdDate || '') +
+        ' · ' + (hd ? 'Hợp đồng tham chiếu: ' + esc(hd) : 'Không theo hợp đồng') + '</div>' +
+      '<table class="pdoc-rows">' +
+        '<tr><td>Khách hàng</td><td>' + esc(o.customer) + (o.mst ? ' · MST ' + esc(o.mst) : '') + '</td></tr>' +
+        '<tr><td>Người liên hệ</td><td>' + esc(o.contact || '—') + '</td></tr>' +
+        '<tr><td>Địa chỉ công trình</td><td>' + esc(o.site || '—') + '</td></tr>' +
+        '<tr><td>NV kinh doanh</td><td>' + esc(o.salesRep || '—') + '</td></tr>' +
+      '</table>' +
+      '<table class="pdoc-items"><thead><tr>' +
+        '<th>STT</th><th>Sản phẩm / hệ nhôm</th><th>Quy cách (KT phủ bì · màu · kính · phụ kiện)</th>' +
+        '<th>ĐVT</th><th class="r">SL</th><th class="r">Đơn giá</th><th class="r">Thành tiền</th>' +
+      '</tr></thead><tbody>' + rowsHtml +
+        '<tr><td colspan="6" style="font-weight:600">Cộng tiền hàng</td><td class="r">' + fmt(sub) + '</td></tr>' +
+        '<tr><td colspan="6">Thuế GTGT 8%</td><td class="r">' + fmt(vat) + '</td></tr>' +
+        '<tr><td colspan="6" style="font-weight:700">TỔNG THANH TOÁN</td><td class="r" style="font-weight:700">' + fmt(total) + '</td></tr>' +
+      '</tbody></table>' +
+      '<div class="pdoc-tot">Bằng chữ: <b>' + esc(words) + '</b></div>' +
+      '<table class="pdoc-rows">' +
+        '<tr><td>Tiến độ giao – lắp</td><td>Hạn giao – lắp: <b>' + esc(o.dueDate || 'chưa chốt') + '</b><br>' + esc(tien) + '</td></tr>' +
+        '<tr><td>Điều khoản thanh toán</td><td>' + esc((o.payment && o.payment.paymentTerm) || '—') +
+          ((o.payment && o.payment.dueDate && o.payment.dueDate !== '—') ? ' · hạn thanh toán ' + esc(o.payment.dueDate) : '') + '</td></tr>' +
+      '</table>' +
+      '<div class="pdoc-note">Đơn hàng có hiệu lực khi hai bên ký xác nhận. Hàng đóng kiện gỗ, bọc màng bảo vệ bề mặt nhôm; ' +
+      'bên mua chuẩn bị mặt bằng &amp; điện nước phục vụ lắp đặt. Bảo hành 24 tháng phụ kiện, 05 năm lớp sơn/anod theo QCVN 16:2023/BXD.</div>' +
+      '<div class="pdoc-sign">' +
+        '<div><b>ĐẠI DIỆN BÊN MUA</b><i>(Ký, ghi rõ họ tên)</i><div class="sp"></div></div>' +
+        '<div><b>ĐẠI DIỆN BÊN BÁN</b><i>(Ký, ghi rõ họ tên)</i><div class="sp"></div></div>' +
+      '</div></div>';
+  }
+
+  // ============================================================
+  // Phiếu thu tiền (mẫu 01-TT) — tạo thật qua ERPCash
+  // ============================================================
+  function receiptPrintBody(d) {
+    const words = (window.ERPCash && ERPCash.toWords) ? ERPCash.toWords(d.amount) : '';
+    return ERPPrint.docHead() +
+      '<div class="pdoc"><div class="pdoc-title">PHIẾU THU</div>' +
+      '<div class="pdoc-sub">Số: ' + esc(d.id || '(chưa cấp số)') + ' · Ngày ' + esc(d.date) +
+      ' · Mẫu số 01-TT (ban hành theo TT 200/2014/TT-BTC)</div>' +
+      '<table class="pdoc-rows">' +
+        '<tr><td>Họ tên người nộp tiền</td><td>' + esc(d.payer) + '</td></tr>' +
+        '<tr><td>Đơn vị / khách hàng</td><td>' + esc(d.partner) + '</td></tr>' +
+        '<tr><td>Lý do nộp</td><td>' + esc(d.reason) + '</td></tr>' +
+        '<tr><td>Hình thức</td><td>' + (d.method === 'ck' ? 'Chuyển khoản' : 'Tiền mặt') + '</td></tr>' +
+        '<tr><td>Chứng từ gốc kèm theo</td><td>Đơn hàng ' + esc(d.ref) + '</td></tr>' +
+        '<tr><td>Số tiền</td><td><b style="font-size:15px">' + fmt(d.amount) + ' ₫</b></td></tr>' +
+        '<tr><td>Viết bằng chữ</td><td><b>' + esc(words) + '</b></td></tr>' +
+      '</table>' +
+      '<div class="pdoc-note">Đã nhận đủ số tiền (viết bằng chữ): <b>' + esc(words) + '</b></div>' +
+      '<div class="pdoc-sign">' +
+        '<div><b>GIÁM ĐỐC</b><i>(Ký, họ tên, đóng dấu)</i><div class="sp"></div></div>' +
+        '<div><b>KẾ TOÁN TRƯỞNG</b><i>(Ký, họ tên)</i><div class="sp"></div></div>' +
+        '<div><b>NGƯỜI NỘP TIỀN</b><i>(Ký, họ tên)</i><div class="sp"></div></div>' +
+        '<div><b>THỦ QUỸ</b><i>(Ký, họ tên)</i><div class="sp"></div></div>' +
+      '</div></div>';
+  }
+
+  function openReceiptModal(o) {
+    const remain = (o.payment && o.payment.remaining) || 0;
+    const today = (window.ERPCash && ERPCash.todayStr) ? ERPCash.todayStr() : '';
+    ERPInteract.showModal({
+      title: 'Tạo phiếu thu tiền · đơn ' + o.id,
+      body: `<div id="rcForm" style="display:grid;grid-template-columns:1fr 1fr;gap:10px 14px">
+          <label class="oc-f" style="display:flex;flex-direction:column;gap:4px"><span style="font-family:var(--ff-mono);font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--ash)">Số tiền (₫) *</span>
+            <input class="input" id="rcAmount" type="number" min="0" value="${remain}" /></label>
+          <label class="oc-f" style="display:flex;flex-direction:column;gap:4px"><span style="font-family:var(--ff-mono);font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--ash)">Ngày thu</span>
+            <input class="input" id="rcDate" value="${esc(today)}" /></label>
+          <label class="oc-f" style="display:flex;flex-direction:column;gap:4px"><span style="font-family:var(--ff-mono);font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--ash)">Hình thức</span>
+            <select class="input" id="rcMethod"><option value="ck">Chuyển khoản</option><option value="tm">Tiền mặt</option></select></label>
+          <label class="oc-f" style="display:flex;flex-direction:column;gap:4px"><span style="font-family:var(--ff-mono);font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--ash)">Người nộp tiền *</span>
+            <input class="input" id="rcPayer" value="${esc(o.contact || o.customer)}" /></label>
+          <label class="oc-f" style="grid-column:1/-1;display:flex;flex-direction:column;gap:4px"><span style="font-family:var(--ff-mono);font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--ash)">Lý do nộp</span>
+            <input class="input" id="rcReason" value="Thu tiền đơn hàng ${esc(o.id)} · ${esc(o.product)}" /></label>
+          <div style="grid-column:1/-1"><button class="btn btn-secondary btn-sm" id="rcPreview" data-no-interact="true"><i data-lucide="eye" style="width:13px;height:13px"></i> Xem trước phiếu thu</button></div>
+        </div>`,
+      primaryText: 'Tạo phiếu thu',
+      secondaryText: 'Huỷ',
+      onPrimary: function () {
+        const amount = Number($('#rcAmount').value) || 0;
+        const payer = ($('#rcPayer').value || '').trim();
+        if (amount <= 0) { ERPInteract.showToast('Số tiền phải lớn hơn 0', 'warning', 2400); return false; }
+        if (!payer) { ERPInteract.showToast('Chưa nhập <b>người nộp tiền</b>', 'warning', 2400); return false; }
+        if (!window.ERPCash || !ERPCash.create) { ERPInteract.showToast('Chưa nạp được sổ quỹ kế toán', 'error', 2600); return false; }
+        const rec = ERPCash.create({
+          kind: 'thu', date: $('#rcDate').value || today, type: 'thu_banhang',
+          partner: o.customer, method: $('#rcMethod').value, amount: amount,
+          reason: $('#rcReason').value || ('Thu tiền đơn hàng ' + o.id),
+          createdBy: 'Kế toán viên', ref: o.id
+        });
+        o.payment = o.payment || {};
+        o.payment.paid = (o.payment.paid || 0) + amount;
+        o.payment.remaining = Math.max(0, (o.payment.total || o.value || 0) - o.payment.paid);
+        if (o.payment.remaining === 0) { o.payment.overdue = false; o.alert = { kind: 'good', text: 'Đã thu đủ · đúng hạn' }; }
+        (o.activity = o.activity || []).unshift({ time: 'hôm nay', by: 'Kế toán',
+          action: 'Lập phiếu thu <b>' + esc(rec.id) + '</b> · ' + fmt(amount) + '₫' });
+        if (window.QuoteStore && QuoteStore.getOrder(o.id)) QuoteStore.save();
+        ERPInteract.showToast('Đã tạo <a href="15-ke-toan.html?pt=' + encodeURIComponent(rec.id) +
+          '" class="lnk" style="color:inherit;text-decoration:underline;font-weight:600">' + esc(rec.id) +
+          '</a> — bấm để mở', 'success', 6500);
+        renderList();
+        openDrawer(o.id);
+      }
+    });
+    const pv = $('#rcPreview');
+    if (pv) pv.addEventListener('click', function () {
+      ERPPrint.preview({
+        title: 'Xem trước phiếu thu · đơn ' + o.id,
+        printTitle: 'Phieu-thu-' + o.id,
+        bodyHtml: receiptPrintBody({
+          id: (window.ERPCash && ERPCash.nextId) ? ERPCash.nextId('thu') : '',
+          date: $('#rcDate').value || today, payer: $('#rcPayer').value, partner: o.customer,
+          reason: $('#rcReason').value, method: $('#rcMethod').value,
+          amount: Number($('#rcAmount').value) || 0, ref: o.id
+        })
+      });
+    });
+    if (window.lucide) lucide.createIcons();
+  }
+
+  // ============================================================
+  // Phát lệnh sản xuất từ drawer (gộp SP chưa lên lệnh vào 1 LSX)
+  // ============================================================
+  function opMakeLSX(o) {
+    const pending = orderLsxRows(o).filter(r => !r.existing);
+    if (!pending.length) { ERPInteract.showToast('Đơn <b>' + esc(o.id) + '</b> đã lên đủ lệnh sản xuất', 'info', 2600); return; }
+    const lsx = QuoteStore.createLSXCombined(pending.map(r => ({ orderId: r.orderId, code: r.code, name: r.name, qty: r.qty, order: r.order })));
+    if (!lsx) { ERPInteract.showToast('Không phát được lệnh sản xuất', 'warning', 2600); return; }
+    ERPInteract.showToast('Đã phát lệnh sản xuất <a href="06-lsx-phieu-cong-nghe.html?id=' + encodeURIComponent(lsx.id) +
+      '" class="lnk" style="color:inherit;text-decoration:underline;font-weight:600">' + esc(lsx.id) + '</a> — bấm để mở', 'success', 6500);
+    renderList();
+    openDrawer(o.id);
+  }
+
+  // ============================================================
+  // Nhóm trường chuẩn ERP trong drawer — sửa tại chỗ
+  // ============================================================
+  function fld(key, label, raw, disp, kind, wide, opts) {
+    return '<div class="fld' + (wide ? ' wide' : '') + '"' +
+      (key ? ' data-fld="' + key + '" data-kind="' + (kind || 'text') + '" data-raw="' + esc(raw == null ? '' : raw) + '"' : '') +
+      (opts ? ' data-opts="' + esc(JSON.stringify(opts)) + '"' : '') + '>' +
+      '<span class="fk">' + esc(label) + '</span><span class="fv">' + (disp || '—') + '</span></div>';
+  }
+  function recordFieldsHTML(o) {
+    const hd = orderContractId(o);
+    const hdOpts = [{ v: '', t: 'Không theo HĐ' }].concat(
+      ((window.QuoteStore && QuoteStore.allContracts) ? QuoteStore.allContracts() : []).map(c => ({ v: c.id, t: c.id + ' · ' + c.customer })));
+    const lsxIds = (o.lsxIds && o.lsxIds.length) ? o.lsxIds : (o.lsxId ? [o.lsxId] : (o.lsx ? [o.lsx.id] : []));
+    return `
+      <div class="dr-section" id="drRec">
+        <div class="dr-section-head">Thông tin chung
+          <span class="h-extra"><button class="btn btn-secondary btn-sm" data-rec="edit" data-no-interact="true"><i data-lucide="square-pen" style="width:12px;height:12px"></i> Sửa</button></span>
+        </div>
+        <div class="fld-grid">
+          ${fld('customer', 'Khách hàng', o.customer, khLink(o.customer))}
+          ${fld('contact', 'Người liên hệ', o.contact, esc(o.contact || '—'))}
+          ${fld('mst', 'Mã số thuế', o.mst, esc(o.mst || '—'))}
+          ${fld('salesRep', 'NV kinh doanh', o.salesRep, esc(o.salesRep || '—'))}
+          ${fld('site', 'Địa chỉ công trình', o.site, esc(o.site || '—'), 'text', true)}
+        </div>
+        <div class="dr-section-head" style="margin-top:14px">Thương mại</div>
+        <div class="fld-grid">
+          ${fld('', 'Giá trị đơn', '', '<b>' + fmt(o.value) + '₫</b>')}
+          ${fld('deposit', 'Đã đặt cọc', (o.payment && o.payment.deposit) || 0, fmt((o.payment && o.payment.deposit) || 0) + '₫', 'number')}
+          ${fld('paymentTerm', 'Điều khoản thanh toán', (o.payment && o.payment.paymentTerm) || '', esc((o.payment && o.payment.paymentTerm) || '—'), 'text', true)}
+        </div>
+        <div class="dr-section-head" style="margin-top:14px">Tiến độ</div>
+        <div class="fld-grid">
+          ${fld('dueDate', 'Hạn giao – lắp', toInputDate(o.dueDate), esc(o.dueDate || '—'), 'date')}
+          ${fld('currentStage', 'Công đoạn hiện tại', o.currentStage, esc(o.currentStage || '—'))}
+        </div>
+        <div class="dr-section-head" style="margin-top:14px">Liên kết</div>
+        <div class="fld-grid">
+          ${fld('contractId', 'Hợp đồng', hd, hd ? hdLink(hd) : '<span style="color:var(--ash-2)">Không theo HĐ</span>', 'select', false, hdOpts)}
+          ${fld('', 'Báo giá', '', o.bgId ? bgLink(o.bgId) : '—')}
+          ${fld('', 'Lệnh sản xuất', '', lsxIds.length ? lsxIds.map(lsxLink).join(' · ') : '—', 'text', true)}
+        </div>
+        <div class="fld-bar" hidden data-rec="bar">
+          <button class="btn btn-secondary btn-sm" data-rec="cancel" data-no-interact="true">Huỷ</button>
+          <button class="btn btn-primary btn-sm" data-rec="save" data-no-interact="true">Lưu</button>
+        </div>
+      </div>`;
+  }
+  const FLD_SET = {
+    customer: (o, v) => { o.customer = v; },
+    contact: (o, v) => { o.contact = v; },
+    mst: (o, v) => { o.mst = v; },
+    salesRep: (o, v) => { o.salesRep = v; },
+    site: (o, v) => { o.site = v; },
+    deposit: (o, v) => { o.payment = o.payment || {}; o.payment.deposit = Number(v) || 0; },
+    paymentTerm: (o, v) => { o.payment = o.payment || {}; o.payment.paymentTerm = v; },
+    dueDate: (o, v) => { const d = fromInputDate(v); o.dueDate = d || v; o.deliveryDate = o.dueDate; },
+    currentStage: (o, v) => { o.currentStage = v; },
+    contractId: (o, v) => { o.contractId = v; }
+  };
+  function wireRecordEdit(o) {
+    const sec = $('#drRec'); if (!sec) return;
+    const bar = sec.querySelector('[data-rec="bar"]');
+    const editBtn = sec.querySelector('[data-rec="edit"]');
+    function toEdit() {
+      sec.querySelectorAll('[data-fld]').forEach(f => {
+        const kind = f.dataset.kind || 'text', raw = f.dataset.raw || '';
+        const fv = f.querySelector('.fv');
+        f.dataset.disp = fv.innerHTML;
+        if (kind === 'select') {
+          const opts = JSON.parse(f.dataset.opts || '[]');
+          fv.innerHTML = '<select class="fe" data-no-interact="true">' + opts.map(op =>
+            '<option value="' + esc(op.v) + '"' + (op.v === raw ? ' selected' : '') + '>' + esc(op.t) + '</option>').join('') + '</select>';
+        } else {
+          fv.innerHTML = '<input class="fe" type="' + (kind === 'number' ? 'number' : (kind === 'date' ? 'date' : 'text')) +
+            '" value="' + esc(raw) + '" data-no-interact="true" />';
+        }
+      });
+      bar.hidden = false; editBtn.hidden = true;
+    }
+    function toView() { openDrawer(o.id); }
+    function save() {
+      sec.querySelectorAll('[data-fld]').forEach(f => {
+        const k = f.dataset.fld, el = f.querySelector('.fe');
+        if (el && FLD_SET[k]) FLD_SET[k](o, el.value);
+      });
+      const tot = o.payment ? (o.payment.total || o.value || 0) : (o.value || 0);
+      if (o.payment) o.payment.remaining = Math.max(0, tot - (o.payment.paid || 0));
+      if (window.QuoteStore && QuoteStore.getOrder(o.id)) QuoteStore.save();
+      ERPInteract.showToast('Đã lưu thay đổi đơn <b>' + esc(o.id) + '</b>', 'success', 2600);
+      renderList();
+      openDrawer(o.id);
+    }
+    if (editBtn) editBtn.addEventListener('click', toEdit);
+    sec.querySelector('[data-rec="cancel"]').addEventListener('click', toView);
+    sec.querySelector('[data-rec="save"]').addEventListener('click', save);
+  }
+
+  // ============================================================
+  // Drawer
+  // ============================================================
+  function openDrawer(orderId) {
+    const o = allOrdersMerged().find(x => x.id === orderId);
+    if (!o) return;
+    const due = dueClass(o.daysLeft, o.stageType);
+
+    const timelineHTML = o.timeline.map(t => {
+      return `<div class="tl-step ${t.status}">
+        <span class="tl-dot"></span>
+        <span class="tl-name">${t.stage}</span>
+        <span class="tl-meta">${t.date}</span>
+      </div>`;
+    }).join('');
+
+    let lsxHTML = '';
+    if (o.lsxId && window.QuoteStore && QuoteStore.getLSX(o.lsxId)) {
+      const L = QuoteStore.getLSX(o.lsxId);
+      const sm = QuoteStore.STATUS_META[L.status] || { cls: 'badge', label: L.status };
+      const pk = L.packaging || {};
+      const pkText = pk.mode === 'roll' ? (fmt(pk.rolls) + ' bó · ' + fmt(pk.perRoll) + ' cây/bó')
+                                        : (fmt(pk.cartons) + ' kiện · ' + fmt(pk.perCarton) + ' cánh/kiện');
+      lsxHTML = `
+        <div class="dr-lsx">
+          <div class="lsx-head">
+            <span class="lsx-id">${L.id}</span>
+            <span class="badge ${sm.cls}">${sm.label}</span>
+          </div>
+          <div class="lsx-meta">Máy: <b>${L.machine}</b> · Thời gian: <b>${L.timeText}</b></div>
+          <div class="lsx-meta">BOM: <b>${L.bom.length}</b> vật tư · Đóng gói: <b>${pkText}</b></div>
+          <a href="19-lsx-san-xuat.html?lsx=${encodeURIComponent(L.id)}" class="lsx-link lnk">Mở lệnh sản xuất <i data-lucide="arrow-up-right" style="width:11px;height:11px"></i></a>
+        </div>`;
+    } else if (o.lsx) {
+      lsxHTML = `
+        <div class="dr-lsx">
+          <div class="lsx-head">
+            <span class="lsx-id">${o.lsx.id}</span>
+            <span class="lsx-stage">${o.lsx.current}</span>
+          </div>
+          <div class="lsx-meta">Máy: <b>${o.lsx.machine}</b> · Công nhân: <b>${o.lsx.worker}</b></div>
+          <div class="lsx-progress-track"><div style="width: ${o.lsx.progress}%"></div></div>
+          <div class="lsx-progress-meta"><span>${o.lsx.done}</span><span><b>${o.lsx.progress}%</b> · ETA ${o.lsx.eta}</span></div>
+          <a href="06-lsx-phieu-cong-nghe.html?id=${encodeURIComponent(o.lsx.id)}" class="lsx-link lnk">Mở phiếu LSX <i data-lucide="arrow-up-right" style="width:11px;height:11px"></i></a>
+        </div>`;
+    } else {
+      lsxHTML = `<div class="dr-lsx"><div class="lsx-empty">Đơn đã hoàn thành — không còn LSX đang chạy</div></div>`;
+    }
+
+    let kcsHTML = '';
+    if (o.kcs) {
+      const okClass = o.kcs.passRate >= 99 ? 'moss' : (o.kcs.passRate >= 95 ? 'amber' : 'signal');
+      kcsHTML = `
+        <div class="dr-section">
+          <div class="dr-section-head">KCS nhôm kính <span class="h-extra">Sai lệch KT ${o.kcs.dev} mm</span></div>
+          <div class="dr-info" style="grid-template-columns: 1fr 1fr 1fr;">
+            <div class="field-pair"><span class="fp-key">Đã kiểm</span><span class="fp-val">${fmt(o.kcs.checked)} cánh</span></div>
+            <div class="field-pair"><span class="fp-key">Đạt</span><span class="fp-val" style="color: var(--moss);">${fmt(o.kcs.passed)}</span></div>
+            <div class="field-pair"><span class="fp-key">Lỗi</span><span class="fp-val" style="color: ${o.kcs.failed > 0 ? 'var(--signal)' : 'var(--ink)'};">${fmt(o.kcs.failed)}</span></div>
+            <div class="field-pair"><span class="fp-key">Tỷ lệ đạt</span><span class="fp-val" style="color: var(--${okClass === 'moss' ? 'moss' : okClass === 'amber' ? 'amber' : 'signal'});">${o.kcs.passRate}%</span></div>
+            <div class="field-pair" style="grid-column: 2 / -1;"><span class="fp-key">Lý do lỗi</span><span class="fp-val" style="font-weight: 400; font-size: 12px; color: var(--ash);">${o.kcs.reason}</span></div>
+          </div>
+        </div>
+      `;
+    }
+
+    const paymentHTML = `
+      <div class="dr-payment">
+        <div class="pay-row"><span class="pk">Tổng giá trị</span><span class="pv">${fmt(o.payment.total)}₫</span></div>
+        <div class="pay-row"><span class="pk">Đã đặt cọc</span><span class="pv" style="color: var(--moss);">${fmt(o.payment.deposit)}₫</span></div>
+        <div class="pay-row"><span class="pk">Tổng đã thu</span><span class="pv">${fmt(o.payment.paid)}₫</span></div>
+        <div class="pay-row pay-total">
+          <span class="pk">Còn phải thu</span>
+          <span class="pv" style="${o.payment.remaining === 0 ? 'color: var(--moss);' : ''}">${o.payment.remaining === 0 ? '✓ Đã thanh toán đủ' : fmt(o.payment.remaining) + '₫'}</span>
+        </div>
+        ${o.payment.remaining > 0 ? `<div style="font-size: 11px; color: ${o.payment.overdue ? 'var(--signal)' : 'var(--ash)'}; margin-top: 8px; font-family: var(--ff-mono); letter-spacing: 0.08em; text-transform: uppercase;">${o.payment.overdue ? '⚠ ' : ''}Hạn thanh toán: ${o.payment.dueDate} · ${o.payment.paymentTerm}</div>` : ''}
+      </div>
+    `;
+
+    let activityHTML = '';
+    if (o.activity.length > 0) {
+      activityHTML = `
+        <div class="dr-section">
+          <div class="dr-section-head">Hoạt động gần đây <span class="h-extra">${o.activity.length} mục</span></div>
+          <div class="dr-activity">
+            ${o.activity.map(a => `
+              <div class="act-item">
+                <span class="at-time">${a.time}</span>
+                <div>
+                  <div class="at-body">${a.action}</div>
+                  <div class="at-by">${a.by}</div>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    // --- Giao hàng (hạn giao + countdown) ---
+    // Suy "hôm nay" từ chính đơn để countdown đổi theo khi sửa ngày
+    const refToday = (function () {
+      const p = (o.dueDate || '').split('/');
+      if (p.length < 3) return null;
+      const d = new Date(+p[2], +p[1] - 1, +p[0]);
+      d.setDate(d.getDate() - (o.daysLeft || 0));
+      return d;
+    })();
+    function daysLeftFor(dmy) {
+      if (!refToday || !dmy) return o.daysLeft;
+      const p = dmy.split('/'); if (p.length < 3) return o.daysLeft;
+      return Math.round((new Date(+p[2], +p[1] - 1, +p[0]) - refToday) / 86400000);
+    }
+
+    const deliverHTML = `
+      <div class="dr-section">
+        <div class="dr-section-head">Giao hàng</div>
+        <div class="dr-deliver-card">
+          <div class="ddc-row">
+            <div class="ddc-field">
+              <span class="ddc-key">Hạn giao cam kết</span>
+              <input type="date" id="ngayGiao" value="${toInputDate(o.dueDate)}" data-no-interact="true" />
+            </div>
+            <span class="ddc-countdown ${due.cls}" id="duePill">${due.label}</span>
+          </div>
+          <div class="ddc-hint">Hạn cam kết với khách — đổi ngày sẽ cập nhật mốc giao &amp; tiến độ đơn.</div>
+        </div>
+      </div>
+    `;
+
+    // --- Gắn hợp đồng ---
+    let contractHTML = '';
+    if (window.QuoteStore) {
+      const hd = QuoteStore.getContractByOrder(o.id);
+      if (hd) {
+        contractHTML = `
+          <div class="dr-section">
+            <div class="dr-section-head">Hợp đồng</div>
+            <div class="dr-contract">
+              <div class="dc-info">
+                Hợp đồng <span class="dc-id">${hd.id}</span>
+                <div class="dc-sub">${QuoteStore.STATUS_META[hd.status] ? QuoteStore.STATUS_META[hd.status].label : hd.status}${hd.signDate ? ' · ký ' + hd.signDate : ''}</div>
+              </div>
+              <a class="dc-btn is-secondary lnk" href="18-hop-dong.html?hd=${encodeURIComponent(hd.id)}" data-no-interact="true">
+                <i data-lucide="file-check" style="width:14px;height:14px"></i> Xem hợp đồng ${hd.id}
+              </a>
+            </div>
+          </div>
+        `;
+      } else {
+        contractHTML = `
+          <div class="dr-section">
+            <div class="dr-section-head">Hợp đồng</div>
+            <div class="dr-contract">
+              <div class="dc-info">
+                Chưa có hợp đồng
+                <div class="dc-sub">Lập hợp đồng cho đơn ${o.id} · ${o.customer}</div>
+              </div>
+              <a class="dc-btn is-primary" href="18-hop-dong.html?order=${encodeURIComponent(o.id)}&customer=${encodeURIComponent(o.customer)}&value=${o.value || 0}&product=${encodeURIComponent(o.product || '')}&qty=${o.qty || 0}" data-no-interact="true">
+                <i data-lucide="file-plus" style="width:14px;height:14px"></i> Tạo hợp đồng
+              </a>
+            </div>
+          </div>
+        `;
+      }
+    }
+
+    const prodOrLsxHTML = (o.products && o.products.length)
+      ? prodSectionHTML(o)
+      : `<div class="dr-section"><div class="dr-section-head">Lệnh sản xuất ${o.lsx ? '<span class="h-extra">REALTIME</span>' : ''}</div>${lsxHTML}</div>`;
+    $('#drawerPanel').innerHTML = `
+      <div class="dr-head">
+        <div class="dr-top">
+          <div>
+            <div class="dr-code-row">
+              <span class="dr-code">${QuoteStore.poCode(o)}</span>
+              <span class="dr-status">${o.currentStage}</span>
+            </div>
+            <div class="dr-cust">
+              <b>${o.customer}</b>
+              ${cleanTier(o.tier) ? `<span style="color: var(--rust-2);">${cleanTier(o.tier)}</span>` : ''}
+              <span style="opacity: 0.5">·</span>
+              <span>${o.contact}</span>
+            </div>
+            <div class="dr-value">
+              <span class="val">${fmt(o.value)}₫</span>
+              <span class="val-sub">· ${fmt(o.qty)} ${o.unit || ordUnit(o.product)}</span>
+            </div>
+            ${o.bgId ? `<div class="dr-bg-ref">
+              <i data-lucide="file-text" style="width:11px;height:11px"></i>
+              Tạo từ báo giá
+              <a href="02-bao-gia.html?bg=${o.bgId}" class="lnk">${o.bgId} <i data-lucide="arrow-up-right" style="width:10px;height:10px"></i></a>
+            </div>` : ''}
+          </div>
+          <button class="dr-close" id="drClose" data-no-interact="true">
+            <i data-lucide="x" style="width:16px;height:16px"></i>
+          </button>
+        </div>
+
+        <div class="dr-quick-actions">
+          <button data-no-interact="true" data-action="copy"><i data-lucide="copy" style="width:16px;height:16px"></i> Sao chép đơn</button>
+          <button data-no-interact="true" data-action="ship"><i data-lucide="truck" style="width:16px;height:16px"></i> In phiếu giao</button>
+          <button data-no-interact="true" data-action="collect"><i data-lucide="banknote" style="width:16px;height:16px"></i> YC thu tiền</button>
+          <button data-no-interact="true" data-action="contact"><i data-lucide="message-circle" style="width:16px;height:16px"></i> Liên hệ KH</button>
+          <button data-no-interact="true" data-action="issue"><i data-lucide="alert-octagon" style="width:16px;height:16px"></i> Báo hỏng</button>
+        </div>
+
+        <div class="dr-ops">
+          <button class="is-primary" data-op="receipt" data-no-interact="true"><i data-lucide="wallet"></i> + Tạo phiếu thu tiền</button>
+          <button data-op="lsx" data-no-interact="true"><i data-lucide="factory"></i> → Phát lệnh sản xuất</button>
+          <button data-op="preview" data-no-interact="true"><i data-lucide="eye"></i> Xem trước bản in</button>
+          <button data-op="print" data-no-interact="true"><i data-lucide="printer"></i> In</button>
+        </div>
+      </div>
+
+      <div class="dr-body">
+
+        <div class="dr-section">
+          <div class="dr-section-head">Tiến độ đơn hàng <span class="h-extra" id="dueHeader">${due.label.toUpperCase()} · ${o.dueDate}</span></div>
+          <div class="dr-timeline">
+            <div class="timeline-track">${timelineHTML}</div>
+          </div>
+        </div>
+
+        ${recordFieldsHTML(o)}
+
+        <div class="dr-section">
+          <div class="dr-section-head">Dòng hàng trong đơn</div>
+          ${orderRecordTable(o)}
+        </div>
+
+        ${deliverHTML}
+
+        ${prodOrLsxHTML}
+
+        ${kcsHTML}
+
+        <div class="dr-section">
+          <div class="dr-section-head">Công nợ &amp; thanh toán</div>
+          ${paymentHTML}
+          <div style="margin-top:10px">
+            <button class="btn btn-secondary btn-sm" data-no-interact="true"
+              data-acct-type="sale" data-acct-code="${o.id}" data-acct-amount="${o.value || 0}"
+              data-acct-partner="${o.customer}" data-acct-date="${o.createdDate || ''}"
+              data-acct-note="Doanh thu đơn ${o.id}">
+              <i data-lucide="file-spreadsheet" style="width:13px;height:13px"></i> Xuất file kế toán
+            </button>
+          </div>
+        </div>
+
+        ${contractHTML}
+
+        ${activityHTML}
+
+      </div>
+    `;
+
+    $('#orderDrawer').classList.add('is-open');
+    if (window.lucide) lucide.createIcons();
+
+    // Wire close
+    $('#drClose').addEventListener('click', closeDrawer);
+
+    // Dải nút hành động liên phòng ban + bản in
+    $('#drawerPanel').querySelectorAll('[data-op]').forEach(b => {
+      b.addEventListener('click', () => {
+        const op = b.dataset.op;
+        if (op === 'receipt') openReceiptModal(o);
+        else if (op === 'lsx') opMakeLSX(o);
+        else if (op === 'preview') ERPPrint.preview({ title: 'Xem trước đơn hàng · ' + o.id, printTitle: 'Don-hang-' + o.id, bodyHtml: orderPrintBody(o) });
+        else if (op === 'print') ERPPrint.printHtml('Don-hang-' + o.id, orderPrintBody(o));
+      });
+    });
+    wireRecordEdit(o);
+
+    // Phase 2: hoàn thiện thông tin SP · pick → tạo LSX
+    $('#drawerPanel').querySelectorAll('[data-complete-prod]').forEach(b => {
+      b.addEventListener('click', () => openCompleteForm(o, b.getAttribute('data-complete-prod')));
+    });
+    const psPicks = $('#drawerPanel').querySelectorAll('[data-pick-prod]');
+    const psBtn = $('#psMakeLsx'), psCnt = $('#psCount');
+    function psSync() {
+      const n = [...psPicks].filter(c => c.checked).length;
+      if (psCnt) psCnt.textContent = n + ' sản phẩm đã chọn';
+      if (psBtn) psBtn.disabled = n === 0;
+    }
+    psPicks.forEach(c => c.addEventListener('change', psSync));
+    if (psBtn) psBtn.addEventListener('click', () => {
+      const codes = [...psPicks].filter(c => c.checked).map(c => c.getAttribute('data-pick-prod'));
+      if (!codes.length) return;
+      const lsx = QuoteStore.createLSXfromProducts(o.id, codes);
+      if (lsx) { ERPInteract.showToast('Đã tạo <b>' + lsx.id + '</b> · ' + codes.length + ' sản phẩm (dự thảo) — <a href="' + lsxHref(lsx.id) + '" style="color:inherit;text-decoration:underline;font-weight:600">mở lệnh</a>', 'success', 5200); openDrawer(o.id); }
+    });
+    psSync();
+
+    // Wire hạn giao — đồng bộ ô nhập, countdown & header tiến độ
+    const ngayGiaoEl = $('#ngayGiao');
+    function applyDue(newDue) {
+      o.dueDate = newDue;
+      o.daysLeft = daysLeftFor(newDue);
+      if (ngayGiaoEl) ngayGiaoEl.value = toInputDate(newDue);
+      const nd = dueClass(o.daysLeft, o.stageType);
+      const pill = $('#duePill'); if (pill) { pill.className = 'ddc-countdown ' + nd.cls; pill.textContent = nd.label; }
+      const dh = $('#dueHeader'); if (dh) dh.textContent = nd.label.toUpperCase() + ' · ' + (newDue || '—');
+      ERPInteract.showToast('Đã cập nhật hạn giao' + (newDue ? ' · <b>' + newDue + '</b>' : ''), 'success');
+    }
+    if (ngayGiaoEl) {
+      ngayGiaoEl.addEventListener('change', (e) => { applyDue(fromInputDate(e.target.value)); });
+    }
+
+    // Wire quick actions
+    $('#drawerPanel').querySelectorAll('[data-action]').forEach(b => {
+      b.addEventListener('click', () => {
+        const act = b.dataset.action;
+        if (act === 'copy') {
+          OrderComposer.open({ copyFromOrderId: o.id, onCreated: window.__afterOrderCreated });
+        } else if (act === 'ship') {
+          // Phiếu giao hàng A4: xem trước + in thật
+          ERPPrint.preview({
+            title: 'Phiếu giao hàng · ' + o.id,
+            printTitle: 'Phiếu giao ' + o.id,
+            bodyHtml: ERPPrint.docHead() +
+              `<div class="pdoc"><div class="pdoc-title">PHIẾU GIAO HÀNG</div>
+              <div class="pdoc-sub">Số: PGH-${o.id} · kèm đơn hàng ${o.id}</div>
+              <table class="pdoc-rows">
+                <tr><td>Khách hàng</td><td>${o.customer}</td></tr>
+                <tr><td>Địa chỉ công trình</td><td>${o.site || o.contact || 'Theo địa chỉ đăng ký trên đơn hàng'}</td></tr>
+                <tr><td>Hạn giao – lắp</td><td>${o.dueDate || 'Chưa đặt hạn'}</td></tr>
+                <tr><td>Tài xế</td><td>Trần Văn E · 0903 555 xxx · BS 61C-123.45</td></tr>
+              </table>
+              <table class="pdoc-items"><thead><tr><th>STT</th><th>Sản phẩm</th><th class="r">Số lượng</th><th>Ghi chú</th></tr></thead>
+                <tbody><tr><td class="c">1</td><td>${o.product}${o.productNote ? ' · ' + o.productNote : ''}</td><td class="r">${fmt(o.qty)} ${o.unit || ''}</td><td>Đóng kiện gỗ, bọc màng bảo vệ bề mặt nhôm</td></tr></tbody>
+              </table>
+              <div class="pdoc-note">Người nhận kiểm đủ số lượng, tình trạng bề mặt nhôm &amp; kính (xước sơn, nứt kính, móp cạnh) trước khi ký nhận. Khiếu nại trong 24h.</div>
+              <div class="pdoc-sign">
+                <div><b>NGƯỜI GIAO HÀNG</b><i>(Ký, ghi rõ họ tên)</i><div class="sp"></div></div>
+                <div><b>THỦ KHO</b><i>(Ký, ghi rõ họ tên)</i><div class="sp"></div></div>
+                <div><b>NGƯỜI NHẬN</b><i>(Ký, ghi rõ họ tên)</i><div class="sp"></div></div>
+              </div></div>`
+          });
+        } else if (act === 'collect') {
+          ERPInteract.showModal({
+            title: 'Yêu cầu thu tiền',
+            body: `<p>Gửi yêu cầu thu tiền <b>${fmt(o.payment.remaining)}₫</b> đến kế toán cho đơn ${o.id}?</p>
+              <p style="font-size: 12px; color: var(--ash); margin-top: 8px;">Kế toán sẽ liên hệ <b>${o.customer}</b> qua kênh đã đăng ký.</p>`,
+            primaryText: 'Gửi yêu cầu',
+            secondaryText: 'Huỷ',
+            onPrimary: () => ERPInteract.showToast(`Đã gửi YC thu <b>${fmt(o.payment.remaining)}₫</b> cho kế toán`, 'success'),
+          });
+        } else if (act === 'contact') {
+          ERPInteract.showModal({
+            title: `Liên hệ ${o.customer}`,
+            body: `<p>Chọn kênh liên hệ — hệ thống tự log lại cuộc hội thoại vào lịch sử KH.</p>
+              <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 14px;">
+                <button class="btn btn-secondary" style="justify-content: flex-start; gap: 12px;"><i data-lucide="phone" style="width:14px;height:14px"></i> Gọi: ${o.contact}</button>
+                <button class="btn btn-secondary" style="justify-content: flex-start; gap: 12px;"><i data-lucide="message-square" style="width:14px;height:14px"></i> Nhắn Zalo / SMS</button>
+                <button class="btn btn-secondary" style="justify-content: flex-start; gap: 12px;"><i data-lucide="mail" style="width:14px;height:14px"></i> Email cập nhật tiến độ</button>
+              </div>`,
+            primaryText: 'Đóng',
+          });
+          setTimeout(() => { if (window.lucide) lucide.createIcons(); }, 30);
+        } else if (act === 'issue') {
+          ERPInteract.showModal({
+            title: 'Báo hỏng đơn hàng',
+            body: `<p>Báo cáo vấn đề với đơn ${o.id}?</p>
+              <div class="field" style="margin-top: 14px;">
+                <span style="font-family: var(--ff-mono); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ash); margin-bottom: 6px; display: block;">Loại vấn đề</span>
+                <select class="input">
+                  <option>Vấn đề chất lượng QC</option>
+                  <option>Khách phản hồi không hài lòng</option>
+                  <option>Thay đổi yêu cầu giữa chừng</option>
+                  <option>Sự cố máy / hỏng vật tư</option>
+                  <option>Khác</option>
+                </select>
+              </div>
+              <div class="field" style="margin-top: 12px;">
+                <span style="font-family: var(--ff-mono); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ash); margin-bottom: 6px; display: block;">Mô tả</span>
+                <textarea class="input" rows="3" placeholder="Mô tả chi tiết vấn đề..."></textarea>
+              </div>`,
+            primaryText: 'Gửi báo cáo',
+            secondaryText: 'Huỷ',
+            onPrimary: () => ERPInteract.showToast(`Đã ghi nhận báo hỏng ${o.id} · chuyển BP xử lý`, 'warning'),
+          });
+        }
+      });
+    });
+  }
+
+  function closeDrawer() {
+    $('#orderDrawer').classList.remove('is-open');
+    document.querySelectorAll('.ol-row').forEach(r => r.classList.remove('active'));
+  }
+
+  document.addEventListener('erp:ready', () => {
+    const incomingId = ingestFromBG();
+    renderList();
+
+    // Mở đơn khi đến từ báo giá (?bg=) HOẶC từ link "Từ đơn hàng" ở Kế hoạch SX (?order=)
+    const openId = incomingId || new URLSearchParams(location.search).get('order');
+    if (openId) {
+      const row = document.querySelector('.ol-row[data-id="' + openId + '"]');
+      if (row) {
+        row.classList.add('active');
+        row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        openDrawer(openId);
+      }
+    }
+
+    // Drawer overlay click → close
+    $('#drawerOverlay').addEventListener('click', closeDrawer);
+
+    // Kéo giãn panel chi tiết đơn hàng (mép trái)
+    (function () {
+      const rez = $('#drawerResizer'), dr = $('#orderDrawer'), panel = $('#drawerPanel');
+      if (!rez || !dr || !panel) return;
+      let startX = 0, startW = 0, dragging = false;
+      const clampW = w => Math.max(380, Math.min(w, Math.round(window.innerWidth * 0.94), 1100));
+      rez.addEventListener('pointerdown', e => {
+        dragging = true; startX = e.clientX; startW = panel.getBoundingClientRect().width;
+        try { rez.setPointerCapture(e.pointerId); } catch (err) {}
+        rez.classList.add('dragging'); document.body.style.userSelect = 'none';
+        e.preventDefault();
+      });
+      rez.addEventListener('pointermove', e => {
+        if (!dragging) return;
+        dr.style.setProperty('--drawer-w', clampW(startW + (startX - e.clientX)) + 'px');
+      });
+      const end = () => { if (!dragging) return; dragging = false; rez.classList.remove('dragging'); document.body.style.userSelect = ''; };
+      rez.addEventListener('pointerup', end);
+      rez.addEventListener('pointercancel', end);
+      // double-click → reset về mặc định
+      rez.addEventListener('dblclick', () => dr.style.setProperty('--drawer-w', '560px'));
+    })();
+
+    // ESC → close
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeDrawer();
+    });
+
+    // Check-all
+    $('#checkAll').addEventListener('change', (e) => {
+      const checked = e.target.checked;
+      document.querySelectorAll('.row-cb').forEach(cb => cb.checked = checked);
+      updateBulk();
+    });
+
+    // Row checkbox change
+    document.addEventListener('change', (e) => {
+      if (e.target.classList && e.target.classList.contains('row-cb')) {
+        updateBulk();
+      }
+    });
+
+    function updateBulk() {
+      const checked = [...document.querySelectorAll('.row-cb:checked')];
+      const n = checked.length;
+      const bar = $('#bulkBar');
+      $('#bulkCount').textContent = n;
+      bar.classList.toggle('is-show', n > 0);
+      // Nút "Sao chép đơn" chỉ hiện khi chọn đúng 1 đơn
+      const copyBtn = $('#bulkCopy');
+      if (copyBtn) {
+        if (n === 1) {
+          const row = checked[0].closest('.ol-row');
+          copyBtn.hidden = false;
+          copyBtn.dataset.id = row ? row.dataset.id : '';
+        } else {
+          copyBtn.hidden = true;
+        }
+      }
+    }
+    $('#bulkCopy').addEventListener('click', () => {
+      const id = $('#bulkCopy').dataset.id;
+      if (id) OrderComposer.open({ copyFromOrderId: id, onCreated: window.__afterOrderCreated });
+    });
+
+    // Bulk: đẩy sản phẩm của các đơn đã tích sang Lệnh sản xuất
+    $('#bulkMakeLsx').addEventListener('click', () => {
+      const ids = [...document.querySelectorAll('.row-cb:checked')]
+        .map(cb => { const row = cb.closest('.ol-row'); return row ? row.dataset.id : ''; })
+        .filter(Boolean);
+      if (!ids.length) return;
+      openLsxBulkPopup(ids);
+    });
+
+    // Header buttons
+    $('#btnExport').addEventListener('click', () => {
+      ERPInteract.showToast('Đang xuất Excel <b>142 đơn hàng</b>...', 'info', 1500);
+      setTimeout(() => {
+        ERPInteract.showToast('<b>donhang-thang5-2026.xlsx</b> · đã sẵn sàng tải', 'success', 2800);
+      }, 1200);
+    });
+
+    // Mở màn hình lên đơn chuyên nghiệp; sau khi tạo → refresh list + mở drawer đơn mới
+    function afterOrderCreated(order) {
+      renderList();
+      const row = document.querySelector('.ol-row[data-id="' + order.id + '"]');
+      if (row) {
+        document.querySelectorAll('.ol-row').forEach(r => r.classList.remove('active'));
+        row.classList.add('active');
+        row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+      openDrawer(order.id);
+    }
+    window.__afterOrderCreated = afterOrderCreated;
+
+    $('#btnCreate').addEventListener('click', () => {
+      openOrderComposer({ onCreated: afterOrderCreated });
+    });
+
+    // Lên đơn thẳng từ một hợp đồng: 03-don-hang.html?newhd=<HĐ>
+    const newHd = new URLSearchParams(location.search).get('newhd');
+    if (newHd) openOrderComposer({ contractId: newHd, onCreated: afterOrderCreated });
+  });
+</script>
+</body>
+</html>

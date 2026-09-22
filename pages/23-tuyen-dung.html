@@ -1,0 +1,851 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tuyển dụng & Định biên — ERP NHÔM OWIN</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/css/style.css" />
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+  <style>
+    /* View tabs */
+    .tab.active { background:var(--canvas); color:var(--ink); box-shadow:0 1px 0 var(--rule); }
+    .tbl tbody tr[data-pdx] { cursor:pointer; }
+
+    /* Info rows trong drawer */
+    .pf-info-row { display:flex; justify-content:space-between; gap:12px; padding:9px 0; border-bottom:1px solid var(--rule-hair); font-size:13px; }
+    .pf-info-row:last-child{ border-bottom:0; }
+    .pf-info-row .k { color:var(--ash); flex-shrink:0; }
+    .pf-info-row .v { font-weight:500; text-align:right; }
+
+    /* Stepper duyệt phiếu (dọc) — quy trình 4 bước */
+    .vstep { display:flex; gap:11px; align-items:flex-start; position:relative; padding-bottom:14px; }
+    .vstep:last-child { padding-bottom:0; }
+    .vstep .dot { width:24px; height:24px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; background:var(--paper-3); color:var(--ash); border:2px solid var(--paper-3); flex-shrink:0; z-index:1; }
+    .vstep.done .dot { background:var(--moss); border-color:var(--moss); color:#fff; }
+    .vstep.current .dot { background:var(--rust); border-color:var(--rust); color:#fff; box-shadow:0 0 0 4px var(--rust-soft); }
+    .vstep::before { content:""; position:absolute; left:11px; top:24px; bottom:0; width:2px; background:var(--paper-3); }
+    .vstep:last-child::before { display:none; }
+    .vstep.done::before { background:var(--moss); }
+    .vstep .vmeta { padding-top:2px; }
+    .vstep .vlbl { font-size:13px; font-weight:600; color:var(--ash); line-height:1.3; }
+    .vstep.done .vlbl, .vstep.current .vlbl { color:var(--ink); }
+    .vstep .vsub { font-size:11px; color:var(--ash-2); margin-top:1px; }
+
+    /* Detail drawer — trượt từ phải, cuộn dọc */
+    .drawer-overlay { position:fixed; inset:0; background:rgba(20,19,15,.42); backdrop-filter:blur(2px); z-index:80; opacity:0; pointer-events:none; transition:opacity .2s ease; }
+    .drawer-overlay.open { opacity:1; pointer-events:auto; }
+    .drawer { position:fixed; top:0; right:0; height:100vh; width:452px; max-width:94vw; background:var(--canvas); border-left:1px solid var(--rule); box-shadow:-12px 0 32px rgba(20,19,15,.16); z-index:81; transform:translateX(100%); transition:transform .26s cubic-bezier(.2,.8,.2,1); overflow-y:auto; padding:20px 22px 36px; }
+    .drawer.open { transform:translateX(0); }
+    .drawer::-webkit-scrollbar { width:8px; }
+    .drawer::-webkit-scrollbar-thumb { background:var(--rule); border-radius:9999px; }
+    .drawer-close { position:absolute; top:14px; right:14px; z-index:2; }
+  </style>
+</head>
+<body>
+
+<div id="app-shell" data-active="hr-tuyendung" data-title="Tuyển dụng & Định biên" data-crumb="<b>Nhân sự</b> · Tuyển dụng & Định biên">
+
+  <div class="page-header">
+    <div>
+      <h1>Tuyển dụng & Định biên</h1>
+      <p>Nhà máy cửa nhôm Owin — Thường Tín, Hà Nội · 5 vị trí đang tuyển · 4 định biên còn thiếu · 12 ứng viên trong pipeline · 2 sắp nhận việc</p>
+    </div>
+    <div class="actions">
+      <button class="btn btn-secondary"><i data-lucide="download" style="width:14px;height:14px"></i> Xuất báo cáo</button>
+      <button class="btn btn-primary" id="pdx-add-btn"><i data-lucide="file-plus" style="width:14px;height:14px"></i> Tạo phiếu đề xuất</button>
+    </div>
+  </div>
+
+  <!-- KPI -->
+  <div class="grid grid-4 mb-4">
+    <div class="card-feature-coral">
+      <div class="t-micro-u" style="color:var(--rust-deep)">VỊ TRÍ ĐANG TUYỂN</div>
+      <div class="t-h2 mt-1">5</div>
+      <div class="t-caption" style="color:var(--rust-deep)">3 phòng/tổ</div>
+    </div>
+    <div class="card-feature-orange">
+      <div class="t-micro-u" style="color:var(--amber)">ĐỊNH BIÊN CÒN THIẾU</div>
+      <div class="t-h2 mt-1">4</div>
+      <div class="t-caption" style="color:var(--amber)">Ép góc, Hoàn thiện, Uốn vòm</div>
+    </div>
+    <div class="card-feature-blue">
+      <div class="t-micro-u" style="color:var(--steel)">ỨNG VIÊN PIPELINE</div>
+      <div class="t-h2 mt-1">12</div>
+      <div class="t-caption" style="color:var(--steel)">4 nguồn giới thiệu nội bộ</div>
+    </div>
+    <div class="card-feature-teal">
+      <div class="t-micro-u" style="color:var(--moss-deep)">SẮP NHẬN VIỆC</div>
+      <div class="t-h2 mt-1">2</div>
+      <div class="t-caption" style="color:var(--moss-deep)">Đẩy sang Hồ sơ nhân sự</div>
+    </div>
+  </div>
+
+  <!-- View tabs -->
+  <div data-tab-group>
+  <div class="tabs view-tabs mb-4">
+    <button class="tab active" data-tab="tab-phieu"><i data-lucide="clipboard-list" style="width:14px;height:14px;vertical-align:-2px"></i> Phiếu đề xuất</button>
+    <button class="tab" data-tab="tab-ungvien"><i data-lucide="users" style="width:14px;height:14px;vertical-align:-2px"></i> Ứng viên</button>
+    <button class="tab" data-tab="tab-baocao"><i data-lucide="bar-chart-3" style="width:14px;height:14px;vertical-align:-2px"></i> Định biên & Báo cáo</button>
+  </div>
+
+  <!-- ===================== PANE 1: PHIẾU ĐỀ XUẤT ===================== -->
+  <div data-tab-pane="tab-phieu">
+
+    <!-- Filter bar -->
+    <div class="card mb-4" style="padding:12px 14px">
+      <div class="flex-between" style="flex-wrap:wrap;gap:10px">
+        <div class="tabs">
+          <button class="tab tab-active">Tất cả (8)</button>
+          <button class="tab">Chờ giám đốc duyệt (2)</button>
+          <button class="tab">Đang tuyển (3)</button>
+          <button class="tab">Đã tuyển (1)</button>
+          <button class="tab">Từ chối (1)</button>
+        </div>
+        <div style="position:relative">
+          <i data-lucide="search" style="width:14px;height:14px;position:absolute;left:10px;top:9px;color:var(--ash-2)"></i>
+          <input class="input" placeholder="Tìm mã phiếu, vị trí…" style="padding-left:30px;width:220px"/>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bảng phiếu đề xuất -->
+    <div class="table-wrap">
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th>Mã phiếu</th>
+            <th>Vị trí cần tuyển</th>
+            <th class="num">SL</th>
+            <th>Bộ phận</th>
+            <th>Người đề xuất</th>
+            <th class="num">Ngày đề xuất</th>
+            <th>Trạng thái</th>
+            <th>Cảnh báo</th>
+            <th class="center">Chi tiết</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr data-pdx="PĐX-2026-018">
+            <td><b>PĐX-2026-018</b></td>
+            <td>Thợ hoàn thiện – đóng kiện</td>
+            <td class="num">2</td>
+            <td>Hoàn thiện</td>
+            <td>Phan Văn Hùng</td>
+            <td class="num">12/06/2026</td>
+            <td><span class="badge status-warning">Chờ giám đốc duyệt</span></td>
+            <td><span style="color:#8a1f1f;font-weight:700">Chờ duyệt 9 ngày · thiếu 2/4 định biên</span></td>
+            <td class="center"><i data-lucide="chevron-right" style="width:16px;height:16px;color:var(--ash-2)"></i></td>
+          </tr>
+          <tr data-pdx="PĐX-2026-014">
+            <td><b>PĐX-2026-014</b></td>
+            <td>NV phát triển đại lý KV miền Trung</td>
+            <td class="num">1</td>
+            <td>Kinh doanh</td>
+            <td>Bùi Thị Lan</td>
+            <td class="num">02/06/2026</td>
+            <td><span class="badge status-warning">Chờ giám đốc duyệt</span></td>
+            <td><span style="color:var(--rule)">—</span></td>
+            <td class="center"><i data-lucide="chevron-right" style="width:16px;height:16px;color:var(--ash-2)"></i></td>
+          </tr>
+          <tr data-pdx="PĐX-2026-019">
+            <td><b>PĐX-2026-019</b></td>
+            <td>Thợ uốn vòm (ca 2)</td>
+            <td class="num">1</td>
+            <td>Uốn vòm</td>
+            <td>Hoàng Văn Sơn</td>
+            <td class="num">14/06/2026</td>
+            <td><span class="badge badge-steel">Giám đốc đã duyệt</span></td>
+            <td><span style="color:var(--rule)">—</span></td>
+            <td class="center"><i data-lucide="chevron-right" style="width:16px;height:16px;color:var(--ash-2)"></i></td>
+          </tr>
+          <tr data-pdx="PĐX-2026-017">
+            <td><b>PĐX-2026-017</b></td>
+            <td>Thợ ép góc – lắp ráp</td>
+            <td class="num">2</td>
+            <td>Ép góc</td>
+            <td>Lê Thị Hồng</td>
+            <td class="num">10/06/2026</td>
+            <td><span class="badge badge-orange">Đang tuyển</span></td>
+            <td><span style="color:#8a1f1f;font-weight:700">Trễ hạn cần người 25/06 · thiếu 2</span></td>
+            <td class="center"><i data-lucide="chevron-right" style="width:16px;height:16px;color:var(--ash-2)"></i></td>
+          </tr>
+          <tr data-pdx="PĐX-2026-016">
+            <td><b>PĐX-2026-016</b></td>
+            <td>Thợ uốn vòm</td>
+            <td class="num">1</td>
+            <td>Uốn vòm</td>
+            <td>Hoàng Văn Sơn</td>
+            <td class="num">08/06/2026</td>
+            <td><span class="badge badge-orange">Đang tuyển</span></td>
+            <td><span style="color:var(--rule)">—</span></td>
+            <td class="center"><i data-lucide="chevron-right" style="width:16px;height:16px;color:var(--ash-2)"></i></td>
+          </tr>
+          <tr data-pdx="PĐX-2026-015">
+            <td><b>PĐX-2026-015</b></td>
+            <td>Thủ kho nhôm – kính</td>
+            <td class="num">1</td>
+            <td>Kho</td>
+            <td>Trần Quốc Bảo</td>
+            <td class="num">05/06/2026</td>
+            <td><span class="badge badge-orange">Đang tuyển</span></td>
+            <td><span style="color:#8a1f1f;font-weight:700">Kho trống thủ kho từ 04/2026</span></td>
+            <td class="center"><i data-lucide="chevron-right" style="width:16px;height:16px;color:var(--ash-2)"></i></td>
+          </tr>
+          <tr data-pdx="PĐX-2026-013">
+            <td><b>PĐX-2026-013</b></td>
+            <td>Phụ máy cắt CNC</td>
+            <td class="num">1</td>
+            <td>Cắt CNC</td>
+            <td>Trần Văn Tú</td>
+            <td class="num">22/05/2026</td>
+            <td><span class="badge badge-moss">Đã tuyển</span></td>
+            <td><span style="color:#1f6b3a;font-weight:700">Tuyển xong trước hạn</span></td>
+            <td class="center"><i data-lucide="chevron-right" style="width:16px;height:16px;color:var(--ash-2)"></i></td>
+          </tr>
+          <tr data-pdx="PĐX-2026-012" style="opacity:.62">
+            <td><b>PĐX-2026-012</b></td>
+            <td>KCS nhôm kính ca đêm</td>
+            <td class="num">1</td>
+            <td>KCS nhôm kính</td>
+            <td>Nguyễn Thị Mai</td>
+            <td class="num">18/05/2026</td>
+            <td><span class="badge status-overdue">Từ chối</span></td>
+            <td><span style="color:var(--rule)">—</span></td>
+            <td class="center"><i data-lucide="chevron-right" style="width:16px;height:16px;color:var(--ash-2)"></i></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div><!-- /PANE Phiếu đề xuất -->
+
+  <!-- ===================== PANE 2: ỨNG VIÊN (đơn giản) ===================== -->
+  <div data-tab-pane="tab-ungvien" style="display:none">
+
+    <!-- Filter bar -->
+    <div class="card mb-4" style="padding:12px 14px">
+      <div class="flex-between" style="flex-wrap:wrap;gap:10px">
+        <div class="tabs">
+          <button class="tab tab-active">Tất cả (10)</button>
+          <button class="tab">Mới (3)</button>
+          <button class="tab">Sàng lọc (2)</button>
+          <button class="tab">Phỏng vấn (2)</button>
+          <button class="tab">Đạt – chờ nhận (2)</button>
+        </div>
+        <div class="flex" style="gap:8px;flex-wrap:wrap">
+          <span class="filter-pill"><i data-lucide="briefcase" style="width:13px;height:13px"></i> Vị trí <i data-lucide="chevron-down" style="width:13px;height:13px"></i></span>
+          <span class="filter-pill"><i data-lucide="git-branch" style="width:13px;height:13px"></i> Nguồn <i data-lucide="chevron-down" style="width:13px;height:13px"></i></span>
+          <button class="btn btn-primary btn-sm" id="uv-add-btn"><i data-lucide="user-plus" style="width:13px;height:13px"></i> Thêm ứng viên</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bảng ứng viên — đơn giản, bấm dòng hiện toast -->
+    <div class="table-wrap">
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th>Họ tên</th>
+            <th>Vị trí ứng tuyển</th>
+            <th>Phiếu ĐX</th>
+            <th>Nguồn</th>
+            <th class="num">Ngày nộp</th>
+            <th>Trạng thái</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr data-uv="Nguyễn Văn Đạt">
+            <td><b>Nguyễn Văn Đạt</b></td>
+            <td>Thợ hoàn thiện – đóng kiện</td>
+            <td>PĐX-2026-018</td>
+            <td><span class="badge badge-moss">Giới thiệu nội bộ</span></td>
+            <td class="num">18/06</td>
+            <td><span class="badge badge-steel">Mới</span></td>
+          </tr>
+          <tr data-uv="Trần Thị Hoa">
+            <td><b>Trần Thị Hoa</b></td>
+            <td>Thợ ép góc – lắp ráp</td>
+            <td>PĐX-2026-017</td>
+            <td><span class="badge">Tuyển ngoài</span></td>
+            <td class="num">17/06</td>
+            <td><span class="badge badge-steel">Mới</span></td>
+          </tr>
+          <tr data-uv="Lê Quốc Huy">
+            <td><b>Lê Quốc Huy</b></td>
+            <td>Thủ kho nhôm – kính</td>
+            <td>PĐX-2026-015</td>
+            <td><span class="badge">Tuyển ngoài</span></td>
+            <td class="num">16/06</td>
+            <td><span class="badge badge-steel">Mới</span></td>
+          </tr>
+          <tr data-uv="Phạm Văn Long">
+            <td><b>Phạm Văn Long</b></td>
+            <td>Thợ hoàn thiện – đóng kiện</td>
+            <td>PĐX-2026-018</td>
+            <td><span class="badge badge-moss">Giới thiệu nội bộ</span></td>
+            <td class="num">15/06</td>
+            <td><span class="badge status-warning">Sàng lọc</span></td>
+          </tr>
+          <tr data-uv="Đặng Thị Thu">
+            <td><b>Đặng Thị Thu</b></td>
+            <td>Thợ ép góc – lắp ráp</td>
+            <td>PĐX-2026-017</td>
+            <td><span class="badge">Tuyển ngoài</span></td>
+            <td class="num">14/06</td>
+            <td><span class="badge status-warning">Sàng lọc</span></td>
+          </tr>
+          <tr data-uv="Hồ Văn Phúc">
+            <td><b>Hồ Văn Phúc</b></td>
+            <td>Thợ uốn vòm</td>
+            <td>PĐX-2026-016</td>
+            <td><span class="badge">Tuyển ngoài</span></td>
+            <td class="num">13/06</td>
+            <td><span class="badge badge-orange">Phỏng vấn · 19/06 14h</span></td>
+          </tr>
+          <tr data-uv="Ngô Thị Bình">
+            <td><b>Ngô Thị Bình</b></td>
+            <td>NV phát triển đại lý</td>
+            <td>PĐX-2026-014</td>
+            <td><span class="badge badge-moss">Giới thiệu nội bộ</span></td>
+            <td class="num">12/06</td>
+            <td><span class="badge badge-orange">Phỏng vấn · 20/06 09h</span></td>
+          </tr>
+          <tr data-uv="Bùi Văn Khánh">
+            <td><b>Bùi Văn Khánh</b></td>
+            <td>Thợ hoàn thiện – đóng kiện</td>
+            <td>PĐX-2026-018</td>
+            <td><span class="badge badge-moss">Giới thiệu nội bộ</span></td>
+            <td class="num">10/06</td>
+            <td><span class="badge badge-moss">Đạt – chờ nhận · 23/06</span></td>
+          </tr>
+          <tr data-uv="Trương Thị Yến">
+            <td><b>Trương Thị Yến</b></td>
+            <td>Thợ ép góc – lắp ráp</td>
+            <td>PĐX-2026-017</td>
+            <td><span class="badge">Tuyển ngoài</span></td>
+            <td class="num">09/06</td>
+            <td><span class="badge badge-moss">Đạt – chờ nhận · 24/06</span></td>
+          </tr>
+          <tr data-uv="Cao Văn Sĩ" style="opacity:.62">
+            <td><b>Cao Văn Sĩ</b></td>
+            <td>Thủ kho nhôm – kính</td>
+            <td>PĐX-2026-015</td>
+            <td><span class="badge">Tuyển ngoài</span></td>
+            <td class="num">06/06</td>
+            <td><span class="badge status-overdue">Từ chối</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="t-caption mt-2"><i data-lucide="info" style="width:13px;height:13px;vertical-align:-2px"></i> Bấm vào một ứng viên để xem chi tiết · ứng viên "Đạt – chờ nhận việc" sẽ được đẩy sang Hồ sơ nhân sự để khởi tạo hồ sơ & hợp đồng thử việc.</div>
+
+  </div><!-- /PANE Ứng viên -->
+
+  <!-- ===================== PANE 3: ĐỊNH BIÊN & BÁO CÁO ===================== -->
+  <div data-tab-pane="tab-baocao" style="display:none">
+
+    <!-- Định biên theo phòng/tổ -->
+    <div class="card mb-4">
+      <div class="flex-between mb-1">
+        <div>
+          <div class="t-h5">Định biên nhân sự theo phòng/tổ</div>
+          <div class="t-caption">Định biên kế hoạch vs hiện có · tháng 6/2026</div>
+        </div>
+        <div class="flex" style="gap:8px;flex-wrap:wrap">
+          <span class="filter-pill"><i data-lucide="building-2" style="width:13px;height:13px"></i> Tất cả phòng/tổ <i data-lucide="chevron-down" style="width:13px;height:13px"></i></span>
+          <button class="btn btn-primary btn-sm" id="db-setup-btn"><i data-lucide="sliders-horizontal" style="width:13px;height:13px"></i> Thiết lập định biên</button>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table class="tbl">
+          <thead>
+            <tr>
+              <th>Phòng / Tổ</th>
+              <th class="num">Định biên</th>
+              <th class="num">Hiện có</th>
+              <th class="num">Thiếu / Thừa</th>
+              <th style="width:180px">Tỷ lệ lấp đầy</th>
+              <th>Trạng thái</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><b>Cắt CNC</b></td>
+              <td class="num">8</td>
+              <td class="num">8</td>
+              <td class="num">0</td>
+              <td><div class="progress success"><span style="width:100%"></span></div></td>
+              <td><span class="badge badge-moss">Đủ</span></td>
+            </tr>
+            <tr>
+              <td><b>KCS nhôm kính</b></td>
+              <td class="num">5</td>
+              <td class="num">5</td>
+              <td class="num">0</td>
+              <td><div class="progress success"><span style="width:100%"></span></div></td>
+              <td><span class="badge badge-moss">Đủ</span></td>
+            </tr>
+            <tr style="background:var(--rust-soft)">
+              <td><b>Ép góc</b></td>
+              <td class="num">9</td>
+              <td class="num">7</td>
+              <td class="num" style="color:var(--signal);font-weight:600">−2</td>
+              <td><div class="progress warn"><span style="width:78%"></span></div></td>
+              <td><span class="badge badge-orange">Đang tuyển</span></td>
+            </tr>
+            <tr style="background:var(--rust-soft)">
+              <td><b>Hoàn thiện</b></td>
+              <td class="num">4</td>
+              <td class="num">2</td>
+              <td class="num" style="color:var(--signal);font-weight:600">−2</td>
+              <td><div class="progress danger"><span style="width:50%"></span></div></td>
+              <td><span class="badge badge-orange">Đang tuyển</span></td>
+            </tr>
+            <tr>
+              <td><b>Uốn vòm</b></td>
+              <td class="num">4</td>
+              <td class="num">3</td>
+              <td class="num" style="color:var(--amber);font-weight:600">−1</td>
+              <td><div class="progress warn"><span style="width:75%"></span></div></td>
+              <td><span class="badge status-warning">Thiếu</span></td>
+            </tr>
+            <tr>
+              <td><b>Lắp đặt công trình</b></td>
+              <td class="num">3</td>
+              <td class="num">3</td>
+              <td class="num">0</td>
+              <td><div class="progress success"><span style="width:100%"></span></div></td>
+              <td><span class="badge badge-moss">Đủ</span></td>
+            </tr>
+            <tr>
+              <td><b>Kho</b></td>
+              <td class="num">3</td>
+              <td class="num">2</td>
+              <td class="num" style="color:var(--amber);font-weight:600">−1</td>
+              <td><div class="progress warn"><span style="width:67%"></span></div></td>
+              <td><span class="badge status-warning">Thiếu</span></td>
+            </tr>
+            <tr>
+              <td><b>Kinh doanh</b></td>
+              <td class="num">5</td>
+              <td class="num">5</td>
+              <td class="num">0</td>
+              <td><div class="progress success"><span style="width:100%"></span></div></td>
+              <td><span class="badge badge-moss">Đủ</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Biểu đồ -->
+    <div class="grid grid-12 mt-4">
+      <div class="card">
+        <div class="t-h5 mb-1">Định biên vs Thực tế theo bộ phận</div>
+        <div class="t-caption mb-3">Khoảng trống định biên cần tuyển · tháng 6/2026</div>
+        <div id="chartHeadcount" style="min-height:240px"></div>
+      </div>
+      <div class="card">
+        <div class="t-h5 mb-3">Nguồn ứng viên</div>
+        <div id="chartSource"></div>
+        <div class="flex" style="gap:14px;flex-wrap:wrap;margin-top:10px;font-size:11px;color:var(--ash)">
+          <span><span class="badge-dot" style="background:var(--moss);margin-right:4px"></span>Giới thiệu nội bộ (4)</span>
+          <span><span class="badge-dot" style="background:var(--steel);margin-right:4px"></span>Tuyển ngoài (6)</span>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /PANE Báo cáo -->
+  </div><!-- /tab-group -->
+
+  <!-- Drawer chi tiết phiếu đề xuất — chỉ hiện khi bấm 1 phiếu -->
+  <div class="drawer-overlay" id="pdx-overlay"></div>
+  <aside class="drawer" id="pdx-drawer" aria-hidden="true">
+    <button class="btn-icon drawer-close" id="pdx-close" title="Đóng"><i data-lucide="x" style="width:18px;height:18px"></i></button>
+    <div id="pdx-body"></div>
+  </aside>
+
+  <!-- Drawer ứng viên — xem chi tiết / thêm mới -->
+  <div class="drawer-overlay" id="uv-overlay"></div>
+  <aside class="drawer" id="uv-drawer" aria-hidden="true">
+    <button class="btn-icon drawer-close" id="uv-close" title="Đóng"><i data-lucide="x" style="width:18px;height:18px"></i></button>
+    <div id="uv-body"></div>
+  </aside>
+
+  <!-- Drawer form dùng chung: Tạo phiếu đề xuất / Thiết lập định biên -->
+  <div class="drawer-overlay" id="fm-overlay"></div>
+  <aside class="drawer" id="fm-drawer" aria-hidden="true">
+    <button class="btn-icon drawer-close" id="fm-close" title="Đóng"><i data-lucide="x" style="width:18px;height:18px"></i></button>
+    <div id="fm-body"></div>
+  </aside>
+
+  <div style="text-align:center;padding:16px">
+    <div class="sticky teal"><i data-lucide="link" style="width:14px;height:14px"></i> Định biên – Phiếu đề xuất – Ứng viên liên thông: khi ứng viên vào "Đạt – chờ nhận việc" sẽ được đẩy thẳng sang Hồ sơ nhân sự để khởi tạo hồ sơ & hợp đồng thử việc</div>
+  </div>
+
+</div>
+
+<script src="../assets/js/layout.js"></script>
+<script src="../assets/js/pricing-engine.js"></script>
+<script src="../assets/js/quote-data.js"></script>
+<script src="../assets/js/loss-data.js"></script>
+<script src="../assets/js/loss-ui.js"></script>
+<script>
+  document.addEventListener('erp:ready', () => {
+
+    /* ===== Biểu đồ vẽ lười khi mở tab Báo cáo (pane ẩn lúc đầu → width=0 nếu vẽ ngay) ===== */
+    let chartsDrawn = false;
+    function drawCharts(){
+      if(chartsDrawn) return; chartsDrawn = true;
+      ERPCharts.groupedBar('chartHeadcount', {
+        labels: ['Cắt CNC','KCS','Ép góc','Hoàn thiện','Uốn vòm','Lắp đặt công trình','Kho','KD'],
+        datasets: [
+          { name:'Định biên', values:[8,5,9,4,4,3,3,5], color:'#b8b2a2' },
+          { name:'Thực tế',   values:[8,5,7,2,3,3,2,5], color:'#c5400a' },
+        ],
+      }, { height: 240, unit:'người' });
+      ERPCharts.donut('chartSource', {
+        labels: ['Giới thiệu nội bộ','Tuyển ngoài'],
+        values: [4, 6],
+        colors: ['#2f5d3a','#4a5560'],
+      }, { centerLabel: 'Ứng viên', centerValue: '10' });
+    }
+    const reportTab = document.querySelector('[data-tab="tab-baocao"]');
+    if(reportTab) reportTab.addEventListener('click', () => setTimeout(drawCharts, 40));
+
+    /* ===== Dữ liệu phiếu đề xuất ===== */
+    const PDX = {
+      'PĐX-2026-018': { vitri:'Thợ hoàn thiện – đóng kiện (Tổ 2)', sl:'2 người', bp:'Hoàn thiện', nguoi:'Phan Văn Hùng · Tổ trưởng hoàn thiện – đóng kiện',
+        lyDo:'Thiếu định biên · tăng ca do đơn hàng tăng', luong:'7,5 – 8,5 triệu/tháng', yeucau:'Có sức khoẻ, ưu tiên có kinh nghiệm máy ép góc', canCo:'Trước 30/06/2026',
+        ngay:'12/06/2026', status:'choduyet', dinhbien:'Hoàn thiện · định biên 4 / hiện có 2 (thiếu 2)' },
+      'PĐX-2026-014': { vitri:'NV phát triển đại lý KV miền Trung', sl:'1 người', bp:'Kinh doanh', nguoi:'Bùi Thị Lan · Trưởng nhóm KD',
+        lyDo:'Mở rộng thị trường miền Trung', luong:'9 – 12 triệu + hoa hồng', yeucau:'Kinh nghiệm bán hàng B2B nhôm kính / VLXD, có xe máy', canCo:'Trước 15/07/2026',
+        ngay:'02/06/2026', status:'choduyet', dinhbien:'Kinh doanh · định biên 5 / hiện có 5 (mở rộng +1)' },
+      'PĐX-2026-019': { vitri:'Thợ uốn vòm (ca 2)', sl:'1 người', bp:'Uốn vòm', nguoi:'Hoàng Văn Sơn · Tổ trưởng uốn vòm',
+        lyDo:'Bổ sung ca 2 · đơn hàng tăng', luong:'7 – 8 triệu/tháng', yeucau:'Chịu được ca đêm, ưu tiên có nghề', canCo:'Trước 05/07/2026',
+        ngay:'14/06/2026', status:'daduyet', dinhbien:'Uốn vòm · định biên 4 / hiện có 3 (thiếu 1)' },
+      'PĐX-2026-017': { vitri:'Thợ ép góc – lắp ráp', sl:'2 người', bp:'Ép góc', nguoi:'Lê Thị Hồng · Tổ trưởng ép góc – lắp ráp',
+        lyDo:'Thay 1 người nghỉ + tăng sản lượng', luong:'7 – 8 triệu/tháng', yeucau:'Nhanh tay, cẩn thận, biết đọc bản vẽ cửa nhôm là lợi thế', canCo:'Trước 25/06/2026',
+        ngay:'10/06/2026', status:'dangtuyen', dinhbien:'Ép góc · định biên 9 / hiện có 7 (thiếu 2)' },
+      'PĐX-2026-016': { vitri:'Thợ uốn vòm', sl:'1 người', bp:'Uốn vòm', nguoi:'Hoàng Văn Sơn · Tổ trưởng uốn vòm',
+        lyDo:'Thay người chuyển công tác', luong:'7,5 – 9 triệu/tháng', yeucau:'Có kinh nghiệm vận hành máy uốn vòm', canCo:'Trước 20/06/2026',
+        ngay:'08/06/2026', status:'dangtuyen', dinhbien:'Uốn vòm · định biên 4 / hiện có 3 (thiếu 1)' },
+      'PĐX-2026-015': { vitri:'Thủ kho nhôm – kính', sl:'1 người', bp:'Kho', nguoi:'Trần Quốc Bảo · Phụ trách kho',
+        lyDo:'Thay thủ kho nghỉ việc 04/2026', luong:'7 – 8,5 triệu/tháng', yeucau:'Biết dùng phần mềm kho, quản được nhôm thanh & kính tấm', canCo:'Trước 30/06/2026',
+        ngay:'05/06/2026', status:'dangtuyen', dinhbien:'Kho · định biên 3 / hiện có 2 (thiếu 1)' },
+      'PĐX-2026-013': { vitri:'Phụ máy cắt CNC', sl:'1 người', bp:'Cắt CNC', nguoi:'Trần Văn Tú · Vận hành chính',
+        lyDo:'Bổ sung phụ máy ca ngày', luong:'7 – 8 triệu/tháng', yeucau:'Sức khoẻ tốt, học việc nhanh', canCo:'Đã hoàn tất',
+        ngay:'22/05/2026', status:'datuyen', dinhbien:'Cắt CNC · định biên 8 / hiện có 8 (đủ)' },
+      'PĐX-2026-012': { vitri:'KCS nhôm kính ca đêm', sl:'1 người', bp:'KCS nhôm kính', nguoi:'Nguyễn Thị Mai · KCS nhôm kiểm hàng',
+        lyDo:'Đề xuất tăng ca đêm', luong:'7 – 8 triệu/tháng', yeucau:'Tỉ mỉ, đo được lớp anod & dung sai, làm được ca đêm', canCo:'—',
+        ngay:'18/05/2026', status:'tuchoi', dinhbien:'KCS nhôm kính · định biên 5 / hiện có 5 (đủ)' },
+    };
+
+    const STATUS = {
+      choduyet:  { lbl:'Chờ giám đốc duyệt', cls:'status-warning' },
+      daduyet:   { lbl:'Giám đốc đã duyệt',  cls:'badge-steel' },
+      dangtuyen: { lbl:'Đang tuyển',          cls:'badge-orange' },
+      datuyen:   { lbl:'Đã tuyển',            cls:'badge-moss' },
+      tuchoi:    { lbl:'Từ chối',             cls:'status-overdue' },
+    };
+
+    const infoRows = arr => arr.map(([k,v]) => `<div class="pf-info-row"><span class="k">${k}</span><span class="v">${v}</span></div>`).join('');
+
+    /* Stepper 4 bước dọc: Tổ trưởng đề xuất → Giám đốc duyệt → Đăng tuyển → Đã tuyển */
+    function stepperHTML(e){
+      const steps = [
+        ['Tổ trưởng đề xuất','file-plus', e.nguoi.split(' · ')[0]+' · '+e.ngay],
+        ['Giám đốc duyệt','user-check', ''],
+        ['Đăng tuyển','megaphone', ''],
+        ['Đã tuyển','user-plus', ''],
+      ];
+      // index của bước "current" theo trạng thái
+      let cur, sub = ['','','','Chưa thực hiện'];
+      if(e.status==='choduyet'){ cur=1; sub=[ '', 'Đang chờ giám đốc', 'Chưa thực hiện', 'Chưa thực hiện' ]; }
+      else if(e.status==='daduyet'){ cur=2; sub=[ '', 'Giám đốc đã duyệt', 'Sẵn sàng đăng tuyển', 'Chưa thực hiện' ]; }
+      else if(e.status==='dangtuyen'){ cur=3; sub=[ '', 'Đã duyệt', 'Đang nhận hồ sơ', 'Chưa thực hiện' ]; }
+      else if(e.status==='datuyen'){ cur=4; sub=[ '', 'Đã duyệt', 'Đã đăng tuyển', 'Đã tuyển đủ người' ]; }
+      else if(e.status==='tuchoi'){ cur=-1; sub=[ '', 'Giám đốc từ chối', 'Không thực hiện', 'Không thực hiện' ]; }
+      return steps.map(([lbl,ic,defSub],i)=>{
+        let cls='';
+        if(e.status==='tuchoi'){ cls = i===0 ? 'done' : (i===1 ? 'current' : ''); }
+        else { cls = i < cur ? 'done' : (i===cur ? 'current' : ''); }
+        const icon = cls==='done' ? 'check' : ic;
+        const subText = sub[i] || defSub;
+        return `<div class="vstep ${cls}"><span class="dot"><i data-lucide="${icon}" style="width:12px;height:12px"></i></span><div class="vmeta"><div class="vlbl">${lbl}</div>${subText?`<div class="vsub">${subText}</div>`:''}</div></div>`;
+      }).join('');
+    }
+
+    function actionsHTML(e){
+      let main = '';
+      if(e.status==='choduyet'){
+        main = `<div class="flex" style="gap:8px;margin-top:4px">
+          <button class="btn btn-secondary btn-sm" style="flex:1" onclick="ERPInteract&&ERPInteract.showToast&&ERPInteract.showToast('Đã từ chối phiếu (mô phỏng)')"><i data-lucide="x" style="width:13px;height:13px"></i> Từ chối</button>
+          <button class="btn btn-primary btn-sm" style="flex:1" onclick="ERPInteract&&ERPInteract.showToast&&ERPInteract.showToast('Đã duyệt phiếu (mô phỏng)')"><i data-lucide="check" style="width:13px;height:13px"></i> Duyệt</button>
+        </div>`;
+      } else if(e.status==='daduyet'){
+        main = `<button class="btn btn-primary btn-sm" style="width:100%;margin-top:4px" onclick="ERPInteract&&ERPInteract.showToast&&ERPInteract.showToast('Đã đăng tuyển (mô phỏng)')"><i data-lucide="megaphone" style="width:13px;height:13px"></i> Đăng tuyển</button>`;
+      } else if(e.status==='dangtuyen'){
+        main = `<div class="flex" style="gap:8px;margin-top:4px">
+          <button class="btn btn-secondary btn-sm" style="flex:1" onclick="ERPInteract&&ERPInteract.showToast&&ERPInteract.showToast('Mở tab Ứng viên (mô phỏng)')"><i data-lucide="users" style="width:13px;height:13px"></i> Xem ứng viên</button>
+          <button class="btn btn-primary btn-sm" style="flex:1" onclick="ERPInteract&&ERPInteract.showToast&&ERPInteract.showToast('Đã đánh dấu đã tuyển (mô phỏng)')"><i data-lucide="check" style="width:13px;height:13px"></i> Đã tuyển</button>
+        </div>`;
+      }
+      return main + `<button class="btn btn-link btn-sm" style="width:100%;margin-top:6px"><i data-lucide="printer" style="width:13px;height:13px"></i> In phiếu đề xuất</button>`;
+    }
+
+    const body = document.getElementById('pdx-body');
+    const drawer = document.getElementById('pdx-drawer');
+    const overlay = document.getElementById('pdx-overlay');
+    function openDrawer(){ drawer.classList.add('open'); overlay.classList.add('open'); drawer.setAttribute('aria-hidden','false'); }
+    function closeDrawer(){ drawer.classList.remove('open'); overlay.classList.remove('open'); drawer.setAttribute('aria-hidden','true'); document.querySelectorAll('.tbl tbody tr[data-pdx]').forEach(r=>r.classList.remove('row-selected')); }
+
+    function render(ma){
+      const e = PDX[ma]; if(!e || !body) return;
+      const st = STATUS[e.status];
+      body.innerHTML = `
+        <div class="flex-between mb-2" style="padding-right:28px">
+          <div>
+            <div class="t-micro-u" style="color:var(--ash)">${ma}</div>
+            <div class="t-h4">${e.vitri}</div>
+          </div>
+          <span class="badge ${st.cls}">${st.lbl}</span>
+        </div>
+        ${infoRows([
+          ['Vị trí cần tuyển', e.vitri],
+          ['Số lượng', e.sl],
+          ['Bộ phận / Tổ', e.bp],
+          ['Người đề xuất', e.nguoi],
+          ['Lý do tuyển', e.lyDo],
+          ['Mức lương dự kiến', e.luong],
+          ['Yêu cầu ứng viên', e.yeucau],
+          ['Ngày đề xuất', e.ngay],
+          ['Ngày cần có người', e.canCo],
+        ])}
+        <hr class="hr-soft">
+        <div class="t-micro-u mb-2">Quy trình duyệt</div>
+        ${stepperHTML(e)}
+        <hr class="hr-soft">
+        <a href="#" onclick="return false" class="doc-link" style="display:flex;align-items:center;gap:9px;padding:9px 10px;border:1px solid var(--rule-soft);border-radius:8px;font-size:13px;text-decoration:none;color:var(--ink)">
+          <i data-lucide="users-round" style="width:16px;height:16px;color:var(--steel);flex-shrink:0"></i>
+          <div><div>Định biên liên quan</div><div class="t-caption">${e.dinhbien}</div></div>
+        </a>
+        <div style="margin-top:14px">${actionsHTML(e)}</div>`;
+      if(window.lucide) window.lucide.createIcons();
+      drawer.scrollTop = 0;
+    }
+
+    document.querySelectorAll('.tbl tbody tr[data-pdx]').forEach(tr=>{
+      tr.addEventListener('click', (ev)=>{
+        if(ev.target.closest('button, a, input')) return;
+        document.querySelectorAll('.tbl tbody tr[data-pdx]').forEach(r=>r.classList.remove('row-selected'));
+        tr.classList.add('row-selected');
+        render(tr.dataset.pdx);
+        openDrawer();
+      });
+    });
+    overlay.addEventListener('click', closeDrawer);
+    document.getElementById('pdx-close').addEventListener('click', closeDrawer);
+    document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closeDrawer(); });
+
+    /* ===== Ứng viên — xem chi tiết (drawer) + thêm ứng viên (form) ===== */
+    const UV = {
+      'Nguyễn Văn Đạt': { vitri:'Thợ hoàn thiện – đóng kiện', phieu:'PĐX-2026-018', nguon:'Giới thiệu nội bộ', ngay:'18/06/2026', status:'Mới', sinh:'2001', sdt:'0367 112 945', email:'dat.nv@gmail.com', hv:'Tốt nghiệp THPT', kn:'1 năm phụ máy xưởng nhôm', danhgia:'Chưa phỏng vấn', ghichu:'Người giới thiệu: Võ Minh Khôi (NV-040)' },
+      'Trần Thị Hoa': { vitri:'Thợ ép góc – lắp ráp', phieu:'PĐX-2026-017', nguon:'Tuyển ngoài', ngay:'17/06/2026', status:'Mới', sinh:'1999', sdt:'0356 778 220', email:'hoa.tt@gmail.com', hv:'THPT', kn:'Chưa có kinh nghiệm', danhgia:'Chưa phỏng vấn', ghichu:'Nộp qua tin tuyển dụng' },
+      'Lê Quốc Huy': { vitri:'Thủ kho nhôm – kính', phieu:'PĐX-2026-015', nguon:'Tuyển ngoài', ngay:'16/06/2026', status:'Mới', sinh:'1997', sdt:'0909 145 776', email:'huy.lq@gmail.com', hv:'Cao đẳng Logistics', kn:'2 năm thủ kho nhôm – kính', danhgia:'Chưa phỏng vấn', ghichu:'—' },
+      'Phạm Văn Long': { vitri:'Thợ hoàn thiện – đóng kiện', phieu:'PĐX-2026-018', nguon:'Giới thiệu nội bộ', ngay:'15/06/2026', status:'Sàng lọc', sinh:'2000', sdt:'0334 552 119', email:'—', hv:'THPT', kn:'6 tháng phụ máy', danhgia:'Hồ sơ đạt yêu cầu, chờ xếp lịch phỏng vấn', ghichu:'Người giới thiệu: Phạm Văn Nam (Tổ 3)' },
+      'Đặng Thị Thu': { vitri:'Thợ ép góc – lắp ráp', phieu:'PĐX-2026-017', nguon:'Tuyển ngoài', ngay:'14/06/2026', status:'Sàng lọc', sinh:'2002', sdt:'0387 220 661', email:'—', hv:'THCS', kn:'Chưa có kinh nghiệm', danhgia:'Hồ sơ đạt, ưu tiên gần nhà máy', ghichu:'—' },
+      'Hồ Văn Phúc': { vitri:'Thợ uốn vòm', phieu:'PĐX-2026-016', nguon:'Tuyển ngoài', ngay:'13/06/2026', status:'Phỏng vấn · 19/06 14h', sinh:'1995', sdt:'0902 661 220', email:'phuc.hv@gmail.com', hv:'THPT', kn:'3 năm vận hành máy uốn vòm', danhgia:'Chờ phỏng vấn (19/06 14h tại VP)', ghichu:'Có thể nhận việc ngay' },
+      'Ngô Thị Bình': { vitri:'NV phát triển đại lý', phieu:'PĐX-2026-014', nguon:'Giới thiệu nội bộ', ngay:'12/06/2026', status:'Phỏng vấn · 20/06 09h', sinh:'1996', sdt:'0938 112 553', email:'binh.nt@gmail.com', hv:'ĐH Kinh tế', kn:'4 năm bán hàng B2B vật liệu xây dựng', danhgia:'Chờ phỏng vấn (20/06 09h)', ghichu:'Người giới thiệu: Bùi Thị Lan (NV-009)' },
+      'Bùi Văn Khánh': { vitri:'Thợ hoàn thiện – đóng kiện', phieu:'PĐX-2026-018', nguon:'Giới thiệu nội bộ', ngay:'10/06/2026', status:'Đạt – chờ nhận · 23/06', sinh:'2001', sdt:'0356 990 117', email:'—', hv:'THPT', kn:'1 năm phụ máy', danhgia:'PV đạt 8.5/10 — chăm chỉ, tiếp thu nhanh', ghichu:'Hẹn nhận việc 23/06' },
+      'Trương Thị Yến': { vitri:'Thợ ép góc – lắp ráp', phieu:'PĐX-2026-017', nguon:'Tuyển ngoài', ngay:'09/06/2026', status:'Đạt – chờ nhận · 24/06', sinh:'2000', sdt:'0344 221 880', email:'—', hv:'THPT', kn:'Chưa có kinh nghiệm', danhgia:'PV đạt — thái độ tốt, chịu khó', ghichu:'Hẹn nhận việc 24/06' },
+      'Cao Văn Sĩ': { vitri:'Thủ kho nhôm – kính', phieu:'PĐX-2026-015', nguon:'Tuyển ngoài', ngay:'06/06/2026', status:'Từ chối', sinh:'1994', sdt:'0909 778 112', email:'—', hv:'THPT', kn:'1 năm kho vật tư', danhgia:'PV 5/10 — thiếu kinh nghiệm quản lý kho', ghichu:'Lưu hồ sơ cho đợt sau' },
+    };
+
+    function uvBadge(s){ if(s==='Mới') return 'badge-steel'; if(s==='Sàng lọc') return 'status-warning'; if(s.indexOf('Phỏng vấn')===0) return 'badge-orange'; if(s.indexOf('Đạt')===0) return 'badge-moss'; if(s==='Từ chối') return 'status-overdue'; return 'badge'; }
+
+    function uvSteps(s){
+      const steps=['Tiếp nhận hồ sơ','Sàng lọc','Phỏng vấn','Kết quả'];
+      const rejected = s==='Từ chối';
+      let idx; if(s==='Mới') idx=0; else if(s==='Sàng lọc') idx=1; else if(s.indexOf('Phỏng vấn')===0) idx=2; else idx=3;
+      return steps.map((lbl,i)=>{
+        const cls = i<idx?'done':(i===idx?'current':'future');
+        const icon = cls==='done'?'check':(i===3&&rejected?'x':'circle');
+        const l = (i===3) ? (rejected?'Từ chối':(idx>=3?'Đạt – chờ nhận việc':'Kết quả')) : lbl;
+        return `<div class="vstep ${cls}"><span class="dot"><i data-lucide="${icon}" style="width:12px;height:12px"></i></span><div class="vmeta"><div class="vlbl">${l}</div></div></div>`;
+      }).join('');
+    }
+
+    function uvTwo(l2,i2,m2,l1,i1,m1){
+      return `<div class="flex" style="gap:8px;margin-top:4px">
+        <button class="btn btn-secondary btn-sm" style="flex:1" onclick="ERPInteract&&ERPInteract.showToast&&ERPInteract.showToast('${m2}')"><i data-lucide="${i2}" style="width:13px;height:13px"></i> ${l2}</button>
+        <button class="btn btn-primary btn-sm" style="flex:1" onclick="ERPInteract&&ERPInteract.showToast&&ERPInteract.showToast('${m1}')"><i data-lucide="${i1}" style="width:13px;height:13px"></i> ${l1}</button>
+      </div>`;
+    }
+    function uvActions(e){
+      const s=e.status;
+      if(s==='Mới') return uvTwo('Từ chối','x','Đã từ chối ứng viên (mô phỏng)','Sàng lọc hồ sơ','list-checks','Đã chuyển sàng lọc (mô phỏng)');
+      if(s==='Sàng lọc') return uvTwo('Từ chối','x','Đã từ chối (mô phỏng)','Mời phỏng vấn','calendar-plus','Đã gửi lịch phỏng vấn (mô phỏng)');
+      if(s.indexOf('Phỏng vấn')===0) return uvTwo('Từ chối','x','Đã từ chối (mô phỏng)','Đánh dấu Đạt','check','Đã đánh dấu Đạt (mô phỏng)');
+      if(s.indexOf('Đạt')===0) return `<a href="22-nhan-su-ho-so.html" class="btn btn-primary btn-sm" style="width:100%;margin-top:4px"><i data-lucide="user-plus" style="width:13px;height:13px"></i> Đẩy sang Hồ sơ nhân sự</a>`;
+      if(s==='Từ chối') return `<button class="btn btn-secondary btn-sm" style="width:100%;margin-top:4px" onclick="ERPInteract&&ERPInteract.showToast&&ERPInteract.showToast('Đã khôi phục ứng viên (mô phỏng)')"><i data-lucide="rotate-ccw" style="width:13px;height:13px"></i> Khôi phục hồ sơ</button>`;
+      return '';
+    }
+    function uvFld(label, control){ return `<div style="margin-bottom:11px"><label class="t-caption-b" style="display:block;margin-bottom:4px">${label}</label>${control}</div>`; }
+
+    const uvBody = document.getElementById('uv-body');
+    const uvDrawer = document.getElementById('uv-drawer');
+    const uvOverlay = document.getElementById('uv-overlay');
+    function openUV(){ uvDrawer.classList.add('open'); uvOverlay.classList.add('open'); uvDrawer.setAttribute('aria-hidden','false'); }
+    function closeUV(){ uvDrawer.classList.remove('open'); uvOverlay.classList.remove('open'); uvDrawer.setAttribute('aria-hidden','true'); document.querySelectorAll('.tbl tbody tr[data-uv]').forEach(r=>r.classList.remove('row-selected')); }
+
+    function renderUV(name){
+      const e = UV[name]; if(!e || !uvBody) return;
+      uvBody.innerHTML = `
+        <div class="flex-between mb-2" style="padding-right:28px">
+          <div><div class="t-micro-u" style="color:var(--ash)">Ứng viên</div><div class="t-h4">${name}</div></div>
+          <span class="badge ${uvBadge(e.status)}">${e.status}</span>
+        </div>
+        ${infoRows([
+          ['Vị trí ứng tuyển', e.vitri],
+          ['Phiếu đề xuất', e.phieu],
+          ['Nguồn', e.nguon],
+          ['Ngày nộp', e.ngay],
+          ['Năm sinh', e.sinh],
+          ['Điện thoại', e.sdt],
+          ['Email', e.email||'—'],
+          ['Học vấn', e.hv],
+          ['Kinh nghiệm', e.kn],
+        ])}
+        <hr class="hr-soft">
+        <div class="t-micro-u mb-2">Tiến trình tuyển dụng</div>
+        ${uvSteps(e.status)}
+        <hr class="hr-soft">
+        <div class="t-micro-u mb-1">Đánh giá phỏng vấn</div>
+        <div style="font-size:13px;margin-bottom:10px">${e.danhgia||'—'}</div>
+        <div class="t-micro-u mb-1">Ghi chú</div>
+        <div style="font-size:13px;color:var(--ash)">${e.ghichu||'—'}</div>
+        <div style="margin-top:14px">${uvActions(e)}</div>`;
+      if(window.lucide) window.lucide.createIcons();
+      uvDrawer.scrollTop = 0;
+    }
+
+    function renderUVForm(){
+      uvBody.innerHTML = `
+        <div class="mb-3" style="padding-right:28px">
+          <div class="t-h4">Thêm ứng viên</div>
+          <div class="t-caption">Nhập thông tin ứng viên mới vào pipeline tuyển dụng</div>
+        </div>
+        ${uvFld('Họ tên *','<input class="input" placeholder="VD: Nguyễn Văn A">')}
+        ${uvFld('Vị trí ứng tuyển *','<input class="input" placeholder="VD: Thợ hoàn thiện – đóng kiện">')}
+        ${uvFld('Phiếu đề xuất liên quan','<input class="input" placeholder="VD: PĐX-2026-018">')}
+        ${uvFld('Nguồn','<select class="input"><option>Giới thiệu nội bộ</option><option>Tuyển ngoài</option><option>Website tuyển dụng</option></select>')}
+        <div class="grid grid-2" style="gap:10px">
+          <div>${uvFld('Năm sinh','<input class="input" placeholder="VD: 2000">')}</div>
+          <div>${uvFld('Điện thoại','<input class="input" placeholder="09xx xxx xxx">')}</div>
+        </div>
+        ${uvFld('Email','<input class="input" placeholder="email@example.com">')}
+        ${uvFld('Học vấn','<input class="input" placeholder="VD: THPT / Cao đẳng…">')}
+        ${uvFld('Kinh nghiệm','<input class="input" placeholder="VD: 1 năm phụ máy xưởng nhôm">')}
+        ${uvFld('Ghi chú','<textarea class="input" rows="2" placeholder="Ghi chú thêm…"></textarea>')}
+        <div class="flex" style="gap:8px;margin-top:14px">
+          <button class="btn btn-secondary btn-sm" style="flex:1" id="uv-cancel"><i data-lucide="x" style="width:13px;height:13px"></i> Hủy</button>
+          <button class="btn btn-primary btn-sm" style="flex:1" id="uv-save"><i data-lucide="check" style="width:13px;height:13px"></i> Lưu ứng viên</button>
+        </div>`;
+      if(window.lucide) window.lucide.createIcons();
+      document.getElementById('uv-cancel').addEventListener('click', closeUV);
+      document.getElementById('uv-save').addEventListener('click', ()=>{ if(window.ERPInteract&&ERPInteract.showToast) ERPInteract.showToast('Đã thêm ứng viên mới vào pipeline (mô phỏng)','success'); closeUV(); });
+      uvDrawer.scrollTop = 0;
+    }
+
+    document.querySelectorAll('.tbl tbody tr[data-uv]').forEach(tr=>{
+      tr.addEventListener('click', (ev)=>{
+        if(ev.target.closest('button, a, input')) return;
+        document.querySelectorAll('.tbl tbody tr[data-uv]').forEach(r=>r.classList.remove('row-selected'));
+        tr.classList.add('row-selected');
+        renderUV(tr.dataset.uv);
+        openUV();
+      });
+    });
+    const uvAddBtn = document.getElementById('uv-add-btn');
+    if(uvAddBtn) uvAddBtn.addEventListener('click', ()=>{ renderUVForm(); openUV(); });
+    uvOverlay.addEventListener('click', closeUV);
+    document.getElementById('uv-close').addEventListener('click', closeUV);
+    document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closeUV(); });
+
+    /* ===== Form drawer dùng chung: Tạo phiếu đề xuất + Thiết lập định biên ===== */
+    const fmBody = document.getElementById('fm-body');
+    const fmDrawer = document.getElementById('fm-drawer');
+    const fmOverlay = document.getElementById('fm-overlay');
+    function openFM(){ fmDrawer.classList.add('open'); fmOverlay.classList.add('open'); fmDrawer.setAttribute('aria-hidden','false'); }
+    function closeFM(){ fmDrawer.classList.remove('open'); fmOverlay.classList.remove('open'); fmDrawer.setAttribute('aria-hidden','true'); }
+    function wireFM(msg){
+      if(window.lucide) window.lucide.createIcons();
+      fmDrawer.scrollTop = 0;
+      document.getElementById('fm-cancel').addEventListener('click', closeFM);
+      document.getElementById('fm-save').addEventListener('click', ()=>{ if(window.ERPInteract&&ERPInteract.showToast) ERPInteract.showToast(msg,'success'); closeFM(); });
+    }
+
+    function renderPhieuForm(){
+      fmBody.innerHTML = `
+        <div class="mb-3" style="padding-right:28px">
+          <div class="t-h4">Tạo phiếu đề xuất tuyển dụng</div>
+          <div class="t-caption">Tổ trưởng / Trưởng bộ phận lập · gửi Giám đốc duyệt</div>
+        </div>
+        ${uvFld('Vị trí cần tuyển *','<input class="input" placeholder="VD: Thợ hoàn thiện – đóng kiện">')}
+        <div class="grid grid-2" style="gap:10px">
+          <div>${uvFld('Số lượng *','<input class="input" placeholder="VD: 2">')}</div>
+          <div>${uvFld('Bộ phận / Tổ *','<select class="input"><option>Cắt CNC</option><option>KCS nhôm kính</option><option>Ép góc</option><option>Hoàn thiện</option><option>Uốn vòm</option><option>Lắp đặt công trình</option><option>Kho</option><option>Kinh doanh</option></select>')}</div>
+        </div>
+        ${uvFld('Người đề xuất','<input class="input" value="Tổ trưởng bộ phận">')}
+        ${uvFld('Lý do tuyển','<select class="input"><option>Thay người nghỉ việc</option><option>Bổ sung do thiếu định biên</option><option>Tăng ca / mở rộng sản xuất</option><option>Khác</option></select>')}
+        ${uvFld('Mức lương dự kiến','<input class="input" placeholder="VD: 6.000.000 – 7.500.000đ">')}
+        ${uvFld('Yêu cầu ứng viên','<textarea class="input" rows="2" placeholder="VD: Sức khỏe tốt, chịu khó, ưu tiên có kinh nghiệm…"></textarea>')}
+        ${uvFld('Ngày cần có người','<input class="input" placeholder="VD: 01/07/2026">')}
+        <div class="flex" style="gap:8px;margin-top:14px">
+          <button class="btn btn-secondary btn-sm" style="flex:1" id="fm-cancel"><i data-lucide="x" style="width:13px;height:13px"></i> Hủy</button>
+          <button class="btn btn-primary btn-sm" style="flex:1" id="fm-save"><i data-lucide="send" style="width:13px;height:13px"></i> Gửi duyệt</button>
+        </div>`;
+      wireFM('Đã tạo & gửi phiếu đề xuất lên Giám đốc duyệt (mô phỏng)');
+    }
+
+    function renderDinhbienForm(){
+      const rows = [['Cắt CNC',8],['KCS nhôm kính',5],['Ép góc',9],['Hoàn thiện',4],['Uốn vòm',4],['Lắp đặt công trình',3],['Kho',3],['Kinh doanh',5]];
+      const rowHtml = rows.map(([t,n])=>`
+        <div class="flex" style="gap:10px;align-items:center;margin-bottom:8px">
+          <div style="flex:1;font-size:13px;font-weight:500">${t}</div>
+          <input class="input" value="${n}" style="width:88px;text-align:center">
+        </div>`).join('');
+      fmBody.innerHTML = `
+        <div class="mb-3" style="padding-right:28px">
+          <div class="t-h4">Thiết lập định biên nhân sự</div>
+          <div class="t-caption">Định biên kế hoạch theo phòng/tổ · áp dụng từ kỳ kế tiếp</div>
+        </div>
+        <div class="flex-between t-micro-u mb-2" style="padding:0 2px"><span>Phòng / Tổ</span><span>Định biên</span></div>
+        ${rowHtml}
+        <hr class="hr-soft">
+        <div class="t-micro-u mb-2">Thêm phòng/tổ mới</div>
+        <div class="flex" style="gap:10px;align-items:center;margin-bottom:4px">
+          <input class="input" placeholder="Tên phòng/tổ…" style="flex:1">
+          <input class="input" placeholder="SL" style="width:88px;text-align:center">
+        </div>
+        <button class="btn btn-link btn-sm" style="margin-top:4px" onclick="ERPInteract&&ERPInteract.showToast&&ERPInteract.showToast('Đã thêm dòng phòng/tổ (mô phỏng)')"><i data-lucide="plus" style="width:13px;height:13px"></i> Thêm vào danh sách</button>
+        <div class="flex" style="gap:8px;margin-top:16px">
+          <button class="btn btn-secondary btn-sm" style="flex:1" id="fm-cancel"><i data-lucide="x" style="width:13px;height:13px"></i> Hủy</button>
+          <button class="btn btn-primary btn-sm" style="flex:1" id="fm-save"><i data-lucide="check" style="width:13px;height:13px"></i> Lưu định biên</button>
+        </div>`;
+      wireFM('Đã lưu định biên nhân sự (mô phỏng)');
+    }
+
+    const pdxAddBtn = document.getElementById('pdx-add-btn');
+    if(pdxAddBtn) pdxAddBtn.addEventListener('click', ()=>{ renderPhieuForm(); openFM(); });
+    const dbSetupBtn = document.getElementById('db-setup-btn');
+    if(dbSetupBtn) dbSetupBtn.addEventListener('click', ()=>{ renderDinhbienForm(); openFM(); });
+    fmOverlay.addEventListener('click', closeFM);
+    document.getElementById('fm-close').addEventListener('click', closeFM);
+    document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closeFM(); });
+  });
+</script>
+</body>
+</html>

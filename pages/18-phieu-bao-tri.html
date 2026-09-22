@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Phiếu bảo trì — ERP NHÔM OWIN</title>
+  <link rel="stylesheet" href="../assets/css/style.css" />
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+  <style>
+    .lnk { color: var(--rust); border-bottom: 1px solid rgba(197,64,10,.35); font-family: var(--ff-mono); font-size: 11.5px; cursor: pointer; }
+    .lnk:hover { color: var(--rust-deep); border-bottom-color: var(--rust-deep); text-decoration: none; }
+
+    .stat-strip { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 10px; margin-bottom: 12px; }
+    @media (max-width: 860px) { .stat-strip { grid-template-columns: repeat(2, minmax(0,1fr)); } }
+    .stat-strip .s { background: var(--canvas); border: 1px solid var(--rule-soft); border-radius: var(--r-4); padding: 10px 14px; min-height: 64px; display: flex; flex-direction: column; justify-content: center; }
+    .stat-strip .s .l { font-family: var(--ff-mono); font-size: 9px; letter-spacing: .14em; text-transform: uppercase; color: var(--ash); }
+    .stat-strip .s .v { font-size: 22px; font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; line-height: 1.1; margin-top: 3px; }
+    .stat-strip .s .v small { font-size: 11px; color: var(--ash); font-weight: 400; }
+    .stat-strip .s .v.bad { color: var(--signal); }
+    .stat-strip .s .v.good { color: var(--moss); }
+
+    .km-toolbar { background: var(--canvas); border: 1px solid var(--rule-soft); border-radius: var(--r-5); padding: 10px 12px; margin-bottom: 10px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    .km-toolbar .search-wrap { flex: 1; min-width: 220px; display: flex; align-items: center; background: var(--paper-2); border-radius: var(--r-3); padding: 0 12px; height: 36px; }
+    .km-toolbar .search-wrap i { color: var(--ash-2); flex-shrink: 0; margin-right: 6px; }
+    .km-toolbar .search-wrap input { flex: 1; background: transparent; border: 0; outline: none; font-size: 13px; color: var(--ink); }
+
+    .seg-tabs { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 10px; }
+    .seg-tabs .seg { padding: 8px 14px; background: transparent; border: 1px solid transparent; color: var(--ash); font-size: 13px; font-weight: 500; border-radius: var(--r-3); cursor: pointer; display: inline-flex; align-items: center; gap: 7px; }
+    .seg-tabs .seg:hover { color: var(--ink); }
+    .seg-tabs .seg .count { font-family: var(--ff-mono); font-size: 10px; padding: 1px 6px; background: var(--paper-2); border-radius: 2px; }
+    .seg-tabs .seg.active { background: var(--ink); color: var(--paper); }
+    .seg-tabs .seg.active .count { background: rgba(245,241,232,.15); color: var(--paper); }
+
+    #btTbl tbody td { font-size: 13px; white-space: nowrap; }
+    #btTbl tbody tr { height: 44px; cursor: pointer; }
+    .cell-main { font-weight: 600; color: var(--ink); }
+    .cell-sub { font-family: var(--ff-mono); font-size: 10px; color: var(--ash-2); letter-spacing: .06em; margin-top: 2px; }
+    .cell-mini { font-size: 11px; color: var(--ash); margin-top: 2px; white-space: normal; }
+    .warn-bad { color: #8a1f1f; font-weight: 600; font-size: 12px; }
+    .warn-good { color: #1f6b3a; font-weight: 600; font-size: 12px; }
+    .warn-none { color: var(--ash-3); }
+    .row-act { width: 30px; height: 30px; border: 1px solid var(--rule); background: var(--canvas); border-radius: var(--r-2); cursor: pointer; color: var(--ash); display: inline-flex; align-items: center; justify-content: center; }
+    .row-act:hover { border-color: var(--ink); color: var(--ink); }
+
+    .kx-drawer { position: fixed; inset: 0; z-index: 100; pointer-events: none; }
+    .kx-drawer .ov { position: absolute; inset: 0; background: rgba(20,19,15,.42); opacity: 0; transition: opacity 240ms ease; }
+    .kx-drawer .panel { position: absolute; right: 0; top: 0; bottom: 0; width: 100%; max-width: 800px; background: var(--paper); border-left: 1px solid var(--rule); transform: translateX(100%); transition: transform 280ms cubic-bezier(.2,.8,.2,1); overflow-y: auto; display: flex; flex-direction: column; box-shadow: -16px 0 48px rgba(20,19,15,.15); }
+    .kx-drawer.is-open { pointer-events: auto; }
+    .kx-drawer.is-open .ov { opacity: 1; }
+    .kx-drawer.is-open .panel { transform: translateX(0); }
+
+    .dr-hero { padding: 18px 22px 20px; background: #14130f; color: #f5f1e8; flex-shrink: 0; position: relative; }
+    .dr-hero::before { content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 3px; background: #c5400a; }
+    .dr-hero .top-bar { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+    .dr-hero .tag-row { display: inline-flex; align-items: center; gap: 8px; font-family: var(--ff-mono); font-size: 10px; font-weight: 500; letter-spacing: .16em; text-transform: uppercase; color: rgba(245,241,232,.55); }
+    .dr-hero .stage-chip { padding: 3px 9px; background: rgba(245,241,232,.1); color: #e85a2a; border-radius: 2px; border: 1px solid rgba(232,90,42,.3); font-weight: 600; }
+    .dr-hero .nav-btn { background: rgba(245,241,232,.08); border: 1px solid rgba(245,241,232,.16); color: #f5f1e8; width: 30px; height: 30px; border-radius: var(--r-2); display: inline-flex; align-items: center; justify-content: center; cursor: pointer; }
+    .dr-hero .nav-btn:hover { background: rgba(245,241,232,.16); }
+    .dr-hero h2 { font-size: 26px; font-weight: 500; letter-spacing: -.015em; line-height: 1.05; margin-top: 8px; }
+    .dr-hero .sub { font-size: 12.5px; color: rgba(245,241,232,.6); margin-top: 5px; }
+    .dr-hero .meta-line { margin-top: 10px; font-size: 12px; color: rgba(245,241,232,.6); display: flex; flex-wrap: wrap; gap: 6px; }
+    .dr-hero .meta-line b { color: #f5f1e8; font-weight: 500; }
+    .dr-hero .meta-line .sep { opacity: .35; }
+    .dr-hero .actions { margin-top: 14px; display: flex; gap: 6px; flex-wrap: wrap; }
+    .dr-hero .actions button { min-height: 36px; padding: 8px 13px; background: rgba(245,241,232,.08); border: 1px solid rgba(245,241,232,.16); color: #f5f1e8; border-radius: var(--r-2); font-size: 12.5px; font-weight: 500; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+    .dr-hero .actions button:hover { background: rgba(245,241,232,.16); }
+    .dr-hero .actions .primary { background: #c5400a; border-color: #c5400a; }
+    .dr-hero .actions .primary:hover { background: #8a2d07; }
+
+    .dr-body { padding: 16px 20px 22px; display: flex; flex-direction: column; gap: 12px; }
+    .sec-card { background: var(--canvas); border: 1px solid var(--rule-soft); border-radius: var(--r-5); padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+    .sec-h { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+    .sec-h .t { font-size: 13px; font-weight: 600; color: var(--ink); display: flex; align-items: center; gap: 8px; }
+    .sec-h .x { font-family: var(--ff-mono); font-size: 9.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--ash); padding: 2px 7px; background: var(--paper-2); border-radius: 2px; }
+    .config-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 20px; }
+    @media (max-width: 640px) { .config-grid { grid-template-columns: 1fr; } }
+    .cfg-row { display: flex; flex-direction: column; gap: 3px; padding: 7px 0; border-bottom: 1px solid var(--rule-hair); }
+    .cfg-row .k { font-family: var(--ff-mono); font-size: 9px; letter-spacing: .14em; text-transform: uppercase; color: var(--ash); }
+    .cfg-row .v { color: var(--ink); font-weight: 600; font-size: 13px; }
+    .cfg-row .v.accent { color: var(--rust); }
+    .cfg-row .v.bad { color: #8a1f1f; }
+    .cfg-row .v.good { color: #1f6b3a; }
+    .cfg-row.wide { grid-column: 1 / -1; }
+    .cfg-row input.input, .cfg-row select.input, .cfg-row textarea.input { font-size: 12.5px; padding: 5px 8px; }
+    .p-tbl { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+    .p-tbl th { font-family: var(--ff-mono); font-size: 9px; letter-spacing: .1em; text-transform: uppercase; color: var(--ash); text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--rule); }
+    .p-tbl td { padding: 7px 8px; border-bottom: 1px solid var(--rule-hair); }
+    .p-tbl .r { text-align: right; font-variant-numeric: tabular-nums; }
+    .p-tbl tfoot td { font-weight: 600; border-bottom: 0; }
+    .money-big { font-size: 20px; font-weight: 600; color: var(--rust-deep); font-variant-numeric: tabular-nums; }
+    .act-bar { display: flex; gap: 8px; flex-wrap: wrap; }
+    .act-bar .btn { min-height: 36px; }
+    .info-note { font-size: 11.5px; color: var(--ash); line-height: 1.5; background: var(--paper-2); border-radius: var(--r-3); padding: 9px 11px; display: flex; gap: 8px; }
+    .info-note i { color: var(--rust); flex-shrink: 0; margin-top: 1px; }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    @media (max-width: 540px) { .form-grid { grid-template-columns: 1fr; } }
+    .form-grid .full { grid-column: 1 / -1; }
+    .fld { display: flex; flex-direction: column; gap: 5px; }
+    .fld label { font-family: var(--ff-mono); font-size: 9.5px; font-weight: 500; letter-spacing: .12em; text-transform: uppercase; color: var(--ash); }
+    textarea.input { resize: vertical; min-height: 64px; font-family: var(--ff-sans); }
+    .erp-modal-overlay:has(.mm-wide) .erp-modal { max-width: 760px; }
+  </style>
+</head>
+<body>
+
+<div id="app-shell" data-active="phieu-bao-tri" data-title="Phiếu bảo trì" data-crumb="<b>Kỹ thuật máy</b> · Phiếu bảo trì">
+
+  <div class="page-header">
+    <div>
+      <h1>Phiếu bảo trì</h1>
+      <p>Danh sách phiếu bảo trì máy xưởng cửa nhôm — giờ dừng máy quy ra tiền, linh kiện đã thay và chi phí nghiệm thu.</p>
+    </div>
+    <div class="actions">
+      <button class="btn btn-primary" id="btnAdd" data-no-interact="true"><i data-lucide="plus" style="width:14px;height:14px"></i> Tạo phiếu bảo trì</button>
+    </div>
+  </div>
+
+  <div class="stat-strip">
+    <div class="s"><span class="l">Tổng phiếu</span><span class="v" id="stTotal">0</span></div>
+    <div class="s"><span class="l">Chưa hoàn thành</span><span class="v bad" id="stOpen">0</span></div>
+    <div class="s"><span class="l">Giờ dừng máy</span><span class="v" id="stStop">0<small>h</small></span></div>
+    <div class="s"><span class="l">Tổng chi phí</span><span class="v" id="stCost">0<small>₫</small></span></div>
+  </div>
+
+  <div class="km-toolbar">
+    <div class="search-wrap"><i data-lucide="search" style="width:14px;height:14px"></i><input id="searchInput" placeholder="Tìm theo mã phiếu, máy, người thực hiện..." /></div>
+    <button class="filter-pill"><i data-lucide="cog" style="width:12px;height:12px"></i> Máy <i data-lucide="chevron-down" style="width:11px;height:11px"></i></button>
+    <button class="filter-pill"><i data-lucide="calendar" style="width:12px;height:12px"></i> Tháng 5/2026 <i data-lucide="chevron-down" style="width:11px;height:11px"></i></button>
+  </div>
+
+  <div class="seg-tabs" id="segTabs">
+    <button class="seg active" data-st="all">Tất cả <span class="count" data-c="all">0</span></button>
+    <button class="seg" data-st="pending">Chờ thực hiện <span class="count" data-c="pending">0</span></button>
+    <button class="seg" data-st="doing">Đang thực hiện <span class="count" data-c="doing">0</span></button>
+    <button class="seg" data-st="done">Hoàn thành <span class="count" data-c="done">0</span></button>
+  </div>
+
+  <div class="table-wrap">
+    <table class="tbl" id="btTbl">
+      <thead>
+        <tr>
+          <th>Mã phiếu</th><th>Máy</th><th>Loại việc</th><th>Người thực hiện</th>
+          <th class="num">Giờ dừng</th><th class="num">Tổng chi phí</th><th>Cảnh báo</th><th class="center">Thao tác</th>
+        </tr>
+      </thead>
+      <tbody id="btBody"></tbody>
+    </table>
+  </div>
+
+</div>
+
+<div class="kx-drawer" id="drawer">
+  <div class="ov" id="drawerOv"></div>
+  <div class="panel" id="drawerPanel"></div>
+</div>
+
+<script src="../assets/js/layout.js"></script>
+<script src="../assets/js/pricing-engine.js"></script>
+<script src="../assets/js/quote-data.js"></script>
+<script src="../assets/js/loss-data.js"></script>
+<script src="../assets/js/loss-ui.js"></script>
+<script src="../assets/js/purchase-data.js"></script>
+<script>
+  const $ = (s) => document.querySelector(s);
+  const fmt = (n) => Math.round(Number(n) || 0).toLocaleString('vi-VN');
+  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const GIO_MAY = 185000;   // ₫/giờ máy — glossary §11
+  const GIO_CONG = 62000;   // ₫/giờ công
+
+  const TBM = (function () {
+    const KEY = 'erp_tbm_nhomowin_v1';
+    function read() { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { return {}; } }
+    function write(d) { try { localStorage.setItem(KEY, JSON.stringify(d)); } catch (e) {} }
+    function list(col) { return read()[col] || []; }
+    function seed(col, arr) {
+      const d = read();
+      if (!d['_s_' + col]) { d[col] = (arr || []).concat(d[col] || []); d['_s_' + col] = 1; write(d); }
+      return list(col);
+    }
+    function add(col, rec) { const d = read(); d[col] = d[col] || []; d[col].unshift(rec); write(d); return rec; }
+    function put(col, id, patch) {
+      const d = read(); d[col] = d[col] || [];
+      const i = d[col].findIndex(x => x.id === id);
+      if (i >= 0) { d[col][i] = Object.assign({}, d[col][i], patch); write(d); return d[col][i]; }
+      return null;
+    }
+    function nextId(col, prefix) {
+      let max = 0;
+      list(col).forEach(r => { const m = new RegExp('^' + prefix + '-(\\d+)$').exec(r.id || ''); if (m) max = Math.max(max, parseInt(m[1], 10)); });
+      return prefix + '-' + ('000' + (max + 1)).slice(-4);
+    }
+    return { list, seed, add, put, nextId };
+  })();
+
+  /* Danh mục linh kiện dùng chung với 20-vat-tu-may.html */
+  const VTM = ('VTM-001|Lưỡi cắt hợp kim Ø500 84T|cái|2850000|hungvuong;VTM-002|Lưỡi cắt hợp kim Ø500 120T|cái|3450000|hungvuong;' +
+    'VTM-003|Dao phay ngón Ø6|cái|285000|hungvuong;VTM-004|Dao phay ngón Ø10|cái|420000|hungvuong;VTM-005|Mũi khoan tâm Ø3,2|cái|95000|hungvuong;' +
+    'VTM-006|Đầu ép góc 14×14|bộ|1650000|hungvuong;VTM-007|Dưỡng ép góc 40–180|bộ|980000|hungvuong;VTM-008|Ray dẫn hướng HGR20-1200|thanh|1850000|hungvuong;' +
+    'VTM-009|Vòng bi trục chính 6205-2RS|cái|165000|hungvuong;VTM-010|Dây curoa răng HTD 8M-1200|sợi|320000|hungvuong;VTM-011|Van khí nén 5/2 SY5120|cái|450000|hungvuong;' +
+    'VTM-012|Lọc khí nén AF30|cái|380000|hungvuong;VTM-013|Xy-lanh khí nén SC63×100|cái|620000|hungvuong;VTM-014|Cảm biến quang E3F-DS30C4|cái|240000|hungvuong;' +
+    'VTM-015|Bơm thuỷ lực bánh răng CBN-E316|cái|4250000|hungvuong;VTM-016|Con lăn uốn R600|bộ|5800000|hungvuong;VTM-017|Con lăn uốn R900|bộ|5800000|hungvuong;' +
+    'VTM-018|Con lăn uốn R1200|bộ|5800000|hungvuong;VTM-019|Đá mài Ø150|viên|85000|hungvuong;VTM-020|Dầu thuỷ lực ISO VG46 (can 18L)|can|1150000|vuhoangminh;' +
+    'VTM-021|Mỡ bôi trơn EP2 (hộp 1kg)|hộp|180000|vuhoangminh;VTM-022|Bộ lọc dầu thuỷ lực 10µm|cái|520000|hungvuong;VTM-023|Contactor LC1D25|cái|690000|hungvuong;' +
+    'VTM-024|Biến tần 2,2 kW Delta VFD022|cái|4900000|hungvuong').split(';').map(s => { const p = s.split('|'); return { code: p[0], name: p[1], unit: p[2], price: +p[3], ncc: p[4] }; });
+  const vtmOf = (code) => VTM.find(v => v.code === code) || { code: code, name: code, unit: '', price: 0, ncc: 'hungvuong' };
+
+  const MAY_OPTS = ('CAT-01|Máy cắt nhôm 2 đầu lưỡi Ø500 WEIKE;CAT-02|Máy cắt nhôm 2 đầu lưỡi Ø500 WEIKE;CNC-03|Máy phay khoá CNC WEIKE;' +
+    'CNC-21|Máy phay đố kẹp bàn WEIKE;CNC-22|Máy phay đố kẹp bàn WEIKE;EP-02|Máy ép góc cơ WEIKE;UON-01|Máy uốn vòm nhôm CNC 3 trục;' +
+    'UON-02|Máy uốn vòm nhôm thuỷ lực;LAP-01|Bàn lắp kính & bơm keo tự động;DOT-01|Máy đột dập hơi 34 dao;KC-01|Máy cắt kính bán tự động;' +
+    'KHI-01|Máy nén khí trục vít;XN-01|Xe nâng điện 2 tấn').split(';').map(s => { const p = s.split('|'); return { id: p[0], name: p[1] }; });
+
+  const NGUOI = ['KT Nguyễn Văn Khánh — Kỹ sư cơ khí – nhôm hệ', 'KT Phạm Quốc Hùng — Thợ bảo trì', 'Lê Minh Tuấn — Tổ trưởng cắt CNC', 'Trần Văn Đức — Thợ ép góc – lắp ráp', 'Đỗ Văn Thành — Thợ uốn vòm', 'Cơ khí WEIKE Việt Nam (NCC hãng)'];
+
+  /* ============================================================
+     Seed phiếu bảo trì
+     ============================================================ */
+  const SEED_BT = [
+    { id: 'BT-0122', may: 'CNC-22', mayName: 'Máy phay đố kẹp bàn WEIKE', team: 'Tổ cắt CNC', type: 'Bảo trì định kỳ theo giờ chạy', sev: 'Trung bình',
+      by: 'KT Phạm Quốc Hùng — Thợ bảo trì', planDate: '18/05/2026', startAt: '18/05/2026 08:00', endAt: '19/05/2026 08:00', stopHours: 24, laborCost: 496000,
+      parts: [{ code: 'VTM-003', qty: 4 }, { code: 'VTM-009', qty: 2 }, { code: 'VTM-021', qty: 1 }],
+      desc: 'Thay dao phay ngón Ø6, vòng bi trục chính, tra mỡ ray dẫn hướng và căn chỉnh kẹp bàn khí nén.',
+      result: '', status: 'doing', warn: { t: 'bad', text: 'Dừng máy 24h · 4,4 tr' } },
+    { id: 'BT-0121', may: 'CAT-01', mayName: 'Máy cắt nhôm 2 đầu lưỡi Ø500 WEIKE', team: 'Tổ cắt CNC', type: 'Bảo trì định kỳ theo tháng', sev: 'Nghiêm trọng',
+      by: 'KT Nguyễn Văn Khánh — Kỹ sư cơ khí – nhôm hệ', planDate: '08/05/2026', startAt: '', endAt: '', stopHours: 0, laborCost: 0,
+      parts: [{ code: 'VTM-001', qty: 2 }, { code: 'VTM-010', qty: 1 }],
+      desc: 'Thay lưỡi cắt Ø500 84T, dây curoa trục cắt, căn chỉnh góc cắt 45° – 90° – 135°, kiểm tra dung sai ±0,2 mm.',
+      result: '', status: 'pending', warn: { t: 'bad', text: 'Quá hạn 12 ngày · chưa thực hiện' } },
+    { id: 'BT-0120', may: 'UON-01', mayName: 'Máy uốn vòm nhôm CNC 3 trục', team: 'Tổ ép góc – lắp ráp', type: 'Bảo trì định kỳ theo giờ chạy', sev: 'Trung bình',
+      by: 'Đỗ Văn Thành — Thợ uốn vòm', planDate: '25/03/2026', startAt: '25/03/2026 07:30', endAt: '25/03/2026 16:00', stopHours: 8.5, laborCost: 527000,
+      parts: [{ code: 'VTM-020', qty: 2 }, { code: 'VTM-022', qty: 1 }, { code: 'VTM-016', qty: 1 }],
+      desc: 'Thay dầu thuỷ lực ISO VG46, lọc dầu 10µm, thay con lăn uốn R600 mòn; hiệu chuẩn bù đàn hồi.',
+      result: 'Đạt — uốn thử R600 dung sai ±1,5 mm, không nứt thanh.', status: 'done', warn: { t: 'bad', text: 'Dừng máy 8,5h · 1,6 tr' } },
+    { id: 'BT-0119', may: 'CAT-02', mayName: 'Máy cắt nhôm 2 đầu lưỡi Ø500 WEIKE', team: 'Tổ cắt CNC', type: 'Bảo trì định kỳ theo tháng', sev: 'Nhẹ',
+      by: 'Lê Minh Tuấn — Tổ trưởng cắt CNC', planDate: '02/04/2026', startAt: '02/04/2026 13:00', endAt: '02/04/2026 13:45', stopHours: 0.75, laborCost: 47000,
+      parts: [{ code: 'VTM-021', qty: 1 }],
+      desc: 'Vệ sinh máng phoi nhôm, tra mỡ ray dẫn hướng, kiểm tra độ đảo lưỡi.',
+      result: 'Đạt — cắt thử 20 thanh, dung sai ±0,15 mm.', status: 'done', warn: { t: 'good', text: 'Xử lý trong 45 phút' } },
+    { id: 'BT-0118', may: 'EP-02', mayName: 'Máy ép góc cơ WEIKE', team: 'Tổ ép góc – lắp ráp', type: 'Bảo trì định kỳ theo giờ chạy', sev: 'Trung bình',
+      by: 'Trần Văn Đức — Thợ ép góc – lắp ráp', planDate: '10/04/2026', startAt: '10/04/2026 08:00', endAt: '10/04/2026 11:30', stopHours: 3.5, laborCost: 217000,
+      parts: [{ code: 'VTM-006', qty: 1 }, { code: 'VTM-013', qty: 1 }],
+      desc: 'Thay đầu ép góc 14×14 mòn, thay xy-lanh khí nén, chỉnh lực ép 8 tấn và vuông góc 90°±0,5°.',
+      result: 'Đạt — ép thử 6 góc, mối ép kín, không lộ khe.', status: 'done', warn: null },
+    { id: 'BT-0117', may: 'CNC-03', mayName: 'Máy phay khoá CNC WEIKE', team: 'Tổ cắt CNC', type: 'Bảo trì định kỳ theo giờ chạy', sev: 'Trung bình',
+      by: 'KT Nguyễn Văn Khánh — Kỹ sư cơ khí – nhôm hệ', planDate: '15/03/2026', startAt: '15/03/2026 08:00', endAt: '15/03/2026 12:00', stopHours: 4, laborCost: 248000,
+      parts: [{ code: 'VTM-004', qty: 3 }, { code: 'VTM-005', qty: 2 }, { code: 'VTM-008', qty: 1 }],
+      desc: 'Thay dao phay ngón Ø10, mũi khoan tâm, thay ray dẫn hướng trục Y; chạy chuẩn 3 giây/lỗ.',
+      result: 'Đạt — phay thử 30 lỗ khoá, đúng 3 giây/lỗ, sai lệch ±0,1 mm.', status: 'done', warn: null },
+    { id: 'BT-0116', may: 'CNC-21', mayName: 'Máy phay đố kẹp bàn WEIKE', team: 'Tổ cắt CNC', type: 'Vệ sinh – bôi trơn – căn chỉnh', sev: 'Nhẹ',
+      by: 'KT Phạm Quốc Hùng — Thợ bảo trì', planDate: '28/03/2026', startAt: '28/03/2026 16:00', endAt: '28/03/2026 17:00', stopHours: 1, laborCost: 62000,
+      parts: [{ code: 'VTM-011', qty: 1 }, { code: 'VTM-021', qty: 1 }],
+      desc: 'Thay van khí nén 5/2, vệ sinh kẹp bàn, chỉnh áp khí 0,6 MPa.',
+      result: 'Đạt — kẹp bàn giữ chắc, không tụt áp.', status: 'done', warn: null },
+    { id: 'BT-0115', may: 'UON-02', mayName: 'Máy uốn vòm nhôm thuỷ lực', team: 'Tổ ép góc – lắp ráp', type: 'Bảo trì đột xuất', sev: 'Nghiêm trọng',
+      by: 'Cơ khí WEIKE Việt Nam (NCC hãng)', planDate: '12/02/2026', startAt: '12/02/2026 08:00', endAt: '13/02/2026 17:00', stopHours: 18, laborCost: 1116000,
+      parts: [{ code: 'VTM-020', qty: 2 }, { code: 'VTM-022', qty: 2 }],
+      desc: 'Áp thuỷ lực không lên 16 MPa — xả khí, thay dầu và lọc, kiểm tra van an toàn.',
+      result: 'Tạm đạt — áp lên 14,5 MPa, khuyến nghị thay bơm thuỷ lực.', status: 'done', warn: { t: 'bad', text: 'Dừng máy 18h · 3,3 tr' } },
+    { id: 'BT-0114', may: 'CAT-01', mayName: 'Máy cắt nhôm 2 đầu lưỡi Ø500 WEIKE', team: 'Tổ cắt CNC', type: 'Bảo trì định kỳ theo giờ chạy', sev: 'Trung bình',
+      by: 'Lê Minh Tuấn — Tổ trưởng cắt CNC', planDate: '18/02/2026', startAt: '18/02/2026 08:00', endAt: '18/02/2026 12:30', stopHours: 4.5, laborCost: 279000,
+      parts: [{ code: 'VTM-002', qty: 1 }, { code: 'VTM-009', qty: 2 }, { code: 'VTM-014', qty: 1 }],
+      desc: 'Thay lưỡi Ø500 120T, vòng bi trục chính, cảm biến quang chặn thanh.',
+      result: 'Đạt — cắt thử 40 thanh, góc 45° chuẩn.', status: 'done', warn: null },
+    { id: 'BT-0113', may: 'LAP-01', mayName: 'Bàn lắp kính & bơm keo tự động', team: 'Tổ ép góc – lắp ráp', type: 'Bảo trì định kỳ theo tháng', sev: 'Nhẹ',
+      by: 'Trần Văn Đức — Thợ ép góc – lắp ráp', planDate: '06/03/2026', startAt: '06/03/2026 16:30', endAt: '06/03/2026 17:10', stopHours: 0.7, laborCost: 43000,
+      parts: [{ code: 'VTM-021', qty: 1 }],
+      desc: 'Vệ sinh đầu bơm keo silicon, kiểm tra định lượng 300 ml, thay đệm chống xước.',
+      result: 'Đạt — định lượng sai số 2%, kính không xước.', status: 'done', warn: { t: 'good', text: 'Xử lý trong 40 phút' } },
+    { id: 'BT-0112', may: 'DOT-01', mayName: 'Máy đột dập hơi 34 dao', team: 'Tổ hoàn thiện – đóng kiện', type: 'Bảo trì định kỳ theo giờ chạy', sev: 'Nhẹ',
+      by: 'KT Phạm Quốc Hùng — Thợ bảo trì', planDate: '20/02/2026', startAt: '20/02/2026 08:00', endAt: '20/02/2026 10:00', stopHours: 2, laborCost: 124000,
+      parts: [{ code: 'VTM-012', qty: 1 }, { code: 'VTM-019', qty: 4 }],
+      desc: 'Thay lọc khí nén, mài lại 4 bộ dao đột, kiểm tra hành trình đột.',
+      result: 'Đạt — 22 nhát/phút, biên đột sắc nét.', status: 'done', warn: null },
+    { id: 'BT-0111', may: 'KHI-01', mayName: 'Máy nén khí trục vít', team: 'Phụ trợ', type: 'Bảo trì định kỳ theo tháng', sev: 'Nhẹ',
+      by: 'KT Nguyễn Văn Khánh — Kỹ sư cơ khí – nhôm hệ', planDate: '08/04/2026', startAt: '08/04/2026 17:30', endAt: '08/04/2026 18:15', stopHours: 0, laborCost: 47000,
+      parts: [{ code: 'VTM-012', qty: 2 }],
+      desc: 'Thay lọc khí, xả nước bình tích, kiểm tra áp cắt 0,85 MPa. Làm ngoài giờ sản xuất.',
+      result: 'Đạt — không dừng sản xuất, áp ổn định.', status: 'done', warn: { t: 'good', text: 'Làm ngoài ca · 0 giờ dừng' } }
+  ];
+
+  const LIST = TBM.seed('bt', SEED_BT);
+  const ST = { pending: { cls: 'badge-steel', label: 'Chờ thực hiện' }, doing: { cls: 'badge-orange', label: 'Đang thực hiện' }, done: { cls: 'badge-moss', label: 'Hoàn thành' } };
+
+  let curSt = 'all', curId = null, editing = false;
+
+  const partsCost = (r) => (r.parts || []).reduce((s, p) => s + vtmOf(p.code).price * (Number(p.qty) || 0), 0);
+  const stopMoney = (r) => (Number(r.stopHours) || 0) * GIO_MAY;
+  const totalCost = (r) => partsCost(r) + (Number(r.laborCost) || 0) + stopMoney(r);
+
+  /* ============================ Bảng ============================ */
+  function renderStats() {
+    $('#stTotal').textContent = LIST.length;
+    $('#stOpen').textContent = LIST.filter(r => r.status !== 'done').length;
+    const h = LIST.reduce((s, r) => s + (Number(r.stopHours) || 0), 0);
+    $('#stStop').innerHTML = String(Math.round(h * 10) / 10).replace('.', ',') + '<small>h</small>';
+    $('#stCost').innerHTML = fmt(LIST.reduce((s, r) => s + totalCost(r), 0)) + '<small> ₫</small>';
+    document.querySelectorAll('[data-c]').forEach(el => {
+      const k = el.dataset.c;
+      el.textContent = k === 'all' ? LIST.length : LIST.filter(r => r.status === k).length;
+    });
+  }
+  function warnCell(r) {
+    if (!r.warn || !r.warn.text) return '<span class="warn-none">—</span>';
+    return `<span class="${r.warn.t === 'bad' ? 'warn-bad' : 'warn-good'}">${esc(r.warn.text)}</span>`;
+  }
+  function renderTable() {
+    const q = ($('#searchInput').value || '').toLowerCase().trim();
+    const rows = LIST.filter(r => (curSt === 'all' || r.status === curSt) &&
+      (!q || (r.id + ' ' + r.may + ' ' + r.by + ' ' + r.type).toLowerCase().includes(q)));
+    $('#btBody').innerHTML = rows.map(r => {
+      const st = ST[r.status] || ST.pending;
+      return `
+      <tr data-id="${esc(r.id)}">
+        <td><div class="cell-main">${esc(r.id)}</div><div class="cell-sub">${esc(r.planDate)}</div></td>
+        <td><a href="17-may-moc.html?may=${encodeURIComponent(r.may)}" class="lnk">${esc(r.may)}</a><div class="cell-mini">${esc(r.mayName)}</div></td>
+        <td><div style="font-size:12.5px">${esc(r.type)}</div><div class="cell-mini"><span class="badge ${st.cls}">${st.label}</span></div></td>
+        <td><div style="font-size:12.5px">${esc(String(r.by).split(' — ')[0])}</div><div class="cell-mini">${esc(String(r.by).split(' — ')[1] || r.team)}</div></td>
+        <td class="num">${String(Number(r.stopHours) || 0).replace('.', ',')} h</td>
+        <td class="num"><b>${fmt(totalCost(r))}</b> ₫</td>
+        <td>${warnCell(r)}</td>
+        <td class="center"><button class="row-act" data-act="open"><i data-lucide="arrow-right" style="width:14px;height:14px"></i></button></td>
+      </tr>`;
+    }).join('');
+    if (!rows.length) $('#btBody').innerHTML = `<tr><td colspan="8" style="text-align:center;color:var(--ash);padding:32px">Không có phiếu phù hợp.</td></tr>`;
+    if (window.lucide) lucide.createIcons();
+    $('#btBody').querySelectorAll('tr[data-id]').forEach(tr => tr.addEventListener('click', (e) => {
+      if (e.target.closest('a.lnk')) return;
+      openDrawer(tr.dataset.id);
+    }));
+  }
+
+  /* ============================ Drawer ============================ */
+  function row(k, field, val, opts) {
+    opts = opts || {};
+    if (editing && field && !opts.ro) {
+      if (opts.pairs) return `<div class="cfg-row${opts.wide ? ' wide' : ''}"><span class="k">${k}</span><select class="input" data-f="${field}">${opts.pairs.map(o => `<option value="${esc(o[0])}"${String(o[0]) === String(val) ? ' selected' : ''}>${esc(o[1])}</option>`).join('')}</select></div>`;
+      if (opts.sel) return `<div class="cfg-row${opts.wide ? ' wide' : ''}"><span class="k">${k}</span><select class="input" data-f="${field}">${opts.sel.map(o => `<option${String(o) === String(val) ? ' selected' : ''}>${esc(o)}</option>`).join('')}</select></div>`;
+      if (opts.area) return `<div class="cfg-row wide"><span class="k">${k}</span><textarea class="input" data-f="${field}">${esc(val)}</textarea></div>`;
+      return `<div class="cfg-row${opts.wide ? ' wide' : ''}"><span class="k">${k}</span><input class="input" data-f="${field}" data-num="${opts.num ? 1 : 0}" value="${esc(val)}" /></div>`;
+    }
+    return `<div class="cfg-row${opts.wide ? ' wide' : ''}"><span class="k">${k}</span><span class="v${opts.cls ? ' ' + opts.cls : ''}">${opts.html ? val : esc(val)}</span></div>`;
+  }
+
+  function partsTable(r) {
+    const rows = (r.parts || []).map((p, i) => {
+      const v = vtmOf(p.code);
+      return `<tr>
+        <td><a href="20-vat-tu-may.html?vtm=${encodeURIComponent(v.code)}" class="lnk">${esc(v.code)}</a></td>
+        <td>${esc(v.name)}</td>
+        <td class="r">${editing ? `<input class="input" data-pq="${i}" value="${esc(p.qty)}" style="width:70px;text-align:right;padding:4px 6px;font-size:12px" />` : String(p.qty).replace('.', ',')}</td>
+        <td>${esc(v.unit)}</td>
+        <td class="r">${fmt(v.price)}</td>
+        <td class="r"><b>${fmt(v.price * (Number(p.qty) || 0))}</b></td>
+      </tr>`;
+    }).join('');
+    return `<table class="p-tbl">
+      <thead><tr><th>Mã LK</th><th>Tên linh kiện</th><th class="r">SL</th><th>ĐVT</th><th class="r">Đơn giá</th><th class="r">Thành tiền</th></tr></thead>
+      <tbody>${rows || '<tr><td colspan="6" style="color:var(--ash);padding:12px 8px">Chưa ghi nhận linh kiện thay thế.</td></tr>'}</tbody>
+      <tfoot><tr><td colspan="5" class="r">Cộng tiền linh kiện</td><td class="r">${fmt(partsCost(r))} ₫</td></tr></tfoot>
+    </table>`;
+  }
+
+  function openDrawer(id) { curId = id; editing = false; renderDrawer(); $('#drawer').classList.add('is-open'); }
+  function closeDrawer() { $('#drawer').classList.remove('is-open'); editing = false; }
+
+  function renderDrawer() {
+    const r = LIST.find(x => x.id === curId); if (!r) return;
+    const st = ST[r.status] || ST.pending;
+    const idx = LIST.findIndex(x => x.id === curId);
+
+    $('#drawerPanel').innerHTML = `
+      <div class="dr-hero">
+        <div class="top-bar">
+          <div class="tag-row"><span class="stage-chip">${st.label.toUpperCase()}</span><span style="opacity:.4">·</span><span>${esc(r.type)}</span></div>
+          <div style="display:flex;gap:4px;align-items:center">
+            <button class="nav-btn" data-nav="prev"><i data-lucide="chevron-up" style="width:14px;height:14px"></i></button>
+            <span style="font-family:var(--ff-mono);font-size:10px;color:rgba(245,241,232,.55);margin:0 4px">${idx + 1}/${LIST.length}</span>
+            <button class="nav-btn" data-nav="next"><i data-lucide="chevron-down" style="width:14px;height:14px"></i></button>
+            <button class="nav-btn" data-nav="close"><i data-lucide="x" style="width:14px;height:14px"></i></button>
+          </div>
+        </div>
+        <h2>${esc(r.id)}</h2>
+        <div class="sub">${esc(r.may)} · ${esc(r.mayName)}</div>
+        <div class="meta-line">
+          <span>Kế hoạch <b>${esc(r.planDate)}</b></span><span class="sep">·</span>
+          <span>Dừng máy <b>${String(Number(r.stopHours) || 0).replace('.', ',')} h</b></span><span class="sep">·</span>
+          <span>Tổng chi phí <b>${fmt(totalCost(r))} ₫</b></span>
+        </div>
+        <div class="actions">
+          ${editing
+            ? `<button class="primary" data-act="save" data-no-interact="true"><i data-lucide="check" style="width:13px;height:13px"></i> Lưu</button>
+               <button data-act="cancel" data-no-interact="true"><i data-lucide="x" style="width:13px;height:13px"></i> Huỷ</button>`
+            : `<button class="primary" data-act="edit" data-no-interact="true"><i data-lucide="pencil" style="width:13px;height:13px"></i> Sửa</button>
+               <button data-act="preview" data-no-interact="true"><i data-lucide="eye" style="width:13px;height:13px"></i> Xem trước</button>
+               <button data-act="print" data-no-interact="true"><i data-lucide="printer" style="width:13px;height:13px"></i> In phiếu bảo trì</button>`}
+        </div>
+      </div>
+
+      <div class="dr-body">
+        <div class="sec-card">
+          <div class="sec-h"><div class="t"><i data-lucide="clipboard-list" style="width:15px;height:15px"></i> Thông tin phiếu</div><span class="x">${esc(r.id)}</span></div>
+          <div class="config-grid">
+            ${row('Máy', 'may', editing ? r.may : `<a href="17-may-moc.html?may=${encodeURIComponent(r.may)}" class="lnk">${esc(r.may)}</a> · ${esc(r.mayName)}`, { html: true, sel: MAY_OPTS.map(m => m.id), wide: true })}
+            ${row('Loại việc', 'type', r.type)}
+            ${row('Mức độ', 'sev', r.sev, { sel: ['Nhẹ', 'Trung bình', 'Nghiêm trọng'] })}
+            ${row('Người thực hiện', 'by', r.by, { sel: NGUOI, wide: true })}
+            ${row('Tổ / bộ phận', 'team', r.team)}
+            ${row('Ngày kế hoạch', 'planDate', r.planDate)}
+            ${row('Thời gian bắt đầu', 'startAt', r.startAt || '—')}
+            ${row('Thời gian kết thúc', 'endAt', r.endAt || '—')}
+            ${row('Trạng thái', 'status', editing ? r.status : st.label, { pairs: [['pending', 'Chờ thực hiện'], ['doing', 'Đang thực hiện'], ['done', 'Hoàn thành']] })}
+            ${row('Nội dung công việc', 'desc', r.desc, { area: true, wide: true })}
+          </div>
+        </div>
+
+        <div class="sec-card">
+          <div class="sec-h"><div class="t"><i data-lucide="timer-off" style="width:15px;height:15px"></i> Giờ dừng máy &amp; thiệt hại</div><span class="x">185.000 ₫/h máy</span></div>
+          <div class="config-grid">
+            ${row('Giờ dừng máy', 'stopHours', r.stopHours, { num: true, cls: (Number(r.stopHours) || 0) > 8 ? 'bad' : 'good' })}
+            ${row('Thiệt hại giờ máy', '', fmt(stopMoney(r)) + ' ₫', { ro: true, cls: stopMoney(r) > 1500000 ? 'bad' : '' })}
+            ${row('Chi phí nhân công', 'laborCost', editing ? r.laborCost : fmt(r.laborCost) + ' ₫', { num: true })}
+            ${row('Đơn giá giờ công', '', fmt(GIO_CONG) + ' ₫/h', { ro: true })}
+          </div>
+          <div class="info-note"><i data-lucide="alert-triangle" style="width:14px;height:14px"></i>
+            <span>Thiệt hại dừng máy = <b>${String(Number(r.stopHours) || 0).replace('.', ',')} h</b> × <b>${fmt(GIO_MAY)} ₫/h</b> = <b>${fmt(stopMoney(r))} ₫</b> (glossary đơn giá quy đổi thiệt hại).</span>
+          </div>
+        </div>
+
+        <div class="sec-card">
+          <div class="sec-h"><div class="t"><i data-lucide="package" style="width:15px;height:15px"></i> Linh kiện đã thay</div>
+            <span class="x">${(r.parts || []).length} dòng</span></div>
+          ${partsTable(r)}
+          ${editing ? `<div class="act-bar"><button class="btn btn-sm btn-secondary" data-act="addpart" data-no-interact="true"><i data-lucide="plus" style="width:13px;height:13px"></i> Thêm linh kiện</button></div>` : ''}
+        </div>
+
+        <div class="sec-card">
+          <div class="sec-h"><div class="t"><i data-lucide="receipt" style="width:15px;height:15px"></i> Tổng hợp chi phí &amp; nghiệm thu</div></div>
+          <div class="config-grid">
+            ${row('Tiền linh kiện', '', fmt(partsCost(r)) + ' ₫', { ro: true })}
+            ${row('Chi phí nhân công', '', fmt(r.laborCost) + ' ₫', { ro: true })}
+            ${row('Thiệt hại dừng máy', '', fmt(stopMoney(r)) + ' ₫', { ro: true })}
+            ${row('Tổng chi phí', '', '<span class="money-big">' + fmt(totalCost(r)) + ' ₫</span>', { ro: true, html: true })}
+            ${row('Kết quả nghiệm thu', 'result', r.result || 'Chưa nghiệm thu', { area: true, wide: true, cls: r.result ? 'good' : 'bad' })}
+          </div>
+          <div class="act-bar">
+            <button class="btn btn-yellow" data-act="dnm" data-no-interact="true"><i data-lucide="clipboard-plus" style="width:14px;height:14px"></i> → Đề nghị mua linh kiện</button>
+            <button class="btn btn-secondary" data-act="gomay" data-no-interact="true"><i data-lucide="cog" style="width:14px;height:14px"></i> Mở bản ghi máy ${esc(r.may)}</button>
+          </div>
+        </div>
+      </div>`;
+    if (window.lucide) lucide.createIcons();
+
+    const P = $('#drawerPanel');
+    P.querySelectorAll('[data-nav]').forEach(b => b.addEventListener('click', () => {
+      const a = b.dataset.nav;
+      if (a === 'close') return closeDrawer();
+      let i = LIST.findIndex(x => x.id === curId);
+      i = a === 'next' ? (i + 1) % LIST.length : (i - 1 + LIST.length) % LIST.length;
+      openDrawer(LIST[i].id);
+    }));
+    P.querySelectorAll('[data-act]').forEach(b => b.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const a = b.dataset.act;
+      if (a === 'edit') { editing = true; renderDrawer(); }
+      else if (a === 'cancel') { editing = false; renderDrawer(); }
+      else if (a === 'save') saveEdits();
+      else if (a === 'preview') printTicket(r, false);
+      else if (a === 'print') printTicket(r, true);
+      else if (a === 'dnm') makeDNM(r);
+      else if (a === 'addpart') addPart(r);
+      else if (a === 'gomay') window.location.href = '17-may-moc.html?may=' + encodeURIComponent(r.may);
+    }));
+  }
+
+  function saveEdits() {
+    const r = LIST.find(x => x.id === curId); if (!r) return;
+    $('#drawerPanel').querySelectorAll('[data-f]').forEach(inp => {
+      const f = inp.dataset.f; if (!f) return;
+      let v = inp.value;
+      if (inp.dataset.num === '1') { const n = parseFloat(String(v).replace(/\./g, '').replace(',', '.')); v = isNaN(n) ? 0 : n; }
+      r[f] = v;
+    });
+    $('#drawerPanel').querySelectorAll('[data-pq]').forEach(inp => {
+      const i = +inp.dataset.pq;
+      const n = parseFloat(String(inp.value).replace(',', '.'));
+      if (r.parts && r.parts[i]) r.parts[i].qty = isNaN(n) ? 0 : n;
+    });
+    const mm = MAY_OPTS.find(m => m.id === r.may); if (mm) r.mayName = mm.name;
+    TBM.put('bt', r.id, r);
+    editing = false;
+    renderDrawer(); renderTable(); renderStats();
+    ERPInteract.showToast('Đã lưu phiếu bảo trì <b>' + esc(r.id) + '</b>', 'success');
+  }
+
+  function addPart(r) {
+    ERPInteract.showModal({
+      title: 'Thêm linh kiện đã thay · ' + r.id,
+      body: `<div class="form-grid">
+        <div class="fld"><label>Linh kiện</label><select class="input" id="apCode">${VTM.map(v => `<option value="${v.code}">${v.code} — ${esc(v.name)}</option>`).join('')}</select></div>
+        <div class="fld"><label>Số lượng</label><input class="input" id="apQty" value="1" /></div>
+      </div>`,
+      primaryText: 'Thêm', secondaryText: 'Huỷ',
+      onPrimary: () => {
+        const code = (document.getElementById('apCode') || {}).value;
+        const qty = parseFloat(String((document.getElementById('apQty') || {}).value || '1').replace(',', '.')) || 1;
+        r.parts = r.parts || []; r.parts.push({ code: code, qty: qty });
+        TBM.put('bt', r.id, r); renderDrawer(); renderTable(); renderStats();
+        ERPInteract.showToast('Đã thêm <b>' + esc(code) + '</b> vào phiếu', 'success');
+      }
+    });
+  }
+
+  /* ================ Đề nghị mua linh kiện (DNM thật) ================ */
+  function makeDNM(r) {
+    const parts = r.parts || [];
+    if (!parts.length) { ERPInteract.showToast('Phiếu chưa có linh kiện để đề nghị mua.', 'warning'); return; }
+    ERPInteract.showModal({
+      title: 'Đề nghị mua linh kiện · ' + r.id,
+      body: `<div class="mm-wide">
+        <p style="color:var(--ash);font-size:12.5px">Tạo đề nghị mua cho các linh kiện đã dùng ở phiếu <b>${esc(r.id)}</b> (máy ${esc(r.may)}) để bù tồn kho.</p>
+        ${parts.map((p, i) => { const v = vtmOf(p.code); return `<label style="display:flex;align-items:center;gap:8px;padding:7px 0;font-size:13px;border-bottom:1px solid var(--rule-hair)">
+          <input type="checkbox" checked data-dnm="${i}" /> <b>${esc(v.name)}</b>
+          <span style="font-family:var(--ff-mono);font-size:10.5px;color:var(--ash-2)">${esc(v.code)}</span>
+          <span style="margin-left:auto;color:var(--ash)">${String(p.qty).replace('.', ',')} ${esc(v.unit)} · ${fmt(v.price)} ₫</span></label>`; }).join('')}
+      </div>`,
+      primaryText: 'Tạo đề nghị mua', secondaryText: 'Huỷ',
+      onPrimary: () => {
+        const lines = [];
+        document.querySelectorAll('[data-dnm]').forEach(cb => {
+          if (!cb.checked) return;
+          const p = parts[+cb.dataset.dnm]; const v = vtmOf(p.code);
+          lines.push({ code: v.code, name: v.name, unit: v.unit, qty: Number(p.qty) || 1, price: v.price, supplier: 'Cơ khí WEIKE Việt Nam' });
+        });
+        if (!lines.length) { ERPInteract.showToast('Chưa chọn linh kiện nào.', 'warning'); return; }
+        let id = 'DNM-2026-000';
+        if (window.ERPPurchase && ERPPurchase.create) {
+          id = ERPPurchase.create({ from: 'Kỹ thuật máy · Phiếu bảo trì', ref: r.id, note: 'Bù tồn linh kiện đã thay cho máy ' + r.may + ' (' + r.id + ')', lines: lines }).id;
+        }
+        ERPInteract.showToast('Đã tạo <a href="13-de-xuat-mua.html?dnm=' + encodeURIComponent(id) + '" class="lnk">' + id + '</a> — bấm để mở', 'success', 6000);
+      }
+    });
+  }
+
+  /* ============================ Bản in ============================ */
+  function ticketHtml(r) {
+    const pair = (k, v) => '<tr><td>' + k + '</td><td>' + v + '</td></tr>';
+    const items = (r.parts || []).map((p, i) => {
+      const v = vtmOf(p.code);
+      return '<tr><td class="c">' + (i + 1) + '</td><td>' + esc(v.code) + '</td><td>' + esc(v.name) + '</td><td class="c">' + esc(v.unit) + '</td><td class="r">' + String(p.qty).replace('.', ',') + '</td><td class="r">' + fmt(v.price) + '</td><td class="r">' + fmt(v.price * (Number(p.qty) || 0)) + '</td></tr>';
+    }).join('');
+    return ERPPrint.docHead() +
+      '<div class="pdoc"><div class="pdoc-title">PHIẾU BẢO TRÌ THIẾT BỊ</div>' +
+      '<div class="pdoc-sub">Số: ' + esc(r.id) + ' · Máy ' + esc(r.may) + ' — ' + esc(r.mayName) + '</div>' +
+      '<table class="pdoc-rows">' +
+        pair('Máy / Tổ', esc(r.may) + ' — ' + esc(r.mayName) + ' · ' + esc(r.team)) +
+        pair('Loại việc · mức độ', esc(r.type) + ' · ' + esc(r.sev)) +
+        pair('Người thực hiện', esc(r.by)) +
+        pair('Ngày kế hoạch', esc(r.planDate)) +
+        pair('Bắt đầu / kết thúc', esc(r.startAt || '—') + ' → ' + esc(r.endAt || '—')) +
+        pair('Nội dung công việc', esc(r.desc)) +
+        pair('Giờ dừng máy', String(Number(r.stopHours) || 0).replace('.', ',') + ' h × ' + fmt(GIO_MAY) + ' ₫/h = <b>' + fmt(stopMoney(r)) + ' ₫</b>') +
+        pair('Chi phí nhân công', fmt(r.laborCost) + ' ₫') +
+        pair('Tiền linh kiện', fmt(partsCost(r)) + ' ₫') +
+        pair('<b>TỔNG CHI PHÍ</b>', '<b>' + fmt(totalCost(r)) + ' ₫</b>') +
+        pair('Kết quả nghiệm thu', esc(r.result || 'Chưa nghiệm thu')) +
+      '</table>' +
+      (items ? '<table class="pdoc-items"><thead><tr><th>#</th><th>Mã LK</th><th>Tên linh kiện</th><th>ĐVT</th><th>SL</th><th>Đơn giá</th><th>Thành tiền</th></tr></thead><tbody>' + items + '</tbody></table>' : '') +
+      '<div class="pdoc-note">Phiếu lập tại nhà máy cửa nhôm Owin — Số 8 Giá Ngự, Xâm Xuyên, Thường Tín, TP Hà Nội.</div>' +
+      '<div class="pdoc-sign">' +
+        '<div><b>NGƯỜI THỰC HIỆN</b><i>(Ký, ghi rõ họ tên)</i><div class="sp"></div></div>' +
+        '<div><b>TỔ TRƯỞNG SẢN XUẤT</b><i>(Ký, ghi rõ họ tên)</i><div class="sp"></div></div>' +
+        '<div><b>PHỤ TRÁCH KỸ THUẬT</b><i>(Ký, ghi rõ họ tên)</i><div class="sp"></div></div>' +
+      '</div></div>';
+  }
+  function printTicket(r, direct) {
+    const body = ticketHtml(r);
+    if (direct) ERPPrint.printHtml('Phiếu bảo trì ' + r.id, body);
+    else ERPPrint.preview({ title: 'Xem trước · Phiếu bảo trì ' + r.id, printTitle: 'Phiếu bảo trì ' + r.id, bodyHtml: body });
+  }
+
+  /* ============================ Tạo phiếu ============================ */
+  function openCreate() {
+    ERPInteract.showModal({
+      title: 'Tạo phiếu bảo trì',
+      body: `<div class="mm-wide"><div class="form-grid">
+          <div class="fld"><label>Máy</label><select class="input" id="ncMay">${MAY_OPTS.map(m => `<option value="${m.id}">${m.id} — ${esc(m.name)}</option>`).join('')}</select></div>
+          <div class="fld"><label>Loại việc</label><select class="input" id="ncType"><option>Bảo trì định kỳ theo giờ chạy</option><option>Bảo trì định kỳ theo tháng</option><option>Bảo trì đột xuất</option><option>Bảo trì sau sửa chữa</option><option>Vệ sinh – bôi trơn – căn chỉnh</option></select></div>
+          <div class="fld"><label>Mức độ</label><select class="input" id="ncSev"><option>Nhẹ</option><option selected>Trung bình</option><option>Nghiêm trọng</option></select></div>
+          <div class="fld"><label>Ngày dự kiến</label><input class="input" id="ncDate" value="25/05/2026" /></div>
+          <div class="fld full"><label>Người thực hiện</label><select class="input" id="ncBy">${NGUOI.map(n => `<option>${esc(n)}</option>`).join('')}</select></div>
+          <div class="fld full"><label>Nội dung công việc</label><textarea class="input" id="ncDesc" placeholder="VD: Thay lưỡi cắt Ø500, căn chỉnh góc cắt 45°..."></textarea></div>
+        </div></div>`,
+      primaryText: 'Tạo phiếu', secondaryText: 'Huỷ',
+      onPrimary: () => {
+        const g = (id) => (document.getElementById(id) || {}).value || '';
+        const may = g('ncMay'); const mm = MAY_OPTS.find(m => m.id === may) || { name: '' };
+        const id = TBM.nextId('bt', 'BT');
+        const rec = { id: id, may: may, mayName: mm.name, team: '', type: g('ncType'), sev: g('ncSev'), by: g('ncBy'), planDate: g('ncDate'),
+          startAt: '', endAt: '', stopHours: 0, laborCost: 0, parts: [], desc: g('ncDesc') || 'Bảo trì theo lịch định kỳ.', result: '', status: 'pending', warn: null };
+        LIST.unshift(rec); TBM.add('bt', rec);
+        renderTable(); renderStats();
+        ERPInteract.showToast('Đã tạo <a href="18-phieu-bao-tri.html?bt=' + encodeURIComponent(id) + '" class="lnk">' + id + '</a> — bấm để mở', 'success', 6000);
+      }
+    });
+  }
+
+  document.addEventListener('erp:ready', () => {
+    renderStats(); renderTable();
+    $('#searchInput').addEventListener('input', renderTable);
+    $('#segTabs').querySelectorAll('.seg').forEach(s => s.addEventListener('click', () => {
+      curSt = s.dataset.st;
+      $('#segTabs').querySelectorAll('.seg').forEach(x => x.classList.toggle('active', x === s));
+      renderTable();
+    }));
+    $('#btnAdd').addEventListener('click', openCreate);
+    $('#drawerOv').addEventListener('click', closeDrawer);
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !document.querySelector('.erp-print-overlay')) closeDrawer(); });
+
+    const p = new URLSearchParams(location.search);
+    const bt = p.get('bt'), may = p.get('may');
+    if (bt && LIST.some(r => r.id === bt)) openDrawer(bt);
+    else if (may) { $('#searchInput').value = may; renderTable(); }
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kho công cụ dụng cụ — ERP NHÔM OWIN</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/css/style.css" />
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+  <style>
+    .tab.active { background: var(--canvas); color: var(--ink); box-shadow: 0 1px 0 var(--rule); }
+    .att-input { padding:8px 10px; border:1px solid var(--rule); border-radius:8px; font-size:13px; font-family:inherit; background:var(--canvas); color:var(--ink); }
+    .wh-scroll thead th { position:sticky; top:0; background:var(--paper-2); z-index:1; }
+    .wh-scroll tbody tr[data-ma] { cursor:pointer; }
+
+    /* Detail drawer — trượt từ phải */
+    .drawer-overlay { position:fixed; inset:0; background:rgba(20,19,15,.42); backdrop-filter:blur(2px); z-index:80; opacity:0; pointer-events:none; transition:opacity .2s ease; }
+    .drawer-overlay.open { opacity:1; pointer-events:auto; }
+    .drawer { position:fixed; top:0; right:0; height:100vh; width:480px; max-width:94vw; background:var(--canvas); border-left:1px solid var(--rule); box-shadow:-12px 0 32px rgba(20,19,15,.16); z-index:81; transform:translateX(100%); transition:transform .26s cubic-bezier(.2,.8,.2,1); overflow-y:auto; padding:20px 22px 36px; }
+    .drawer.open { transform:translateX(0); }
+    .drawer::-webkit-scrollbar { width:8px; }
+    .drawer::-webkit-scrollbar-thumb { background:var(--rule); border-radius:9999px; }
+    .drawer-close { position:absolute; top:14px; right:14px; z-index:2; }
+    .wh-head { display:flex; gap:14px; align-items:center; }
+    .wh-avatar { width:54px; height:54px; border-radius:12px; background:var(--ink); color:var(--paper); display:inline-flex; align-items:center; justify-content:center; flex-shrink:0; }
+    .pf-info-row { display:flex; justify-content:space-between; gap:12px; padding:9px 0; border-bottom:1px solid var(--rule-hair); font-size:13px; }
+    .pf-info-row:last-child{ border-bottom:0; }
+    .pf-info-row .k { color:var(--ash); white-space:nowrap; }
+    .pf-info-row .v { font-weight:500; text-align:right; }
+    .wh-stat { border:1px solid var(--rule-soft); border-radius:10px; padding:11px 13px; background:var(--paper); }
+    .wh-stat .l { font-size:10.5px; text-transform:uppercase; letter-spacing:.06em; color:var(--ash); }
+    .wh-stat .v { font-size:18px; font-weight:700; margin-top:3px; }
+  </style>
+</head>
+<body>
+
+<div id="app-shell" data-active="kho-ccdc" data-title="Kho công cụ dụng cụ" data-crumb="<b>Kho</b> · Kho công cụ dụng cụ">
+
+  <div class="page-header">
+    <div>
+      <h1>Kho công cụ dụng cụ</h1>
+      <p>Thước nhôm · máy cầm tay · giác hút kính · kẹp góc · thang &amp; dây an toàn — quản lý cấp phát &amp; thu hồi</p>
+    </div>
+    <div class="actions">
+      <button class="btn btn-secondary"><i data-lucide="rotate-ccw" style="width:14px;height:14px"></i> Phiếu thu hồi</button>
+      <button class="btn btn-secondary"><i data-lucide="hand" style="width:14px;height:14px"></i> Phiếu cấp phát</button>
+      <button class="btn btn-primary"><i data-lucide="package-plus" style="width:14px;height:14px"></i> Phiếu nhập</button>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div data-tab-group>
+  <div class="tabs view-tabs mb-4">
+    <button class="tab active" data-tab="tab-ton"><i data-lucide="boxes" style="width:14px;height:14px;vertical-align:-2px"></i> Tồn kho</button>
+    <button class="tab" data-tab="tab-xnk"><i data-lucide="arrow-left-right" style="width:14px;height:14px;vertical-align:-2px"></i> Cấp phát · Thu hồi</button>
+    <button class="tab" data-tab="tab-bc"><i data-lucide="bar-chart-3" style="width:14px;height:14px;vertical-align:-2px"></i> Báo cáo</button>
+  </div>
+
+  <!-- ===== TỒN KHO ===== -->
+  <div data-tab-pane="tab-ton">
+    <div class="card mb-4">
+      <div class="flex-between mb-3">
+        <div class="t-h5"><i data-lucide="boxes" style="width:16px;height:16px"></i> Danh mục công cụ dụng cụ xưởng nhôm</div>
+        <span class="badge status-warning"><i data-lucide="alert-triangle" style="width:12px;height:12px"></i> 4 món cần thay / kiểm định lại</span>
+      </div>
+      <div class="flex mb-3" style="gap:8px;flex-wrap:wrap">
+        <div style="position:relative;flex:1;min-width:220px">
+          <i data-lucide="search" style="width:14px;height:14px;position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--ash)"></i>
+          <input id="whSearch" class="att-input" type="text" placeholder="Tìm mã / tên công cụ…" style="width:100%;padding-left:30px">
+        </div>
+        <select id="whGroup" class="att-input">
+          <option value="">Tất cả nhóm</option>
+          <option>Dụng cụ đo &amp; lấy dấu</option><option>Máy cầm tay</option><option>Dụng cụ lắp kính</option><option>Đồ nghề &amp; kẹp</option><option>An toàn &amp; lên cao</option>
+        </select>
+      </div>
+      <div class="table-wrap wh-scroll" style="border:none;max-height:480px;overflow:auto">
+        <table class="tbl">
+          <thead><tr>
+            <th>Mã</th><th>Tên công cụ</th><th>Nhóm</th><th>ĐVT</th><th class="num">Tổng</th><th class="num">Đang dùng</th><th class="num">Tồn kho</th><th>Tình trạng</th><th>Cảnh báo thiết bị</th>
+          </tr></thead>
+          <tbody>
+            <tr data-ma="CC-001" data-group="Dụng cụ đo &amp; lấy dấu"><td><b>CC-001</b></td><td>Thước nhôm 2m</td><td>Dụng cụ đo &amp; lấy dấu</td><td>cái</td><td class="num">14</td><td class="num">9</td><td class="num">5</td><td><span class="badge badge-moss">Tốt</span></td><td><span style="color:var(--ash-3)">—</span></td></tr>
+            <tr data-ma="CC-002" data-group="Dụng cụ đo &amp; lấy dấu"><td><b>CC-002</b></td><td>Thước góc (ke vuông 90°)</td><td>Dụng cụ đo &amp; lấy dấu</td><td>cái</td><td class="num">18</td><td class="num">12</td><td class="num">6</td><td><span class="badge status-warning">2 cái lệch chuẩn</span></td><td><span style="color:#8a1f1f;font-weight:700">Lệch &gt; 0,5° · ngừng dùng</span></td></tr>
+            <tr data-ma="CC-003" data-group="Dụng cụ đo &amp; lấy dấu"><td><b>CC-003</b></td><td>Máy laser cân bằng</td><td>Dụng cụ đo &amp; lấy dấu</td><td>cái</td><td class="num">4</td><td class="num">3</td><td class="num">1</td><td><span class="badge badge-moss">Tốt</span></td><td><span style="color:#1f6b3a;font-weight:700">Kiểm định còn hạn 9 tháng</span></td></tr>
+            <tr data-ma="CC-004" data-group="Máy cầm tay"><td><b>CC-004</b></td><td>Máy khoan cầm tay</td><td>Máy cầm tay</td><td>cái</td><td class="num">10</td><td class="num">7</td><td class="num">3</td><td><span class="badge status-warning">1 cái yếu pin</span></td><td><span style="color:var(--ash-3)">—</span></td></tr>
+            <tr data-ma="CC-011" data-group="Máy cầm tay"><td><b>CC-011</b></td><td>Máy bắt vít (pin 18V)</td><td>Máy cầm tay</td><td>cái</td><td class="num">12</td><td class="num">9</td><td class="num">3</td><td><span class="badge status-overdue">1 máy hỏng côn</span></td><td><span style="color:#8a1f1f;font-weight:700">Siết lệch lực · cần sửa</span></td></tr>
+            <tr data-ma="CC-012" data-group="Máy cầm tay"><td><b>CC-012</b></td><td>Máy cắt cầm tay</td><td>Máy cầm tay</td><td>cái</td><td class="num">6</td><td class="num">4</td><td class="num">2</td><td><span class="badge badge-moss">Tốt</span></td><td><span style="color:var(--ash-3)">—</span></td></tr>
+            <tr data-ma="CC-013" data-group="Dụng cụ lắp kính"><td><b>CC-013</b></td><td>Súng bắn keo silicon</td><td>Dụng cụ lắp kính</td><td>cái</td><td class="num">16</td><td class="num">11</td><td class="num">5</td><td><span class="badge badge-moss">Tốt</span></td><td><span style="color:var(--ash-3)">—</span></td></tr>
+            <tr data-ma="CC-018" data-group="Dụng cụ lắp kính"><td><b>CC-018</b></td><td>Giác hút kính (2 bát)</td><td>Dụng cụ lắp kính</td><td>bộ</td><td class="num">8</td><td class="num">6</td><td class="num">2</td><td><span class="badge status-overdue">1 bộ mất chân không</span></td><td><span style="color:#8a1f1f;font-weight:700">Nguy cơ rơi kính · thay gấp</span></td></tr>
+            <tr data-ma="CC-019" data-group="Dụng cụ lắp kính"><td><b>CC-019</b></td><td>Xe đẩy kính chuyên dụng</td><td>Dụng cụ lắp kính</td><td>cái</td><td class="num">5</td><td class="num">3</td><td class="num">2</td><td><span class="badge badge-moss">Tốt</span></td><td><span style="color:var(--ash-3)">—</span></td></tr>
+            <tr data-ma="CC-025" data-group="Đồ nghề &amp; kẹp"><td><b>CC-025</b></td><td>Kẹp góc ép khung</td><td>Đồ nghề &amp; kẹp</td><td>cái</td><td class="num">40</td><td class="num">26</td><td class="num">14</td><td><span class="badge badge-moss">Tốt</span></td><td><span style="color:#1f6b3a;font-weight:700">Đủ cấp cho 2 tổ</span></td></tr>
+            <tr data-ma="CC-026" data-group="Đồ nghề &amp; kẹp"><td><b>CC-026</b></td><td>Búa cao su</td><td>Đồ nghề &amp; kẹp</td><td>cái</td><td class="num">22</td><td class="num">15</td><td class="num">7</td><td><span class="badge badge-moss">Tốt</span></td><td><span style="color:var(--ash-3)">—</span></td></tr>
+            <tr data-ma="CC-031" data-group="An toàn &amp; lên cao"><td><b>CC-031</b></td><td>Thang nhôm rút 4m</td><td>An toàn &amp; lên cao</td><td>cái</td><td class="num">9</td><td class="num">6</td><td class="num">3</td><td><span class="badge status-warning">1 cái cong bậc</span></td><td><span style="color:var(--ash-3)">—</span></td></tr>
+            <tr data-ma="CC-034" data-group="An toàn &amp; lên cao"><td><b>CC-034</b></td><td>Dây an toàn toàn thân</td><td>An toàn &amp; lên cao</td><td>bộ</td><td class="num">18</td><td class="num">12</td><td class="num">6</td><td><span class="badge status-overdue">3 bộ quá hạn kiểm định</span></td><td><span style="color:#8a1f1f;font-weight:700">Quá hạn kiểm định · thu hồi</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="t-caption mt-2" id="whCount"></div>        </table>
+      </div>
+      <div class="t-caption mt-2" id="whCount"></div>
+    </div>
+  </div>
+
+  <!-- ===== CẤP PHÁT · THU HỒI ===== -->
+  <div data-tab-pane="tab-xnk" style="display:none">
+    <div class="grid grid-4 mb-4">
+      <div class="wh-stat"><div class="l">Lượt giao dịch · T6</div><div class="v">18</div></div>
+      <div class="wh-stat"><div class="l">Cấp phát ra xưởng</div><div class="v" style="color:var(--steel)">96</div></div>
+      <div class="wh-stat"><div class="l">Thu hồi về kho</div><div class="v" style="color:var(--moss-deep)">21</div></div>
+      <div class="wh-stat"><div class="l">Thay mới · bảo dưỡng</div><div class="v" style="color:var(--signal)">8</div></div>
+    </div>
+    <div class="card mb-6">
+      <div class="flex-between mb-3">
+        <div class="t-h5"><i data-lucide="arrow-left-right" style="width:16px;height:16px"></i> Tổng quan cấp phát · thu hồi công cụ</div>
+        <a href="lich-su-xnk-kho.html" class="btn-link" style="font-size:12px">Xem lịch sử đầy đủ</a>
+      </div>
+      <div class="flex mb-3" style="gap:8px;flex-wrap:wrap">
+        <div style="position:relative;flex:1;min-width:220px">
+          <i data-lucide="search" style="width:14px;height:14px;position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--ash)"></i>
+          <input id="xnkSearch" class="att-input" type="text" placeholder="Tìm chứng từ / mã / tên công cụ…" style="width:100%;padding-left:30px">
+        </div>
+        <select id="xnkType" class="att-input">
+          <option value="">Tất cả loại</option><option>Cấp phát</option><option>Thu hồi</option><option>Nhập</option><option>Thay mới</option><option>Bảo dưỡng</option>
+        </select>
+        <select id="xnkGroup" class="att-input">
+          <option value="">Tất cả nhóm</option>
+          <option>Dụng cụ đo &amp; lấy dấu</option><option>Máy cầm tay</option><option>Dụng cụ lắp kính</option><option>Đồ nghề &amp; kẹp</option><option>An toàn &amp; lên cao</option>
+        </select>
+        <select id="xnkMonth" class="att-input">
+          <option value="">Mọi thời gian</option><option value="2026-06">Tháng 6/2026</option><option value="2026-05">Tháng 5/2026</option>
+        </select>
+      </div>
+      <div class="table-wrap wh-scroll" style="border:none;max-height:480px;overflow:auto">
+        <table class="tbl">
+          <thead><tr>
+            <th>Ngày</th><th>Chứng từ</th><th>Loại</th><th>Mã CC</th><th>Tên công cụ</th><th>Nhóm</th><th class="num">SL</th><th>Nguồn / Mục đích</th>
+          </tr></thead>
+          <tbody id="xnkBody"></tbody>
+        </table>
+      </div>
+      <div class="t-caption mt-2" id="xnkCount"></div>
+    </div>
+  </div>
+
+  <!-- ===== BÁO CÁO ===== -->
+  <div data-tab-pane="tab-bc" style="display:none">
+    <div class="grid grid-4 mb-4">
+      <div class="card-feature-blue"><div class="t-micro-u" style="color:var(--steel)">SỐ MÃ CCDC</div><div class="t-h2 mt-1">13</div><div class="t-caption" style="color:var(--steel)">5 nhóm dụng cụ</div></div>
+      <div class="card-feature-teal"><div class="t-micro-u" style="color:var(--moss-deep)">ĐANG SỬ DỤNG</div><div class="t-h2 mt-1">123</div><div class="t-caption" style="color:var(--moss-deep)">đã cấp ra xưởng</div></div>
+      <div class="card-feature-yellow"><div class="t-micro-u" style="color:var(--rust-deep)">TỒN TRONG KHO</div><div class="t-h2 mt-1">59</div><div class="t-caption" style="color:var(--rust-deep)">sẵn sàng cấp</div></div>
+      <div class="card-feature-coral"><div class="t-micro-u" style="color:var(--coral-dark)">CẦN THAY / BẢO DƯỠNG</div><div class="t-h2 mt-1">4</div><div class="t-caption" style="color:var(--coral-dark)">hỏng / quá hạn kiểm định</div></div>
+    </div>
+    <div class="grid grid-12 mb-4">
+      <div class="card">
+        <div class="t-h5 mb-3"><i data-lucide="bar-chart-3" style="width:16px;height:16px"></i> Đang dùng vs tồn kho theo nhóm</div>
+        <div id="chartUse" style="min-height:240px"></div>
+      </div>
+      <div class="card">
+        <div class="t-h5 mb-3"><i data-lucide="pie-chart" style="width:16px;height:16px"></i> Tình trạng công cụ</div>
+        <div id="chartState" style="display:flex;justify-content:center;min-height:220px"></div>
+        <div class="flex" style="gap:14px;flex-wrap:wrap;margin-top:8px;font-size:11px;color:var(--ash);justify-content:center">
+          <span><span class="badge-dot" style="background:var(--moss);margin-right:4px"></span>Tốt</span>
+          <span><span class="badge-dot" style="background:var(--amber);margin-right:4px"></span>Cần bảo dưỡng</span>
+          <span><span class="badge-dot" style="background:var(--signal);margin-right:4px"></span>Cần thay</span>
+        </div>
+      </div>
+    </div>
+    <div class="card mb-6">
+      <div class="t-h5 mb-3"><i data-lucide="table-2" style="width:16px;height:16px"></i> Cấp phát – Thu hồi · T6/2026</div>
+      <div class="table-wrap" style="border:none">
+        <table class="tbl">
+          <thead><tr><th>Nhóm</th><th class="num">Cấp phát</th><th class="num">Thu hồi</th><th class="num">Thay mới</th><th class="num">Đang sử dụng</th></tr></thead>
+          <tbody>
+            <tr><td>Dụng cụ đo &amp; lấy dấu</td><td class="num">6</td><td class="num">3</td><td class="num">2</td><td class="num">24</td></tr>
+            <tr><td>Máy cầm tay</td><td class="num">5</td><td class="num">2</td><td class="num">1</td><td class="num">20</td></tr>
+            <tr><td>Dụng cụ lắp kính</td><td class="num">5</td><td class="num">3</td><td class="num">1</td><td class="num">20</td></tr>
+            <tr><td>Đồ nghề &amp; kẹp</td><td class="num">13</td><td class="num">6</td><td class="num">0</td><td class="num">41</td></tr>
+            <tr><td>An toàn &amp; lên cao</td><td class="num">6</td><td class="num">4</td><td class="num">3</td><td class="num">18</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  </div><!-- /tab-group -->
+
+  <!-- Detail drawer -->
+  <div class="drawer-overlay" id="wh-overlay"></div>
+  <aside class="drawer" id="wh-drawer" aria-hidden="true">
+    <button class="btn-icon drawer-close" id="wh-close" title="Đóng"><i data-lucide="x" style="width:18px;height:18px"></i></button>
+    <div id="wh-body"></div>
+  </aside>
+
+</div>
+
+<script src="../assets/js/layout.js"></script>
+<script src="../assets/js/pricing-engine.js"></script>
+<script src="../assets/js/quote-data.js"></script>
+<script src="../assets/js/loss-data.js"></script>
+<script src="../assets/js/loss-ui.js"></script>
+<script>
+  document.addEventListener('erp:ready', () => {
+    const rows = [...document.querySelectorAll('.wh-scroll tbody tr[data-group]')];
+    const search = document.getElementById('whSearch');
+    const grp = document.getElementById('whGroup');
+    const count = document.getElementById('whCount');
+    function apply(){
+      const q=(search?.value||'').toLowerCase().trim(), g=grp?.value||''; let n=0;
+      rows.forEach(r=>{ const ok=(!q||r.textContent.toLowerCase().includes(q))&&(!g||r.dataset.group===g); r.style.display=ok?'':'none'; if(ok)n++; });
+      if(count) count.textContent = `Hiển thị ${n}/${rows.length} mã công cụ`;
+    }
+    search?.addEventListener('input', apply); grp?.addEventListener('change', apply); apply();
+
+    /* ===== Chi tiết công cụ — drawer trượt từ phải ===== */
+    const CC = {
+      'CC-001': { ten:'Thước nhôm 2m', nhom:'Dụng cụ đo & lấy dấu', dvt:'cái', tong:'14', dung:'9', ton:'5', tt:'ok', ttText:'Tốt', alert:false,
+        info:[['Nhà cung cấp','Vật tư Hồng Phúc'],['Quy cách','Thước nhôm 2m · vạch khắc laser'],['Vị trí kho','Giá dụng cụ D1 · Tổ cắt CNC'],['Ngày nhập đầu','15/01/2025'],['Chu kỳ hiệu chuẩn','6 tháng/lần'],['Lần hiệu chuẩn gần nhất','02/05/2026']],
+        his:[['10/06/2026','Cấp phát','PC-0620','−2 cái','Tổ cắt CNC · LSX-0331'],['28/05/2026','Thu hồi','PT-0571','+1 cái','Tổ cắt CNC · hoàn trả'],['02/05/2026','Bảo dưỡng','BD-0512','—','Hiệu chuẩn vạch đo'],['15/01/2025','Nhập','PN-0102','+14 cái','Vật tư Hồng Phúc']] },
+      'CC-002': { ten:'Thước góc (ke vuông 90°)', nhom:'Dụng cụ đo & lấy dấu', dvt:'cái', tong:'18', dung:'12', ton:'6', tt:'warn', ttText:'2 cái lệch chuẩn', alert:true,
+        info:[['Nhà cung cấp','Vật tư Hồng Phúc'],['Quy cách','Ke vuông thép 300mm'],['Vị trí kho','Tủ dụng cụ · Tổ ép góc'],['Cảnh báo','2/18 cái lệch > 0,5° — nguy cơ lệch góc cắt 45°/90°'],['Lần kiểm gần nhất','18/05/2026']],
+        his:[['09/06/2026','Cấp phát','PC-0618','−3 cái','Tổ ép góc – lắp ráp'],['20/05/2026','Thu hồi','PT-0558','+2 cái','2 cái lệch chuẩn · chờ thay'],['18/04/2026','Thay mới','TM-0488','+4 cái','Thay ke lệch'],['08/03/2025','Nhập','PN-0140','+18 cái','Vật tư Hồng Phúc']] },
+      'CC-003': { ten:'Máy laser cân bằng', nhom:'Dụng cụ đo & lấy dấu', dvt:'cái', tong:'4', dung:'3', ton:'1', tt:'ok', ttText:'Tốt', alert:false,
+        info:[['Nhà cung cấp','Cơ khí WEIKE Việt Nam'],['Quy cách','Laser 3 tia xanh · sai số ±1mm/5m'],['Vị trí kho','Tủ thiết bị đo · Kho CCDC'],['Chu kỳ kiểm định','12 tháng/lần'],['Kiểm định còn hạn','9 tháng']],
+        his:[['06/06/2026','Cấp phát','PC-0610','−1 cái','Thợ lắp đặt công trình'],['14/03/2026','Bảo dưỡng','BD-0479','—','Kiểm định sai số tia'],['22/02/2025','Nhập','PN-0128','+4 cái','Cơ khí WEIKE Việt Nam']] },
+      'CC-004': { ten:'Máy khoan cầm tay', nhom:'Máy cầm tay', dvt:'cái', tong:'10', dung:'7', ton:'3', tt:'warn', ttText:'1 cái yếu pin', alert:true,
+        info:[['Nhà cung cấp','Cơ khí WEIKE Việt Nam'],['Quy cách','Khoan pin 18V · 2 pin 4.0Ah'],['Vị trí kho','Tủ đồ nghề T1 · Tổ bảo trì'],['Cảnh báo','1 máy yếu pin — đề nghị thay pin'],['Lần bảo dưỡng gần nhất','06/05/2026']],
+        his:[['07/06/2026','Cấp phát','PC-0612','−2 cái','Tổ ép góc – lắp ráp'],['18/05/2026','Thu hồi','PT-0550','+1 cái','Pin yếu · chờ thay'],['06/05/2026','Bảo dưỡng','BD-0520','—','Vệ sinh · tra mỡ bò đầu kẹp'],['10/04/2025','Nhập','PN-0150','+10 cái','Cơ khí WEIKE Việt Nam']] },
+      'CC-011': { ten:'Máy bắt vít (pin 18V)', nhom:'Máy cầm tay', dvt:'cái', tong:'12', dung:'9', ton:'3', tt:'over', ttText:'1 máy hỏng côn', alert:true,
+        info:[['Nhà cung cấp','Cơ khí WEIKE Việt Nam'],['Quy cách','Máy bắt vít 18V · chỉnh 20 cấp lực'],['Vị trí kho','Giá máy V1 · Kho kỹ thuật'],['Cảnh báo','1 máy siết lệch lực — làm gãy mũi vít, cần sửa'],['Lần thay gần nhất','12/03/2026']],
+        his:[['08/06/2026','Cấp phát','PC-0615','−2 cái','Tổ ép góc – lắp ráp'],['25/05/2026','Thu hồi','PT-0564','+1 cái','Hỏng côn · đề nghị sửa'],['12/03/2026','Thay mới','TM-0455','+2 cái','Thay máy hỏng'],['22/02/2025','Nhập','PN-0128','+12 cái','Cơ khí WEIKE Việt Nam']] },
+      'CC-012': { ten:'Máy cắt cầm tay', nhom:'Máy cầm tay', dvt:'cái', tong:'6', dung:'4', ton:'2', tt:'ok', ttText:'Tốt', alert:false,
+        info:[['Nhà cung cấp','Cơ khí WEIKE Việt Nam'],['Quy cách','Máy cắt Ø125 · dùng đá cắt nhôm'],['Vị trí kho','Giá máy V2 · Kho kỹ thuật'],['Chu kỳ bảo dưỡng','6 tháng/lần'],['Lần bảo dưỡng gần nhất','14/04/2026']],
+        his:[['05/06/2026','Cấp phát','PC-0610','−1 cái','Thợ lắp đặt công trình'],['14/04/2026','Bảo dưỡng','BD-0479','—','Thay chổi than · vệ sinh'],['22/02/2025','Nhập','PN-0128','+6 cái','Cơ khí WEIKE Việt Nam']] },
+      'CC-013': { ten:'Súng bắn keo silicon', nhom:'Dụng cụ lắp kính', dvt:'cái', tong:'16', dung:'11', ton:'5', tt:'ok', ttText:'Tốt', alert:false,
+        info:[['Nhà cung cấp','Hoá chất Xây dựng Việt'],['Quy cách','Súng bơm keo tuýp 300ml'],['Vị trí kho','Tủ dụng cụ · Bàn lắp kính LAP-01'],['Ngày nhập đầu','05/06/2025'],['Ghi chú','Cấp theo thợ lắp kính']],
+        his:[['04/06/2026','Cấp phát','PC-0608','−3 cái','Tổ ép góc – lắp ráp'],['12/05/2026','Thu hồi','PT-0536','+2 cái','Hoàn trả sau công trình'],['05/06/2025','Nhập','PN-0188','+16 cái','Hoá chất Xây dựng Việt']] },
+      'CC-018': { ten:'Giác hút kính (2 bát)', nhom:'Dụng cụ lắp kính', dvt:'bộ', tong:'8', dung:'6', ton:'2', tt:'over', ttText:'1 bộ mất chân không', alert:true,
+        info:[['Nhà cung cấp','Kính Việt Nhật Hải Long'],['Quy cách','2 bát hút Ø120 · tải 60kg'],['Vị trí kho','Giá lắp kính · Xưởng hoàn thiện'],['Cảnh báo','1 bộ tụt chân không — nguy cơ rơi vỡ kính, thay gấp'],['Lần kiểm gần nhất','25/05/2026']],
+        his:[['08/06/2026','Cấp phát','PC-0615','−1 bộ','Bàn lắp kính LAP-01'],['25/05/2026','Thu hồi','PT-0564','+1 bộ','Mất chân không · đề nghị thay'],['10/04/2025','Nhập','PN-0150','+8 bộ','Kính Việt Nhật Hải Long']] },
+      'CC-019': { ten:'Xe đẩy kính chuyên dụng', nhom:'Dụng cụ lắp kính', dvt:'cái', tong:'5', dung:'3', ton:'2', tt:'ok', ttText:'Tốt', alert:false,
+        info:[['Nhà cung cấp','Kính Việt Nhật Hải Long'],['Quy cách','Xe đẩy kính khung thép · tải 400kg'],['Vị trí kho','Sân bãi · Khu kính'],['Chu kỳ bảo dưỡng','6 tháng/lần'],['Lần bảo dưỡng gần nhất','06/05/2026']],
+        his:[['07/06/2026','Cấp phát','PC-0612','−1 cái','Tổ hoàn thiện – đóng kiện'],['06/05/2026','Bảo dưỡng','BD-0520','—','Tra mỡ bánh xe · siết khung'],['10/04/2025','Nhập','PN-0150','+5 cái','Kính Việt Nhật Hải Long']] },
+      'CC-025': { ten:'Kẹp góc ép khung', nhom:'Đồ nghề & kẹp', dvt:'cái', tong:'40', dung:'26', ton:'14', tt:'ok', ttText:'Tốt', alert:false,
+        info:[['Nhà cung cấp','Phụ kiện Kinlong VN'],['Quy cách','Kẹp góc 90° · mở tối đa 80mm'],['Vị trí kho','Tủ đồ nghề · Tổ ép góc'],['Ngày nhập đầu','05/06/2025'],['Ghi chú','Đủ cấp cho 2 tổ ép góc']],
+        his:[['04/06/2026','Cấp phát','PC-0608','−8 cái','Tổ ép góc – lắp ráp'],['12/05/2026','Thu hồi','PT-0536','+6 cái','Hoàn trả sau lệnh LSX-0322'],['05/06/2025','Nhập','PN-0188','+40 cái','Phụ kiện Kinlong VN']] },
+      'CC-026': { ten:'Búa cao su', nhom:'Đồ nghề & kẹp', dvt:'cái', tong:'22', dung:'15', ton:'7', tt:'ok', ttText:'Tốt', alert:false,
+        info:[['Nhà cung cấp','Vật tư Hồng Phúc'],['Quy cách','Búa cao su 500g · cán gỗ'],['Vị trí kho','Tủ đồ nghề · Tổ ép góc'],['Ngày nhập đầu','05/06/2025'],['Ghi chú','Dùng đóng gioăng, nẹp kính']],
+        his:[['02/06/2026','Cấp phát','PC-0604','−5 cái','Tổ ép góc – lắp ráp'],['05/06/2025','Nhập','PN-0188','+22 cái','Vật tư Hồng Phúc']] },
+      'CC-031': { ten:'Thang nhôm rút 4m', nhom:'An toàn & lên cao', dvt:'cái', tong:'9', dung:'6', ton:'3', tt:'warn', ttText:'1 cái cong bậc', alert:true,
+        info:[['Nhà cung cấp','BHLĐ An Toàn Việt'],['Quy cách','Thang nhôm rút 4m · tải 150kg'],['Vị trí kho','Khu thiết bị lên cao · Xưởng'],['Cảnh báo','1 cái cong bậc thứ 5 — chờ sửa'],['Lần kiểm gần nhất','03/06/2026']],
+        his:[['06/06/2026','Cấp phát','PC-0610','−2 cái','Thợ lắp đặt công trình'],['03/06/2026','Thu hồi','PT-0606','+1 cái','Cong bậc · chờ sửa'],['15/03/2026','Nhập','PN-0460','+9 cái','BHLĐ An Toàn Việt']] },
+      'CC-034': { ten:'Dây an toàn toàn thân', nhom:'An toàn & lên cao', dvt:'bộ', tong:'18', dung:'12', ton:'6', tt:'over', ttText:'3 bộ quá hạn kiểm định', alert:true,
+        info:[['Nhà cung cấp','BHLĐ An Toàn Việt'],['Quy cách','Dây toàn thân 2 móc · dây chống sốc'],['Vị trí kho','Kệ BHLĐ B2 · Tầng 1'],['Cảnh báo','3/18 bộ quá hạn kiểm định — thu hồi ngay, cấm dùng'],['Chu kỳ kiểm định','12 tháng/lần']],
+        his:[['02/06/2026','Cấp phát','PC-0604','−4 bộ','Thợ lắp đặt công trình'],['30/05/2026','Thu hồi','PT-0600','+3 bộ','Quá hạn kiểm định · thu hồi'],['15/03/2026','Nhập','PN-0460','+18 bộ','BHLĐ An Toàn Việt']] },
+    };
+    const ctLink = ct => /^PN/.test(ct) ? `<a href="05-kho.html?pnk=${encodeURIComponent(ct)}" class="lnk">${ct}</a>`
+      : /^(PC|PT|PX)/.test(ct) ? `<a href="05-kho.html?pxk=${encodeURIComponent(ct)}" class="lnk">${ct}</a>` : ct;
+    const srcLink = src => String(src).replace(/(LSX-\d+)/g, m => `<a href="06-lsx-phieu-cong-nghe.html?id=${m}" class="lnk">${m}</a>`);
+    const infoRows = arr => arr.map(([k,v]) => `<div class="pf-info-row"><span class="k">${k}</span><span class="v">${v}</span></div>`).join('');
+    const ttBadge = c => c.tt==='ok' ? '<span class="badge badge-moss"><i data-lucide="check" style="width:12px;height:12px"></i> '+c.ttText+'</span>'
+      : c.tt==='warn' ? '<span class="badge status-warning"><i data-lucide="alert-triangle" style="width:12px;height:12px"></i> '+c.ttText+'</span>'
+      : '<span class="badge status-overdue"><i data-lucide="alert-triangle" style="width:12px;height:12px"></i> '+c.ttText+'</span>';
+    function hisRows(arr){
+      return arr.map(([d,loai,ct,sl,nguon])=>{
+        let badge;
+        if(loai==='Cấp phát') badge='<span class="badge badge-steel">Cấp phát</span>';
+        else if(loai==='Thu hồi') badge='<span class="badge badge-moss">Thu hồi</span>';
+        else if(loai==='Nhập') badge='<span class="badge badge-moss">Nhập</span>';
+        else if(loai==='Thay mới') badge='<span class="badge status-overdue">Thay mới</span>';
+        else badge='<span class="badge status-warning">Bảo dưỡng</span>';
+        return `<tr><td>${d}</td><td>${badge}</td><td>${ctLink(ct)}</td><td class="num" style="font-weight:600">${sl}</td><td>${srcLink(nguon)}</td></tr>`;
+      }).join('');
+    }
+
+    const body = document.getElementById('wh-body');
+    const drawer = document.getElementById('wh-drawer');
+    const overlay = document.getElementById('wh-overlay');
+    function openDrawer(){ drawer.classList.add('open'); overlay.classList.add('open'); drawer.setAttribute('aria-hidden','false'); }
+    function closeDrawer(){ drawer.classList.remove('open'); overlay.classList.remove('open'); drawer.setAttribute('aria-hidden','true'); rows.forEach(r=>r.classList.remove('row-selected')); }
+    overlay.addEventListener('click', closeDrawer);
+    document.getElementById('wh-close')?.addEventListener('click', closeDrawer);
+    document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeDrawer(); });
+
+    function render(ma){
+      const c = CC[ma]; if(!c || !body) return;
+      const replaceBtn = c.alert
+        ? `<button class="btn btn-primary btn-sm" style="flex:1"><i data-lucide="shopping-cart" style="width:13px;height:13px"></i> Đề xuất mua / thay</button>`
+        : `<button class="btn btn-secondary btn-sm" style="flex:1"><i data-lucide="shopping-cart" style="width:13px;height:13px"></i> Đề xuất mua / thay</button>`;
+      body.innerHTML = `
+        <div class="wh-head mb-3">
+          <div class="wh-avatar"><i data-lucide="wrench" style="width:24px;height:24px"></i></div>
+          <div style="min-width:0">
+            <div class="t-h4">${c.ten}</div>
+            <div class="t-caption">${ma} · ${c.nhom}</div>
+            <div class="mt-1">${ttBadge(c)}</div>
+          </div>
+        </div>
+
+        <div class="flex" style="gap:8px;margin-bottom:14px">
+          <button class="btn btn-secondary btn-sm" style="flex:1"><i data-lucide="hand" style="width:13px;height:13px"></i> Cấp phát</button>
+          ${replaceBtn}
+        </div>
+
+        <div class="grid grid-3 mb-3" style="gap:8px">
+          <div class="wh-stat"><div class="l">Tổng</div><div class="v">${c.tong} <span style="font-size:12px;font-weight:500;color:var(--ash)">${c.dvt}</span></div></div>
+          <div class="wh-stat"><div class="l">Đang dùng</div><div class="v" style="color:var(--moss-deep)">${c.dung}</div></div>
+          <div class="wh-stat"><div class="l">Tồn kho</div><div class="v">${c.ton}</div></div>
+        </div>
+
+        <div class="t-micro-u mb-1">Thông tin công cụ</div>
+        ${infoRows([['Đơn vị tính',c.dvt],['Nhóm',c.nhom],...c.info])}
+
+        <hr class="hr-soft">
+        <div class="flex-between mb-2">
+          <div class="t-micro-u"><i data-lucide="history" style="width:13px;height:13px;vertical-align:-2px"></i> Lịch sử cấp phát · thu hồi</div>
+          <a href="lich-su-xnk-kho.html" class="btn-link" style="font-size:12px">Xem tất cả</a>
+        </div>
+        <div class="table-wrap" style="border:none">
+          <table class="tbl" style="font-size:12.5px">
+            <thead><tr><th>Ngày</th><th>Loại</th><th>Chứng từ</th><th class="num">SL</th><th>Nguồn / Mục đích</th></tr></thead>
+            <tbody>${hisRows(c.his)}</tbody>
+          </table>
+        </div>`;
+      if(window.lucide) window.lucide.createIcons();
+      drawer.scrollTop = 0;
+    }
+
+    rows.forEach(tr=>{
+      tr.addEventListener('click', ()=>{
+        const ma = tr.dataset.ma; if(!ma) return;
+        rows.forEach(r=>r.classList.remove('row-selected'));
+        tr.classList.add('row-selected');
+        render(ma); openDrawer();
+      });
+    });
+
+    /* ===== Tab Cấp phát · Thu hồi — bảng tổng quan + bộ lọc ===== */
+    function ymOf(d){ const [dd,mm,yy]=d.split('/'); return yy+'-'+mm; }
+    const txBadge = loai => {
+      if(loai==='Cấp phát') return '<span class="badge badge-steel">Cấp phát</span>';
+      if(loai==='Thu hồi') return '<span class="badge badge-moss">Thu hồi</span>';
+      if(loai==='Nhập') return '<span class="badge badge-moss">Nhập</span>';
+      if(loai==='Thay mới') return '<span class="badge status-overdue">Thay mới</span>';
+      return '<span class="badge status-warning">Bảo dưỡng</span>';
+    };
+    const TX = [];
+    Object.keys(CC).forEach(ma=>{
+      const c = CC[ma];
+      c.his.forEach(([d,loai,ct,sl,nguon])=>{
+        TX.push({ d, ym:ymOf(d), loai, ct, ma, ten:c.ten, nhom:c.nhom, sl, nguon });
+      });
+    });
+    const toKey = d => { const [dd,mm,yy]=d.split('/'); return yy+mm+dd; };
+    TX.sort((a,b)=> toKey(b.d).localeCompare(toKey(a.d)));
+
+    const xnkBody = document.getElementById('xnkBody');
+    const xnkSearch = document.getElementById('xnkSearch');
+    const xnkType = document.getElementById('xnkType');
+    const xnkGroup = document.getElementById('xnkGroup');
+    const xnkMonth = document.getElementById('xnkMonth');
+    const xnkCount = document.getElementById('xnkCount');
+    function renderTx(){
+      const q=(xnkSearch?.value||'').toLowerCase().trim(), t=xnkType?.value||'', g=xnkGroup?.value||'', mo=xnkMonth?.value||'';
+      const list = TX.filter(x=>{
+        const hay = (x.ct+' '+x.ma+' '+x.ten+' '+x.nguon).toLowerCase();
+        return (!q||hay.includes(q)) && (!t||x.loai===t) && (!g||x.nhom===g) && (!mo||x.ym===mo);
+      });
+      xnkBody.innerHTML = list.map(x=>
+        `<tr><td>${x.d}</td><td><b>${x.ct}</b></td><td>${txBadge(x.loai)}</td><td>${x.ma}</td><td>${x.ten}</td><td>${x.nhom}</td><td class="num" style="font-weight:600">${x.sl}</td><td>${x.nguon}</td></tr>`
+      ).join('') || `<tr><td colspan="8" class="t-caption" style="text-align:center;padding:20px">Không có giao dịch phù hợp</td></tr>`;
+      if(window.lucide) window.lucide.createIcons();
+      if(xnkCount) xnkCount.textContent = `Hiển thị ${list.length}/${TX.length} giao dịch`;
+    }
+    xnkSearch?.addEventListener('input', renderTx);
+    [xnkType,xnkGroup,xnkMonth].forEach(s=>s?.addEventListener('change', renderTx));
+    renderTx();
+
+    let drawn=false;
+    function draw(){
+      if(drawn) return; drawn=true;
+      ERPCharts.groupedBar('chartUse', {
+        labels:['Đo & lấy dấu','Máy cầm tay','Lắp kính','Đồ nghề & kẹp','An toàn'],
+        datasets:[ {name:'Đang dùng', values:[24,20,20,41,18], color:'#2f5d3a'}, {name:'Tồn kho', values:[12,8,9,21,9], color:'#b8b2a2'} ],
+      }, { height:240, unit:'cái' });
+      ERPCharts.donut('chartState', { labels:['Tốt','Cần bảo dưỡng','Cần thay / kiểm định'], values:[8,2,3], colors:['#2f5d3a','#9c7714','#8a1f1f'] }, { centerLabel:'Tổng mã', centerValue:'13', size:180 });
+    }
+    document.querySelector('[data-tab="tab-bc"]')?.addEventListener('click', ()=> setTimeout(draw, 60));
+  });
+</script>
+</body>
+</html>

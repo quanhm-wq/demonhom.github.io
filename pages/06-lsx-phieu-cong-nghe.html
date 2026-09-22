@@ -1,0 +1,1398 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lệnh sản xuất — ERP NHÔM OWIN</title>
+  <link rel="stylesheet" href="../assets/css/style.css" />
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+  <style>
+    /* ============================================================
+       LSX · MÀN CHI TIẾT MỘT LỆNH SẢN XUẤT (công nhân dùng)
+       Bố cục: (1) dải nút · (2) bảng thông tin · (3) 6 bước ngang
+               (4) phân tích lỗi hỏng & quá thời gian
+       ============================================================ */
+
+    /* sticky hoạt động được bên trong .main (overflow-x:hidden → clip) */
+    .main { overflow-x: clip; }
+
+    /* liên kết bản ghi (ERPPeek bắt click) — style dự phòng */
+    .lnk { color: var(--rust); font-family: var(--ff-mono); font-weight: 600; text-decoration: none; border-bottom: 1px dotted rgba(197,64,10,.5); cursor: pointer; }
+    .lnk:hover { color: var(--rust-deep); border-bottom-style: solid; }
+
+    /* bản in luôn nổi trên cùng */
+    .erp-print-overlay { z-index: 9000 !important; }
+    /* form rộng trong modal mặc định 560px */
+    .erp-modal:has(.lsxd-form) { max-width: 900px; }
+    .erp-modal:has(.lsxd-form) h3 { margin-bottom: 14px; }
+
+    /* ===== (1) DẢI NÚT TRÊN CÙNG ===== */
+    .lsxd-bar {
+      position: sticky; top: 0; z-index: 60;
+      display: flex; align-items: stretch; gap: 0;
+      flex-wrap: wrap;
+      background: var(--canvas);
+      border: 1px solid var(--rule);
+      border-radius: var(--r-4);
+      padding: 8px 4px;
+      row-gap: 10px;
+      margin: -6px 0 14px;
+      box-shadow: 0 6px 18px rgba(20,19,15,.07);
+    }
+    .lsxd-grp { display: flex; flex-direction: column; gap: 6px; padding: 2px 14px; position: relative; }
+    .lsxd-grp + .lsxd-grp::before {
+      content: ""; position: absolute; left: 0; top: 4px; bottom: 4px;
+      width: 1px; background: var(--rule);
+    }
+    .lsxd-grp.row-start::before { display: none; }
+    .lsxd-grp > .lbl {
+      font-family: var(--ff-mono); font-size: 9.5px; font-weight: 600;
+      letter-spacing: .18em; text-transform: uppercase; color: var(--ash-2);
+    }
+    .lsxd-grp > .row { display: flex; gap: 8px; flex-wrap: wrap; }
+    .obtn {
+      height: 40px; min-width: 40px; padding: 0 14px;
+      display: inline-flex; align-items: center; gap: 7px;
+      font-family: var(--ff-sans); font-size: 14px; font-weight: 600;
+      border-radius: var(--r-3); border: 1px solid var(--rule);
+      background: var(--paper); color: var(--ink);
+      cursor: pointer; transition: filter .12s ease, transform .08s ease;
+      white-space: nowrap;
+    }
+    .obtn i { width: 16px; height: 16px; }
+    .obtn:hover { filter: brightness(.96); }
+    .obtn:active { transform: translateY(1px); }
+    .obtn[disabled], .obtn.is-off { opacity: .38; cursor: not-allowed; filter: grayscale(.5); }
+    .obtn-go    { background: #1f6b3a; border-color: #1a5a31; color: #fff; }
+    .obtn-pause { background: #9c7714; border-color: #866413; color: #fff; }
+    .obtn-stop  { background: #8a1f1f; border-color: #741a1a; color: #fff; }
+    .obtn-warn  { background: #f0e6c4; border-color: #d9c98c; color: #6d5410; }
+    .obtn-ink   { background: var(--ink); border-color: var(--ink); color: var(--paper); }
+
+    /* ===== (2) BẢNG THÔNG TIN LỆNH ===== */
+    .lsxd-info {
+      display: flex; gap: 18px; align-items: stretch;
+      background: var(--canvas); border: 1px solid var(--rule);
+      border-radius: var(--r-4); padding: 16px 18px; margin-bottom: 16px;
+    }
+    .lsxd-info .fields {
+      flex: 1; min-width: 0;
+      display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px 20px;
+    }
+    .lsxd-fd .k {
+      display: block; font-family: var(--ff-mono); font-size: 9.5px; font-weight: 600;
+      letter-spacing: .14em; text-transform: uppercase; color: var(--ash-2); margin-bottom: 3px;
+    }
+    .lsxd-fd .v { display: block; font-size: 15px; font-weight: 600; color: var(--ink); line-height: 1.3; }
+    .lsxd-fd .v.big { font-family: var(--ff-mono); font-size: 19px; letter-spacing: -.01em; }
+    .lsxd-fd .v small { font-size: 12.5px; font-weight: 500; color: var(--ash); }
+    .lsxd-qr {
+      flex: none; width: 150px; border-left: 1px solid var(--rule); padding-left: 16px;
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+      text-align: center;
+    }
+    .lsxd-qr .cap { font-family: var(--ff-mono); font-size: 9.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--ash-2); }
+    .pbar { height: 10px; background: var(--paper-3); border-radius: 999px; overflow: hidden; margin-top: 5px; }
+    .pbar > i { display: block; height: 100%; background: #1f6b3a; border-radius: 999px; }
+    .pbar.warn > i { background: var(--amber); }
+
+    .st-chip {
+      display: inline-flex; align-items: center; gap: 6px;
+      height: 26px; padding: 0 11px; border-radius: 999px;
+      font-size: 12.5px; font-weight: 700; letter-spacing: .01em;
+      border: 1px solid transparent;
+    }
+    .st-chip .dot { width: 7px; height: 7px; border-radius: 999px; background: currentColor; }
+    .st-run   { background: var(--moss-soft); color: #1f6b3a; border-color: rgba(31,107,58,.28); }
+    .st-pause { background: var(--amber-soft); color: #6d5410; border-color: rgba(156,119,20,.3); }
+    .st-wait  { background: var(--paper-3); color: var(--ash); border-color: var(--rule); }
+    .st-done  { background: var(--steel-soft); color: var(--steel); border-color: rgba(74,85,96,.25); }
+    .st-late  { background: var(--signal-soft); color: #8a1f1f; border-color: rgba(138,31,31,.28); }
+
+    /* ===== (3) CÁC BƯỚC SẢN XUẤT — HÀNG NGANG ===== */
+    .lsxd-sec-h {
+      display: flex; align-items: baseline; gap: 10px; margin: 2px 0 10px;
+    }
+    .lsxd-sec-h h2 { font-size: 15px; font-weight: 700; letter-spacing: -.01em; }
+    .lsxd-sec-h span { font-size: 12.5px; color: var(--ash); }
+
+    .lsxd-steps {
+      display: flex; flex-wrap: nowrap; overflow-x: auto; gap: 14px;
+      padding: 2px 2px 14px; margin-bottom: 18px;
+      scrollbar-width: thin;
+    }
+    .stp {
+      flex: 0 0 300px; width: 300px;
+      display: flex; flex-direction: column;
+      background: var(--canvas); border: 1px solid var(--rule);
+      border-radius: var(--r-4); overflow: hidden;
+    }
+    .stp.is-doing { border-color: #1f6b3a; box-shadow: 0 0 0 2px rgba(31,107,58,.14); }
+    .stp.is-late  { border-color: #8a1f1f; box-shadow: 0 0 0 2px rgba(138,31,31,.12); }
+    .stp-h { padding: 10px 12px; border-bottom: 1px solid var(--rule); background: var(--paper-2); }
+    .stp-h .t1 { display: flex; align-items: center; gap: 8px; }
+    .stp-no {
+      width: 26px; height: 26px; flex: none; border-radius: 999px;
+      background: var(--ink); color: var(--paper);
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--ff-mono); font-size: 13px; font-weight: 700;
+    }
+    .stp-nm { font-size: 14.5px; font-weight: 700; line-height: 1.22; min-width: 0; }
+    .stp-h .t2 { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+    .stp-meta { padding: 9px 12px; border-bottom: 1px solid var(--rule-soft); font-size: 12.5px; color: var(--ash); line-height: 1.7; }
+    .stp-meta b { color: var(--ink); font-weight: 600; }
+    .stp-acts { display: flex; gap: 8px; padding: 10px 12px; }
+    .stp-acts .obtn { flex: 1 1 0; min-width: 0; height: 44px; justify-content: center; font-size: 14px; }
+
+    .stp-form { padding: 4px 12px 12px; flex: 1; }
+    .stp-form .gr { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 8px; margin-bottom: 9px; }
+    .stp-form .gr.g2 { grid-template-columns: repeat(2, minmax(0,1fr)); }
+    .fld { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+    .fld > label {
+      font-family: var(--ff-mono); font-size: 9.5px; font-weight: 600;
+      letter-spacing: .1em; text-transform: uppercase; color: var(--ash-2);
+    }
+    .fld > input, .fld > select, .fld > textarea {
+      height: 38px; padding: 0 9px; width: 100%;
+      font-family: var(--ff-sans); font-size: 15px; font-weight: 600; color: var(--ink);
+      background: var(--paper); border: 1px solid var(--rule); border-radius: var(--r-2);
+    }
+    .fld > select { font-size: 13px; font-weight: 600; }
+    .fld > textarea { height: 46px; padding: 7px 9px; font-size: 13px; font-weight: 500; resize: vertical; line-height: 1.4; }
+    .fld > input:focus, .fld > select:focus, .fld > textarea:focus { outline: 2px solid rgba(197,64,10,.35); border-color: var(--rust); }
+    .fld.bad > input { border-color: #8a1f1f; background: #fdf4f4; }
+    .stp-save { width: 100%; height: 40px; justify-content: center; margin-top: 2px; }
+
+    .stp-time {
+      margin-top: 10px; padding: 9px 12px; border-top: 1px solid var(--rule-soft);
+      display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 4px 10px;
+      font-size: 12.5px; background: var(--paper-2);
+    }
+    .stp-time span { color: var(--ash); }
+    .stp-time b { color: var(--ink); font-family: var(--ff-mono); font-weight: 600; }
+    .stp-time b.over { color: #8a1f1f; }
+    .stp-time b.early { color: #1f6b3a; }
+
+    /* ===== (4) PHÂN TÍCH LỖI HỎNG & QUÁ THỜI GIAN ===== */
+    .lsxd-loss { background: var(--canvas); border: 1px solid var(--rule); border-radius: var(--r-4); overflow: hidden; }
+    .lsxd-loss .wrap { overflow-x: auto; }
+    table.lstb { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 1320px; }
+    table.lstb td:first-child { min-width: 205px; }
+    table.lstb td:nth-child(2), table.lstb td:nth-child(3) { white-space: nowrap; }
+    table.lstb td:nth-child(11), table.lstb td:nth-child(12) { white-space: nowrap; }
+    table.lstb th {
+      position: sticky; top: 0; z-index: 2;
+      background: var(--paper-2); text-align: left; padding: 9px 10px;
+      font-family: var(--ff-mono); font-size: 9.5px; font-weight: 600;
+      letter-spacing: .1em; text-transform: uppercase; color: var(--ash);
+      border-bottom: 1px solid var(--rule); white-space: nowrap;
+    }
+    table.lstb td { padding: 9px 10px; border-bottom: 1px solid var(--rule-hair); vertical-align: middle; height: 42px; }
+    table.lstb tbody tr { cursor: pointer; }
+    table.lstb tbody tr:hover { background: var(--paper-2); }
+    table.lstb .num { text-align: right; font-family: var(--ff-mono); font-variant-numeric: tabular-nums; }
+    table.lstb .bad  { color: #8a1f1f; font-weight: 700; }
+    table.lstb .good { color: #1f6b3a; font-weight: 700; }
+    table.lstb .mut  { color: var(--ash-3); }
+    table.lstb tr.row-bad  td:first-child { box-shadow: inset 3px 0 0 #8a1f1f; }
+    table.lstb tr.row-good td:first-child { box-shadow: inset 3px 0 0 #1f6b3a; }
+    table.lstb tfoot td { background: var(--paper-2); font-weight: 700; border-top: 1px solid var(--rule); border-bottom: none; }
+    .mcode { font-family: var(--ff-mono); font-size: 12px; }
+
+    /* drawer chi tiết nguyên nhân (nội bộ trang) */
+    .lsxd-dw-ov { position: fixed; inset: 0; z-index: 820; background: rgba(20,19,15,.42); animation: overlay-in 150ms ease; }
+    .lsxd-dw {
+      position: absolute; top: 0; bottom: 0; right: 0; width: min(560px, 94vw);
+      background: var(--paper); box-shadow: -14px 0 48px rgba(0,0,0,.34);
+      border-radius: 14px 0 0 14px; display: flex; flex-direction: column; overflow: hidden;
+      animation: lsxd-slide 220ms cubic-bezier(.2,.8,.25,1);
+    }
+    @keyframes lsxd-slide { from { transform: translateX(100%); } to { transform: translateX(0); } }
+    .lsxd-dw-h { padding: 16px 20px; background: var(--ink); color: var(--paper); }
+    .lsxd-dw-h .k { font-family: var(--ff-mono); font-size: 9.5px; letter-spacing: .16em; text-transform: uppercase; color: #e8a075; }
+    .lsxd-dw-h h3 { font-size: 18px; font-weight: 700; margin-top: 4px; }
+    .lsxd-dw-h .x { position: absolute; top: 14px; right: 18px; background: rgba(245,241,232,.12); color: var(--paper); border: 0; width: 30px; height: 30px; border-radius: var(--r-2); cursor: pointer; font-size: 15px; }
+    .lsxd-dw-b { padding: 18px 20px; overflow-y: auto; }
+    .dwg { margin-bottom: 18px; }
+    .dwg > .h { font-family: var(--ff-mono); font-size: 9.5px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: var(--ash-2); padding-bottom: 6px; border-bottom: 1px solid var(--rule); margin-bottom: 10px; }
+    .dwg .kv { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 10px 16px; }
+    .dwg .kv > div > span { display: block; font-size: 11px; color: var(--ash-2); margin-bottom: 2px; }
+    .dwg .kv > div > b { font-size: 14px; font-weight: 600; }
+    .dwg p { font-size: 13.5px; line-height: 1.6; color: var(--ink); }
+    .dwg ul { margin: 0; padding-left: 18px; font-size: 13.5px; line-height: 1.7; }
+
+    /* bảng trong modal */
+    .lsxd-form { font-size: 13px; }
+    .lsxd-form .row3 { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 10px; margin-bottom: 12px; }
+    .lsxd-form .row2 { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 10px; margin-bottom: 12px; }
+    .lsxd-form table { width: 100%; border-collapse: collapse; font-size: 12.5px; margin-top: 4px; }
+    .lsxd-form th { background: var(--paper-2); text-align: left; padding: 7px 8px; font-family: var(--ff-mono); font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--ash); border-bottom: 1px solid var(--rule); }
+    .lsxd-form td { padding: 7px 8px; border-bottom: 1px solid var(--rule-hair); }
+    .lsxd-form td.num, .lsxd-form th.num { text-align: right; font-family: var(--ff-mono); font-variant-numeric: tabular-nums; }
+    .lsxd-form .bad { color: #8a1f1f; font-weight: 700; }
+    .lsxd-form .good { color: #1f6b3a; font-weight: 700; }
+    .lsxd-note { font-size: 12px; color: var(--ash); margin-top: 8px; line-height: 1.5; }
+
+    /* tem QR trong bản in */
+    .tem-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .tem {
+      border: 1px dashed #14130f; border-radius: 4px; padding: 8px;
+      display: flex; gap: 8px; align-items: center; font-size: 10.5px; line-height: 1.35; color: #14130f;
+    }
+    .tem b { font-size: 12px; display: block; font-family: var(--ff-mono); }
+
+    @media (max-width: 1180px) {
+      .lsxd-info .fields { grid-template-columns: repeat(3, minmax(0,1fr)); }
+    }
+  </style>
+</head>
+<body>
+
+<div id="app-shell" data-active="lsx" data-title="Lệnh sản xuất" data-crumb="<b>Sản xuất</b> · Lệnh sản xuất · chi tiết">
+
+  <!-- (1) DẢI NÚT TRÊN CÙNG -->
+  <div class="lsxd-bar" id="lsxBar"></div>
+
+  <!-- (2) BẢNG THÔNG TIN LỆNH -->
+  <div class="lsxd-info" id="lsxInfo"></div>
+
+  <!-- (3) CÁC BƯỚC SẢN XUẤT -->
+  <div class="lsxd-sec-h">
+    <h2>Các bước sản xuất</h2>
+    <span id="stepHint">6 bước · cuộn ngang để xem hết</span>
+  </div>
+  <div class="lsxd-steps" id="lsxSteps"></div>
+
+  <!-- (4) PHÂN TÍCH LỖI HỎNG & QUÁ THỜI GIAN -->
+  <div class="lsxd-sec-h">
+    <h2>Phân tích lỗi hỏng &amp; quá thời gian</h2>
+    <span>Bấm một dòng để xem nguyên nhân &amp; biện pháp khắc phục</span>
+  </div>
+  <div class="lsxd-loss">
+    <div class="wrap"><table class="lstb" id="lossTb"></table></div>
+  </div>
+
+</div>
+
+<script src="../assets/js/layout.js"></script>
+<script src="../assets/js/loss-data.js"></script>
+<script src="../assets/js/loss-ui.js"></script>
+<script src="../assets/js/pricing-engine.js"></script>
+<script src="../assets/js/quote-data.js"></script>
+<script src="../assets/js/stock-data.js"></script>
+<script src="../assets/js/bom-data.js"></script>
+<script src="../assets/js/inventory.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  /* ============================================================
+     0. Hằng số ngành nhôm
+     ============================================================ */
+  // Đơn giá quy đổi thiệt hại (giữ đúng bảng định mức công ty)
+  var PRICE = { mayH: 185000, congH: 62000, nhomKg: 78500, kinhM2: 385000, banLeBo: 4850000 };
+  // Trần năng lực 1 ca — chặn phóng đại thiệt hại
+  var CAP = { nhomKgCa: 1400, boCa: 28 };
+  // Khối lượng quy đổi 1 cây nhôm hệ 120 (5,8m · dày 2,0mm)
+  var KG_PER_BAR = 14.5;
+  var M2_KINH_PER_CANH = 1.6;
+
+  var MACHINES = {
+    'CAT-01': 'Máy cắt nhôm 2 đầu lưỡi 500 WEIKE',
+    'CAT-02': 'Máy cắt nhôm 2 đầu lưỡi 500 WEIKE',
+    'CNC-03': 'Máy phay khoá CNC WEIKE (3 giây/lỗ)',
+    'CNC-21': 'Máy phay đố kẹp bàn WEIKE',
+    'CNC-22': 'Máy phay đố kẹp bàn WEIKE',
+    'EP-02':  'Máy ép góc cơ WEIKE',
+    'UON-01': 'Máy uốn vòm nhôm CNC 3 trục',
+    'UON-02': 'Máy uốn vòm nhôm thuỷ lực',
+    'LAP-01': 'Bàn lắp kính & bơm keo tự động',
+    'DOT-01': 'Máy đột dập hơi 34 dao'
+  };
+
+  var ERR_CODES = [
+    ['CAT-SAI-KT',      'Cắt sai kích thước (>2mm)'],
+    ['CAT-LECH-GOC',    'Lệch góc cắt 45°/90°'],
+    ['UON-NUT',         'Nứt/gãy thanh khi uốn vòm'],
+    ['UON-MEO',         'Méo tiết diện sau uốn'],
+    ['EP-HO-MOI',       'Mối ép góc hở, lộ khe'],
+    ['SON-XUOC',        'Xước sơn / bong màng vân gỗ'],
+    ['ANOD-MONG',       'Lớp anod mỏng < 15µm'],
+    ['KINH-NUT',        'Nứt/vỡ kính khi lắp'],
+    ['GIOANG-HO',       'Hở gioăng, không kín nước'],
+    ['BANLE-KHONG-HOI', 'Bản lề thuỷ lực không tự hồi'],
+    ['CANH-VENH',       'Cánh cong vênh quá dung sai'],
+    ['KHOA-KET',        'Khoá kẹt / lệch ổ']
+  ];
+
+  // Nhóm nguyên nhân 4M1E theo mã lỗi QC
+  var ERR_4M1E = {
+    'CAT-SAI-KT': 'Máy', 'CAT-LECH-GOC': 'Máy', 'EP-HO-MOI': 'Máy',
+    'UON-NUT': 'Phương pháp', 'UON-MEO': 'Phương pháp', 'GIOANG-HO': 'Phương pháp', 'CANH-VENH': 'Phương pháp',
+    'SON-XUOC': 'Con người', 'KINH-NUT': 'Con người',
+    'ANOD-MONG': 'Nguyên liệu', 'BANLE-KHONG-HOI': 'Nguyên liệu', 'KHOA-KET': 'Nguyên liệu'
+  };
+
+  var SUCO_TYPES = [
+    'Kẹt / gãy lưỡi cắt – dao phay',
+    'Mất áp thuỷ lực – xi lanh yếu',
+    'Lỗi điện · servo · biến tần',
+    'Rò rỉ nhớt thuỷ lực',
+    'Sai lệch cữ chặn / mất gốc toạ độ CNC',
+    'Khí nén yếu · rò khí',
+    'Kẹt phôi – hỏng đồ gá',
+    'Khác (mô tả bên dưới)'
+  ];
+
+  var KHO_NVL = ['Kho nhôm thanh (NVL-01)', 'Kho kính (NVL-02)', 'Kho phụ kiện (NVL-03)'];
+  var KHO_TP  = ['Kho lưu thành phẩm (TP-LUU)', 'Kho bán hàng (TP-BH)'];
+
+  // Danh mục NVL dự phòng khi chưa nạp được sổ kho
+  var NVL_FALLBACK = [
+    { code: 'GIAY-IV300-6586',  name: 'Thanh nhôm hệ thuỷ lực 120 (6063-T5)',   unit: 'kg',   price: 78500 },
+    { code: 'GIAY-CU150-6090',  name: 'Thanh nhôm hệ thuỷ lực 180',             unit: 'kg',   price: 82000 },
+    { code: 'GIAY-CU250-7290',  name: 'Thanh nhôm hệ trượt quay 93',            unit: 'kg',   price: 76000 },
+    { code: 'GIAY-DC230-65100', name: 'Thanh nhôm Luxanode Anodized-ED 121',    unit: 'kg',   price: 96000 },
+    { code: 'GIAY-FT80-79109',  name: 'Thanh nhôm hệ chấn song + phào',         unit: 'kg',   price: 71000 },
+    { code: 'GIAY-BT350-7090',  name: 'Kính hộp 5-9-5 cường lực',               unit: 'm²',   price: 385000 },
+    { code: 'GIAY-DC400-7090',  name: 'Kính cường lực 8mm',                     unit: 'm²',   price: 295000 },
+    { code: 'KEM-CTP-525',      name: 'Bộ bản lề thuỷ lực sàn (Đức)',           unit: 'bộ',   price: 4850000 },
+    { code: 'MUC-CMYK',         name: 'Bộ khoá & tay nắm cao cấp',              unit: 'bộ',   price: 3200000 },
+    { code: 'DECAL-GIAY',       name: 'Gioăng EPDM',                            unit: 'm',    price: 9500 },
+    { code: 'DECAL-PP',         name: 'Keo silicon trung tính',                 unit: 'tuýp', price: 62000 },
+    { code: 'DECAL-TRONG',      name: 'Màng bảo vệ bề mặt nhôm',                unit: 'm²',   price: 15000 },
+    { code: 'CAN-BONG',         name: 'Xốp + kiện gỗ đóng cửa',                 unit: 'bộ',   price: 145000 },
+    { code: 'BAN-FLEXO',        name: 'Ke góc & vít inox (bộ)',                 unit: 'bộ',   price: 185000 }
+  ];
+
+  // Định mức dự phòng cho 1 bộ cửa thuỷ lực hệ 120 · 2 cánh (khi chưa có ERPBOM)
+  var BOM_FALLBACK = [
+    { matCode: 'GIAY-IV300-6586', matName: 'Thanh nhôm hệ thuỷ lực 120 (6063-T5)', unit: 'kg',   qty: 58,  waste: 6 },
+    { matCode: 'KEM-CTP-525',     matName: 'Bộ bản lề thuỷ lực sàn (Đức)',         unit: 'bộ',   qty: 1,   waste: 0.5 },
+    { matCode: 'MUC-CMYK',        matName: 'Bộ khoá & tay nắm cao cấp',            unit: 'bộ',   qty: 1,   waste: 0.5 },
+    { matCode: 'GIAY-BT350-7090', matName: 'Kính hộp 5-9-5 cường lực',             unit: 'm²',   qty: 3.2, waste: 3 },
+    { matCode: 'DECAL-GIAY',      matName: 'Gioăng EPDM',                          unit: 'm',    qty: 24,  waste: 2 },
+    { matCode: 'DECAL-PP',        matName: 'Keo silicon trung tính',               unit: 'tuýp', qty: 2,   waste: 2 },
+    { matCode: 'BAN-FLEXO',       matName: 'Ke góc & vít inox (bộ)',               unit: 'bộ',   qty: 2,   waste: 1 },
+    { matCode: 'DECAL-TRONG',     matName: 'Màng bảo vệ bề mặt nhôm',              unit: 'm²',   qty: 7,   waste: 2 },
+    { matCode: 'CAN-BONG',        matName: 'Xốp + kiện gỗ đóng cửa',               unit: 'bộ',   qty: 1,   waste: 0 }
+  ];
+
+  /* 6 bước sản xuất cửa nhôm — máy & người phụ trách */
+  var STEP_DEF = [
+    { key: 'tiep-nhan', name: 'Tiếp nhận & kiểm nhôm thanh', unit: 'thanh',
+      machines: ['CAT-01'], nv: 'NV-031', nvName: 'Nguyễn Thị Mai', nvRole: 'KCS nhôm kính', dept: 'Phòng KCS nhôm kính' },
+    { key: 'cat-phay',  name: 'Cắt & phay đố (CNC)', unit: 'thanh',
+      machines: ['CAT-02', 'CNC-21', 'CNC-03'], nv: 'NV-018', nvName: 'Trần Văn Tú', nvRole: 'Tổ trưởng cắt CNC', dept: 'Tổ cắt CNC' },
+    { key: 'uon-vom',   name: 'Uốn vòm / định hình', unit: 'thanh',
+      machines: ['UON-01', 'UON-02'], nv: 'NV-035', nvName: 'Hoàng Văn Sơn', nvRole: 'Thợ uốn vòm', dept: 'Tổ cắt CNC (uốn vòm)' },
+    { key: 'ep-goc',    name: 'Ép góc & lắp khung cánh', unit: 'cánh',
+      machines: ['EP-02', 'DOT-01'], nv: 'NV-022', nvName: 'Đỗ Văn Minh', nvRole: 'Thợ ép góc – lắp ráp', dept: 'Tổ ép góc – lắp ráp' },
+    { key: 'lap-kinh',  name: 'Lắp kính & phụ kiện', unit: 'cánh',
+      machines: ['LAP-01'], nv: 'NV-040', nvName: 'Võ Minh Khôi', nvRole: 'Thợ lắp kính', dept: 'Tổ ép góc – lắp ráp' },
+    { key: 'dong-kien', name: 'Bọc màng, QC & đóng kiện', unit: 'bộ',
+      machines: ['LAP-01'], nv: 'NV-042', nvName: 'Lê Hoàng Nam', nvRole: 'Thợ hoàn thiện – đóng kiện', dept: 'Tổ hoàn thiện – đóng kiện' }
+  ];
+
+  /* Số liệu mặc định của ca đang chạy — quy mô theo SL kế hoạch (P bộ cửa).
+     Tỷ lệ quy đổi: 1 bộ ≈ 17,4 cây nhôm đầu vào · 2 cánh · 3,7 thanh vòm. */
+  function seedSteps(P) {
+    var f = P / 24;                               // hệ số quy mô so với ca chuẩn 24 bộ
+    var h = function (v) { return Math.round(v * f * 10) / 10; };
+    var q = function (v) { return Math.max(0, Math.round(v * f)); };
+    return {
+      'tiep-nhan': { status: 'done',  good: q(418), defect: q(2),  scrap: 0,     runH: h(1.2), stopH: 0,      stdH: h(1.5), start: '07:00', end: '08:12', err: '',           note: 'Cây cong vênh quá dung sai — trả lại lô nhập, không tính thiệt hại' },
+      'cat-phay':  { status: 'done',  good: q(402), defect: q(11), scrap: q(5),  runH: h(5.0), stopH: h(0.3), stdH: h(4.0), start: '08:20', end: '13:38', err: 'CAT-SAI-KT', note: 'Lưỡi cắt 500 mòn, cữ chặn CNC-21 xê dịch sau ~120 nhát' },
+      'uon-vom':   { status: 'done',  good: q(88),  defect: q(5),  scrap: q(3),  runH: h(4.0), stopH: h(0.4), stdH: h(3.0), start: '13:45', end: '18:09', err: 'UON-NUT',    note: 'Bán kính vòm R900 nhỏ, phôi 6063-T5 lô mới giòn, chưa gia nhiệt' },
+      'ep-goc':    { status: 'done',  good: q(48),  defect: 0,     scrap: 0,     runH: h(3.3), stopH: 0,      stdH: h(3.5), start: '18:15', end: '21:33', err: '',           note: '' },
+      'lap-kinh':  { status: 'doing', good: q(46),  defect: q(2),  scrap: 0,     runH: h(4.3), stopH: h(0.3), stdH: h(4.0), start: '21:40', end: '',      err: 'KINH-NUT',   note: 'Ép gioăng quá lực làm nứt góc kính hộp 5-9-5' },
+      'dong-kien': { status: 'wait',  good: 0,      defect: 0,     scrap: 0,     runH: 0,      stopH: 0,      stdH: h(2.0), start: '',      end: '',      err: '',           note: '' }
+    };
+  }
+
+  /* Quy đổi thiệt hại theo bước — suy ra TỪ SỐ LỖI/PHẾ CÔNG NHÂN NHẬP:
+     aluPerScrap: số cây nhôm hỏng trên 1 đơn vị phế · glassPerDefect: m² kính vỡ trên 1 cánh lỗi
+     hingePerDefect: bộ bản lề hỏng trên 1 đơn vị lỗi · reworkPerDefect: giờ công sửa lại / 1 lỗi */
+  var LOSS_DEF = {
+    'tiep-nhan': { aluPerScrap: 1, glassPerDefect: 0, hingePerDefect: 0, reworkPerDefect: 0,
+      cause: 'Nguyên liệu', causeText: 'Lô nhôm 6063-T5 nhập về có một số cây cong vênh vượt dung sai thẳng 1,5mm/m, phát hiện ngay tại bàn kiểm đầu vào.',
+      fix: ['Trả số cây không đạt về Đùn ép Nhôm Đông Anh theo biên bản kiểm nhập', 'Bổ sung bước đo độ thẳng + đo lớp anod bằng máy cho 100% cây nhập', 'Ghi điểm chất lượng NCC vào phiếu đánh giá tháng'],
+      dept: 'Kho nhôm – kính · Phòng KCS nhôm kính' },
+    'cat-phay': { aluPerScrap: 1, glassPerDefect: 0, hingePerDefect: 0, reworkPerDefect: 0.2,
+      cause: 'Máy', causeText: 'Lưỡi cắt 500 của CAT-02 mòn sớm và cữ chặn trên CNC-21 xê dịch sau khoảng 120 nhát, làm một loạt thanh sai kích thước >2mm (sửa lại được) và một số thanh hụt chiều dài phải cắt phế.',
+      fix: ['Thay lưỡi 500 định kỳ sau mỗi 2.000 nhát cắt, ghi sổ máy', 'Hiệu chuẩn cữ chặn CAT-02 / CNC-21 đầu mỗi ca bằng thanh mẫu', 'Kiểm 3 thanh đầu mỗi lô trước khi chạy loạt'],
+      dept: 'Tổ cắt CNC · Bảo trì cơ điện' },
+    'uon-vom': { aluPerScrap: 1, glassPerDefect: 0, hingePerDefect: 0, reworkPerDefect: 0.5,
+      cause: 'Phương pháp', causeText: 'Uốn vòm R900 ở tốc độ cao, phôi chưa gia nhiệt nên có thanh nứt gãy hẳn (phế) và thanh méo tiết diện phải nắn lại.',
+      fix: ['Lập trình UON-01 giảm tốc độ uốn 30% với bán kính < R1000', 'Gia nhiệt phôi 120°C trước khi uốn vòm', 'Chạy thử 1 thanh mẫu, đo tiết diện trước khi uốn loạt'],
+      dept: 'Tổ cắt CNC (uốn vòm) · Kỹ sư cơ khí – nhôm hệ' },
+    'ep-goc': { aluPerScrap: 0.5, glassPerDefect: 0, hingePerDefect: 0, reworkPerDefect: 0.25,
+      cause: '', causeText: 'Ép góc đạt 100%, mối ghép kín, xong sớm hơn định mức 0,2 giờ.',
+      fix: ['Giữ nguyên thông số ép góc EP-02 đang dùng cho hệ 120', 'Ghi lại bộ dao đột DOT-01 đang dùng làm chuẩn cho lệnh sau'],
+      dept: 'Tổ ép góc – lắp ráp' },
+    'lap-kinh': { aluPerScrap: 0.5, glassPerDefect: 1, hingePerDefect: 0, reworkPerDefect: 0.4,
+      cause: 'Con người', causeText: 'Thợ ép gioăng quá lực khi lắp kính hộp 5-9-5, làm nứt góc kính hộp; thời gian bơm keo cũng kéo dài hơn định mức 0,6 giờ.',
+      fix: ['Dùng cữ lực khi ép gioăng, cấm dùng búa cao su trực tiếp lên kính', 'Kiểm cạnh kính trước khi lắp, loại tấm sứt mẻ ngay tại kho', 'Đào tạo lại thao tác lắp kính cho thợ mới trong ca'],
+      dept: 'Tổ ép góc – lắp ráp · Phòng KCS nhôm kính' },
+    'dong-kien': { aluPerScrap: 0, glassPerDefect: 0.5, hingePerDefect: 0.2, reworkPerDefect: 0.3,
+      cause: '', causeText: 'Bước chưa bắt đầu — chờ lắp kính & phụ kiện hoàn tất.',
+      fix: ['Chuẩn bị sẵn màng bảo vệ và kiện gỗ đủ cho cả lệnh', 'Bố trí KCS kiểm độ kín gioăng + lực đóng bản lề trước khi đóng kiện'],
+      dept: 'Tổ hoàn thiện – đóng kiện' }
+  };
+
+  var STATE_KEY = 'erp_lsx_step_state_v1';
+  var SC_KEY = 'erp_lsx_sc_v1';
+
+  /* ============================================================
+     1. Tiện ích
+     ============================================================ */
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+    });
+  }
+  function nf(n) { return Number(Math.round(Number(n) || 0)).toLocaleString('vi-VN'); }
+  function nf1(n) { return (Math.round((Number(n) || 0) * 10) / 10).toLocaleString('vi-VN', { minimumFractionDigits: 1, maximumFractionDigits: 1 }); }
+  function nf2(n) { return (Math.round((Number(n) || 0) * 100) / 100).toLocaleString('vi-VN', { maximumFractionDigits: 2 }); }
+  function money(n) { return nf(n) + ' ₫'; }
+  function pct(n) { return (Math.round((Number(n) || 0) * 10) / 10).toLocaleString('vi-VN', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + '%'; }
+  function num(v) { var n = Number(String(v).replace(',', '.')); return isFinite(n) ? n : 0; }
+  function todayStr() {
+    var d = new Date(), p = function (n) { return ('0' + n).slice(-2); };
+    return p(d.getDate()) + '/' + p(d.getMonth() + 1) + '/' + d.getFullYear();
+  }
+  function nowHM() {
+    var d = new Date(), p = function (n) { return ('0' + n).slice(-2); };
+    return p(d.getHours()) + ':' + p(d.getMinutes());
+  }
+  function toast(html, type) {
+    if (window.ERPInteract) window.ERPInteract.showToast(html, type || 'success', 4200);
+  }
+  function qr(text, label, size) {
+    if (window.ERPQR && typeof window.ERPQR.block === 'function') {
+      try {
+        var s = window.ERPQR.block(text, label, size || 96);
+        if (typeof s === 'string' && s) return s;
+      } catch (e) {}
+    }
+    return '<div style="display:inline-block;text-align:center">' +
+      '<div style="width:' + (size || 96) + 'px;height:' + (size || 96) + 'px;border:1px solid #14130f;' +
+      'display:flex;align-items:center;justify-content:center;font-size:10px">QR</div>' +
+      '<div style="font-family:var(--ff-mono);font-size:10px;margin-top:4px">' + esc(label || text) + '</div></div>';
+  }
+  function mlink(code) {
+    if (!code) return '—';
+    return '<a href="17-may-moc.html?may=' + encodeURIComponent(code) + '" class="lnk" title="' +
+      esc(MACHINES[code] || code) + '">' + esc(code) + '</a>';
+  }
+  function nvlink(id, name) {
+    if (!id) return esc(name || '—');
+    return '<a href="30-nhan-su-chi-tiet.html?nv=' + encodeURIComponent(id) + '" class="lnk">' + esc(name || id) + '</a>';
+  }
+  function errLabel(code) {
+    for (var i = 0; i < ERR_CODES.length; i++) if (ERR_CODES[i][0] === code) return ERR_CODES[i][1];
+    return '';
+  }
+
+  /* ============================================================
+     2. Lấy lệnh sản xuất theo ?id= (không có → lệnh đang chạy đầu tiên)
+     ============================================================ */
+  var DEMO_LSX = {
+    id: 'LSX-0312', orderId: 'ĐH-0312', contractId: 'HĐ-2026-0312',
+    customer: 'VINHOMES OCEAN PARK',
+    product: 'Cửa thuỷ lực hệ 120 · 2 cánh vân gỗ trắc',
+    productCode: 'TP-TL120-2C',
+    qty: 24, unit: 'bộ',
+    dateStart: todayStr(), dateDelivery: '', manager: 'Trần Văn Tú', shift: 'Ca 1 · 06:30—14:30',
+    status: 'đang SX'
+  };
+
+  var LSX = null, STEPS = [], ST = {};
+
+  function pickLSX() {
+    var p = new URLSearchParams(location.search);
+    var wanted = p.get('id') || p.get('lsx') || '';
+    var list = [];
+    try { if (window.QuoteStore && QuoteStore.allLSX) list = QuoteStore.allLSX() || []; } catch (e) {}
+    var rec = null;
+    if (wanted && list.length) {
+      rec = list.filter(function (l) { return l.id === wanted; })[0] || null;
+    }
+    if (!rec && list.length) {
+      rec = list.filter(function (l) { return /đang\s*SX|dang\s*sx/i.test(String(l.status || '')); })[0] || list[0];
+    }
+    if (!rec) {
+      var d = JSON.parse(JSON.stringify(DEMO_LSX));
+      if (wanted) d.id = wanted;
+      return d;
+    }
+    // SL kế hoạch: nhận số liệu của lệnh nếu nằm trong tầm sản xuất cửa nhôm
+    // (một lệnh cửa thực tế 8–60 bộ/m²), ngược lại dùng ca chuẩn 24 bộ.
+    var qty = Number(rec.qty) || 0;
+    if (!(qty > 0) || qty > 60) qty = 24;
+    return {
+      id: rec.id,
+      orderId: rec.orderId || '',
+      contractId: rec.contractId || rec.hdId || (rec.orderId ? String(rec.orderId).replace(/^ĐH-|^DH-/, 'HĐ-') : ''),
+      customer: rec.customer || DEMO_LSX.customer,
+      product: rec.product || DEMO_LSX.product,
+      productCode: rec.productCode || DEMO_LSX.productCode,
+      qty: qty,
+      unit: (rec.unit && /^(bộ|cánh|m²|md|cây|kg)$/.test(rec.unit)) ? rec.unit : 'bộ',
+      dateStart: rec.dateReceived || todayStr(),
+      dateDelivery: rec.dateDelivery || '',
+      manager: rec.manager || DEMO_LSX.manager,
+      shift: rec.shift || DEMO_LSX.shift,
+      status: rec.status || 'đang SX',
+      _raw: rec
+    };
+  }
+
+  /* ---- trạng thái lệnh + số liệu bước (lưu cục bộ) ---- */
+  function loadState() {
+    var all = {};
+    try { all = JSON.parse(localStorage.getItem(STATE_KEY) || '{}') || {}; } catch (e) {}
+    var seed = seedSteps(LSX.qty);
+    var mine = all[LSX.id];
+    if (!mine) mine = { steps: {} };
+    if (!mine.steps) mine.steps = {};
+    STEP_DEF.forEach(function (s) {
+      if (!mine.steps[s.key]) mine.steps[s.key] = JSON.parse(JSON.stringify(seed[s.key]));
+    });
+    if (!mine.run) {
+      var st = String(LSX.status || '').toLowerCase();
+      mine.run = /hoàn thành|da dong|đã đóng|xong/.test(st) ? 'done'
+               : /dự thảo|du thao|chờ|cho duyet/.test(st) ? 'idle'
+               : /tạm dừng|tam dung|dừng/.test(st) ? 'paused' : 'running';
+    }
+    return mine;
+  }
+  function saveState() {
+    var all = {};
+    try { all = JSON.parse(localStorage.getItem(STATE_KEY) || '{}') || {}; } catch (e) {}
+    all[LSX.id] = ST;
+    try { localStorage.setItem(STATE_KEY, JSON.stringify(all)); } catch (e) {}
+  }
+
+  /* ============================================================
+     3. Tính toán tiến độ & thiệt hại
+     ============================================================ */
+  function stepRow(def) {
+    var d = ST.steps[def.key] || {};
+    var good = num(d.good), defect = num(d.defect), scrap = num(d.scrap);
+    var total = good + defect + scrap;
+    var actH = num(d.runH) + num(d.stopH);
+    var stdH = num(d.stdH);
+    var over = Math.max(0, Math.round((actH - stdH) * 10) / 10);
+    var early = actH > 0 && actH < stdH ? Math.round((stdH - actH) * 10) / 10 : 0;
+    var rate = total > 0 ? (good / total) * 100 : 0;
+    var L = LOSS_DEF[def.key] || {};
+
+    // quy đổi thiệt hại từ chính số lỗi/phế đã nhập — chặn trần năng lực 1 ca
+    var aluKg = Math.min(scrap * (L.aluPerScrap || 0) * KG_PER_BAR, CAP.nhomKgCa);
+    var glassM2 = Math.min(defect * (L.glassPerDefect || 0), CAP.boCa * 2) * M2_KINH_PER_CANH;
+    var hinge = Math.min(defect * (L.hingePerDefect || 0), CAP.boCa);
+    var reworkH = Math.round(defect * (L.reworkPerDefect || 0) * 10) / 10;
+    var damage = 0;
+    if (actH > 0) {
+      damage += over * (PRICE.mayH + PRICE.congH);
+      damage += reworkH * PRICE.congH;
+      damage += aluKg * PRICE.nhomKg;
+      damage += glassM2 * PRICE.kinhM2;
+      damage += hinge * PRICE.banLeBo;
+    }
+    var isBad = over > 0 || scrap > 0 || (total > 0 && rate < 98);
+    var isGood = !isBad && total > 0 && (early > 0 || rate >= 99.5);
+
+    return {
+      def: def, d: d, good: good, defect: defect, scrap: scrap, total: total,
+      actH: actH, stdH: stdH, over: over, early: early, rate: rate,
+      aluKg: aluKg, glassM2: glassM2, hinge: hinge, reworkH: reworkH,
+      cause: (d.err ? (ERR_4M1E[d.err] || L.cause || '') : (L.cause || '')),
+      damage: Math.round(damage), bad: isBad, ok: isGood, loss: L
+    };
+  }
+  function allRows() { return STEP_DEF.map(stepRow); }
+
+  function doneQty() {
+    var last = ST.steps[STEP_DEF[5].key];
+    if (last && num(last.good) > 0) return num(last.good);
+    var prev = ST.steps[STEP_DEF[4].key];
+    if (prev && num(prev.good) > 0) return Math.floor(num(prev.good) / 2); // 2 cánh = 1 bộ
+    return 0;
+  }
+  function progressPct() {
+    var done = 0;
+    STEP_DEF.forEach(function (s) {
+      var st = (ST.steps[s.key] || {}).status;
+      if (st === 'done') done += 1; else if (st === 'doing') done += 0.5;
+    });
+    return Math.round((done / STEP_DEF.length) * 100);
+  }
+
+  /* ============================================================
+     4. (1) DẢI NÚT TRÊN CÙNG
+     ============================================================ */
+  function renderBar() {
+    var run = ST.run; // running · paused · done · idle
+    var offStart = (run === 'running');
+    var offPause = (run !== 'running');
+    var offStop  = (run === 'done');
+    var b = function (id, cls, icon, label, off) {
+      return '<button class="obtn ' + cls + (off ? ' is-off' : '') + '" data-act="' + id + '"' +
+        (off ? ' disabled' : '') + ' data-no-interact="true">' +
+        '<i data-lucide="' + icon + '"></i> ' + label + '</button>';
+    };
+    document.getElementById('lsxBar').innerHTML =
+      '<div class="lsxd-grp"><span class="lbl">Điều khiển lệnh</span><div class="row">' +
+        b('lsx-start', 'obtn-go',    'play',   '▶ Bắt đầu lệnh',  offStart) +
+        b('lsx-pause', 'obtn-pause', 'pause',  '⏸ Tạm dừng lệnh', offPause) +
+        b('lsx-stop',  'obtn-stop',  'square', '■ Kết thúc lệnh',  offStop) +
+      '</div></div>' +
+      '<div class="lsxd-grp"><span class="lbl">Sự cố</span><div class="row">' +
+        b('sc-open', 'obtn-warn', 'alert-triangle', '⚠ Báo sự cố máy', false) +
+      '</div></div>' +
+      '<div class="lsxd-grp"><span class="lbl">Kho</span><div class="row">' +
+        b('nvl-open', '', 'download', '⬇ Nhập nguyên liệu', false) +
+        b('tp-open',  '', 'upload',   '⬆ Nhập thành phẩm',  false) +
+      '</div></div>' +
+      '<div class="lsxd-grp"><span class="lbl">In ấn</span><div class="row">' +
+        b('print-lsx', 'obtn-ink', 'printer', '🖨 In lệnh sản xuất', false) +
+        b('print-tem', '',         'qr-code', '🏷 In tem QR',        false) +
+      '</div></div>';
+    if (window.lucide) window.lucide.createIcons();
+    // thanh nút xuống dòng trên màn hẹp → bỏ vạch dọc ở nhóm mở đầu mỗi dòng
+    var gs = [].slice.call(document.querySelectorAll('#lsxBar .lsxd-grp'));
+    var top = null;
+    gs.forEach(function (g) {
+      if (top === null || g.offsetTop > top) { top = g.offsetTop; g.classList.add('row-start'); }
+    });
+  }
+
+  /* ============================================================
+     5. (2) BẢNG THÔNG TIN LỆNH
+     ============================================================ */
+  function statusChip() {
+    var m = { running: ['st-run', 'Đang chạy'], paused: ['st-pause', 'Tạm dừng'], done: ['st-done', 'Đã kết thúc'], idle: ['st-wait', 'Chưa bắt đầu'] };
+    var it = m[ST.run] || m.idle;
+    return '<span class="st-chip ' + it[0] + '"><span class="dot"></span>' + it[1] + '</span>';
+  }
+  function fd(k, v) { return '<div class="lsxd-fd"><span class="k">' + k + '</span><span class="v">' + v + '</span></div>'; }
+
+  function renderInfo() {
+    var p = progressPct();
+    var dq = doneQty();
+    var order = LSX.orderId ? '<a href="03-don-hang.html?order=' + encodeURIComponent(LSX.orderId) + '" class="lnk">' + esc(LSX.orderId) + '</a>' : '—';
+    var hd = LSX.contractId ? '<a href="18-hop-dong.html?hd=' + encodeURIComponent(LSX.contractId) + '" class="lnk">' + esc(LSX.contractId) + '</a>' : '—';
+    document.getElementById('lsxInfo').innerHTML =
+      '<div class="fields">' +
+        '<div class="lsxd-fd"><span class="k">Mã lệnh SX</span><span class="v big">' + esc(LSX.id) + '</span></div>' +
+        '<div class="lsxd-fd"><span class="k">Trạng thái</span><span class="v">' + statusChip() + '</span></div>' +
+        fd('Sản phẩm', esc(LSX.product) + ' <small>' + esc(LSX.productCode) + '</small>') +
+        fd('SL kế hoạch / đã đạt', '<span class="v big" style="font-size:19px">' + nf(dq) + '</span> <small>/ ' + nf(LSX.qty) + ' ' + esc(LSX.unit) + '</small>') +
+        fd('Đơn hàng liên kết', order) +
+        fd('Hợp đồng', hd) +
+        fd('Khách hàng', esc(LSX.customer)) +
+        fd('Hạn giao', esc(LSX.dateDelivery || '—')) +
+        fd('Ngày bắt đầu', esc(LSX.dateStart || todayStr())) +
+        fd('Quản đốc', nvlink('NV-018', LSX.manager || 'Trần Văn Tú')) +
+        fd('Ca sản xuất', esc(LSX.shift || 'Ca 1 · 06:30—14:30')) +
+        '<div class="lsxd-fd"><span class="k">Tiến độ</span><span class="v">' + p + '%' +
+          '<span class="pbar' + (p < 60 ? ' warn' : '') + '"><i style="width:' + p + '%"></i></span></span></div>' +
+      '</div>' +
+      '<div class="lsxd-qr">' + qr(LSX.id + '|' + LSX.productCode + '|' + LSX.qty, LSX.id, 104) +
+        '<span class="cap">Quét để báo công đoạn</span></div>';
+  }
+
+  /* ============================================================
+     6. (3) CÁC BƯỚC SẢN XUẤT — hàng ngang
+     ============================================================ */
+  function stepChip(st, over) {
+    if (st === 'done') return over ? '<span class="st-chip st-late"><span class="dot"></span>Xong · trễ</span>'
+                                   : '<span class="st-chip st-done"><span class="dot"></span>Xong</span>';
+    if (st === 'doing') return over ? '<span class="st-chip st-late"><span class="dot"></span>Đang làm · trễ</span>'
+                                    : '<span class="st-chip st-run"><span class="dot"></span>Đang làm</span>';
+    return '<span class="st-chip st-wait"><span class="dot"></span>Chưa bắt đầu</span>';
+  }
+
+  function renderSteps() {
+    var rows = allRows();
+    document.getElementById('lsxSteps').innerHTML = rows.map(function (r, i) {
+      var def = r.def, d = r.d;
+      var cls = d.status === 'doing' ? ' is-doing' : (r.over > 0 ? ' is-late' : '');
+      var machines = def.machines.map(mlink).join(' · ');
+      var opts = '<option value="">— không có lỗi —</option>' + ERR_CODES.map(function (e) {
+        return '<option value="' + e[0] + '"' + (d.err === e[0] ? ' selected' : '') + '>' + esc(e[0] + ' · ' + e[1]) + '</option>';
+      }).join('');
+      return '<div class="stp' + cls + '" data-step="' + def.key + '">' +
+        '<div class="stp-h">' +
+          '<div class="t1"><span class="stp-no">' + (i + 1) + '</span><span class="stp-nm">' + esc(def.name) + '</span></div>' +
+          '<div class="t2">' + stepChip(d.status, r.over > 0) + '</div>' +
+        '</div>' +
+        '<div class="stp-meta">Máy: <b>' + machines + '</b><br>Người phụ trách: <b>' + nvlink(def.nv, def.nvName) + '</b> · ' + esc(def.nvRole) + '</div>' +
+        '<div class="stp-acts">' +
+          '<button class="obtn obtn-go" data-act="stp-start" data-step="' + def.key + '" data-no-interact="true"><i data-lucide="play"></i> ▶ BẮT ĐẦU</button>' +
+          '<button class="obtn obtn-stop" data-act="stp-end" data-step="' + def.key + '" data-no-interact="true"><i data-lucide="square"></i> ■ KẾT THÚC</button>' +
+        '</div>' +
+        '<div class="stp-form">' +
+          '<div class="gr">' +
+            '<div class="fld"><label>SL đạt (' + esc(def.unit) + ')</label><input type="number" min="0" data-f="good" value="' + num(d.good) + '"></div>' +
+            '<div class="fld"><label>SL lỗi</label><input type="number" min="0" data-f="defect" value="' + num(d.defect) + '"></div>' +
+            '<div class="fld"><label>SL phế</label><input type="number" min="0" data-f="scrap" value="' + num(d.scrap) + '"></div>' +
+          '</div>' +
+          '<div class="gr g2">' +
+            '<div class="fld"><label>Giờ chạy (h)</label><input type="number" step="0.1" min="0" data-f="runH" value="' + num(d.runH) + '"></div>' +
+            '<div class="fld"><label>Giờ dừng (h)</label><input type="number" step="0.1" min="0" data-f="stopH" value="' + num(d.stopH) + '"></div>' +
+          '</div>' +
+          '<div class="fld" style="margin-bottom:9px"><label>Mã lỗi (QC)</label><select data-f="err">' + opts + '</select></div>' +
+          '<div class="fld" style="margin-bottom:9px"><label>Ghi chú nguyên nhân</label><textarea data-f="note" placeholder="Mô tả nguyên nhân, máy nào, ai xử lý...">' + esc(d.note || '') + '</textarea></div>' +
+          '<button class="obtn obtn-ink stp-save" data-act="stp-save" data-step="' + def.key + '" data-no-interact="true"><i data-lucide="save"></i> Lưu bước</button>' +
+        '</div>' +
+        '<div class="stp-time">' +
+          '<span>Bắt đầu: <b>' + esc(d.start || '—') + '</b></span>' +
+          '<span>Kết thúc: <b>' + esc(d.end || '—') + '</b></span>' +
+          '<span>Định mức: <b>' + nf1(r.stdH) + ' h</b></span>' +
+          '<span>Thực tế: <b class="' + (r.over > 0 ? 'over' : (r.early > 0 ? 'early' : '')) + '">' +
+            (r.actH > 0 ? nf1(r.actH) + ' h' + (r.over > 0 ? ' (+' + nf1(r.over) + ')' : (r.early > 0 ? ' (−' + nf1(r.early) + ')' : '')) : '—') +
+          '</b></span>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+    if (window.lucide) window.lucide.createIcons();
+  }
+
+  /* ============================================================
+     7. (4) BẢNG PHÂN TÍCH LỖI HỎNG & QUÁ THỜI GIAN
+     ============================================================ */
+  function renderLoss() {
+    var rows = allRows();
+    var T = { good: 0, defect: 0, scrap: 0, total: 0, std: 0, act: 0, over: 0, dmg: 0 };
+    var body = rows.map(function (r, i) {
+      T.good += r.good; T.defect += r.defect; T.scrap += r.scrap; T.total += r.total;
+      T.std += r.stdH; T.act += r.actH; T.over += r.over; T.dmg += r.damage;
+      var cls = r.bad ? 'row-bad' : (r.ok ? 'row-good' : '');
+      var rateCls = r.total === 0 ? 'mut' : (r.rate >= 99.5 ? 'good' : (r.rate < 98 ? 'bad' : ''));
+      return '<tr class="' + cls + '" data-row-drill="' + r.def.key + '">' +
+        '<td><b>' + (i + 1) + '. ' + esc(r.def.name) + '</b></td>' +
+        '<td class="mcode">' + r.def.machines.map(mlink).join(' · ') + '</td>' +
+        '<td>' + nvlink(r.def.nv, r.def.nvName) + '</td>' +
+        '<td class="num">' + (r.total ? nf(r.good) : '<span class="mut">—</span>') + '</td>' +
+        '<td class="num' + (r.defect > 0 ? ' bad' : '') + '">' + (r.defect > 0 ? nf(r.defect) : '<span class="mut">—</span>') + '</td>' +
+        '<td class="num' + (r.scrap > 0 ? ' bad' : '') + '">' + (r.scrap > 0 ? nf(r.scrap) : '<span class="mut">—</span>') + '</td>' +
+        '<td class="num ' + rateCls + '">' + (r.total ? pct(r.rate) : '<span class="mut">—</span>') + '</td>' +
+        '<td class="num">' + nf1(r.stdH) + '</td>' +
+        '<td class="num">' + (r.actH ? nf1(r.actH) : '<span class="mut">—</span>') + '</td>' +
+        '<td class="num' + (r.over > 0 ? ' bad' : (r.early > 0 ? ' good' : '')) + '">' +
+          (r.over > 0 ? '+' + nf1(r.over) : (r.early > 0 ? '−' + nf1(r.early) : '<span class="mut">—</span>')) + '</td>' +
+        '<td class="mcode">' + (r.d.err ? esc(r.d.err) : '<span class="mut">—</span>') + '</td>' +
+        '<td>' + (r.cause ? esc(r.cause) : '<span class="mut">—</span>') + '</td>' +
+        '<td class="num' + (r.damage > 0 ? ' bad' : ' good') + '">' + (r.damage > 0 ? money(r.damage) : '<span class="mut">—</span>') + '</td>' +
+      '</tr>';
+    }).join('');
+
+    document.getElementById('lossTb').innerHTML =
+      '<thead><tr>' +
+        '<th>Bước</th><th>Máy tham gia</th><th>Người phụ trách</th>' +
+        '<th class="num" style="text-align:right">SL đạt</th><th class="num" style="text-align:right">SL lỗi</th><th class="num" style="text-align:right">SL phế</th>' +
+        '<th class="num" style="text-align:right">Tỷ lệ đạt</th><th class="num" style="text-align:right">Giờ ĐM</th><th class="num" style="text-align:right">Giờ TT</th>' +
+        '<th class="num" style="text-align:right">Quá giờ</th><th>Mã lỗi</th><th>Nguyên nhân (4M1E)</th>' +
+        '<th class="num" style="text-align:right">Thiệt hại quy tiền</th>' +
+      '</tr></thead>' +
+      '<tbody>' + body + '</tbody>' +
+      '<tfoot><tr>' +
+        '<td colspan="3">TỔNG CỘNG · ' + esc(LSX.id) + '</td>' +
+        '<td class="num">' + nf(T.good) + '</td>' +
+        '<td class="num' + (T.defect > 0 ? ' bad' : '') + '">' + nf(T.defect) + '</td>' +
+        '<td class="num' + (T.scrap > 0 ? ' bad' : '') + '">' + nf(T.scrap) + '</td>' +
+        '<td class="num">' + (T.total ? pct((T.good / T.total) * 100) : '—') + '</td>' +
+        '<td class="num">' + nf1(T.std) + '</td>' +
+        '<td class="num">' + nf1(T.act) + '</td>' +
+        '<td class="num' + (T.over > 0 ? ' bad' : '') + '">' + (T.over > 0 ? '+' + nf1(T.over) : '—') + '</td>' +
+        '<td colspan="2">Giờ máy 185.000 ₫ · giờ công 62.000 ₫ · nhôm 78.500 ₫/kg · kính hộp 385.000 ₫/m²</td>' +
+        '<td class="num bad">' + money(T.dmg) + '</td>' +
+      '</tr></tfoot>';
+  }
+
+  /* ---- drawer chi tiết một dòng ---- */
+  function openDrill(key) {
+    var r = stepRow(STEP_DEF.filter(function (s) { return s.key === key; })[0]);
+    if (!r) return;
+    var L = r.loss;
+    var ov = document.createElement('div');
+    ov.className = 'lsxd-dw-ov';
+    ov.innerHTML = '<div class="lsxd-dw">' +
+      '<div class="lsxd-dw-h" style="position:relative">' +
+        '<div class="k">Phân tích thiệt hại · ' + esc(LSX.id) + '</div>' +
+        '<h3>' + esc(r.def.name) + '</h3>' +
+        '<button class="x" data-dw="close" data-no-interact="true">✕</button>' +
+      '</div>' +
+      '<div class="lsxd-dw-b">' +
+        '<div class="dwg"><div class="h">Kết quả bước</div><div class="kv">' +
+          '<div><span>SL đạt</span><b>' + nf(r.good) + ' ' + esc(r.def.unit) + '</b></div>' +
+          '<div><span>SL lỗi / phế</span><b class="' + (r.defect + r.scrap > 0 ? 'bad' : '') + '" style="' + (r.defect + r.scrap > 0 ? 'color:#8a1f1f' : '') + '">' + nf(r.defect) + ' / ' + nf(r.scrap) + '</b></div>' +
+          '<div><span>Tỷ lệ đạt</span><b style="color:' + (r.rate >= 99.5 ? '#1f6b3a' : (r.rate < 98 && r.total ? '#8a1f1f' : 'inherit')) + '">' + (r.total ? pct(r.rate) : '—') + '</b></div>' +
+          '<div><span>Giờ định mức / thực tế</span><b style="color:' + (r.over > 0 ? '#8a1f1f' : (r.early > 0 ? '#1f6b3a' : 'inherit')) + '">' + nf1(r.stdH) + ' h / ' + nf1(r.actH) + ' h</b></div>' +
+          '<div><span>Mã lỗi QC</span><b>' + (r.d.err ? esc(r.d.err + ' · ' + errLabel(r.d.err)) : '—') + '</b></div>' +
+          '<div><span>Nhóm nguyên nhân 4M1E</span><b>' + (r.cause ? esc(r.cause) : '—') + '</b></div>' +
+        '</div></div>' +
+        '<div class="dwg"><div class="h">Nguyên nhân chi tiết</div><p>' + esc(L.causeText || '—') + '</p>' +
+          (r.d.note ? '<p style="margin-top:8px;color:var(--ash)">Ghi chú xưởng: ' + esc(r.d.note) + '</p>' : '') + '</div>' +
+        '<div class="dwg"><div class="h">Biện pháp khắc phục</div><ul>' +
+          (L.fix || []).map(function (f) { return '<li>' + esc(f) + '</li>'; }).join('') + '</ul></div>' +
+        '<div class="dwg"><div class="h">Quy đổi thiệt hại</div><div class="kv">' +
+          '<div><span>Quá giờ máy + công</span><b>' + money(r.over * (PRICE.mayH + PRICE.congH)) + '</b></div>' +
+          '<div><span>Giờ công sửa lại</span><b>' + money(r.reworkH * PRICE.congH) + '</b></div>' +
+          '<div><span>Nhôm phế (' + nf2(r.aluKg) + ' kg)</span><b>' + money(r.aluKg * PRICE.nhomKg) + '</b></div>' +
+          '<div><span>Kính vỡ (' + nf2(r.glassM2) + ' m²)</span><b>' + money(r.glassM2 * PRICE.kinhM2) + '</b></div>' +
+          '<div><span>Bản lề hỏng (' + nf(r.hinge) + ' bộ)</span><b>' + money(r.hinge * PRICE.banLeBo) + '</b></div>' +
+          '<div><span>TỔNG THIỆT HẠI</span><b style="font-size:17px;color:' + (r.damage > 0 ? '#8a1f1f' : '#1f6b3a') + '">' + money(r.damage) + '</b></div>' +
+        '</div><p class="lsxd-note" style="margin-top:8px">Quy đổi 1 cây nhôm 5,8m ≈ ' + nf1(KG_PER_BAR) + ' kg · 1 cánh dùng ' + nf1(M2_KINH_PER_CANH) + ' m² kính hộp. Chặn trần ' + nf(CAP.nhomKgCa) + ' kg nhôm/ca và ' + nf(CAP.boCa) + ' bộ/ca.</p></div>' +
+        '<div class="dwg"><div class="h">Bộ phận chịu trách nhiệm</div><p><b>' + esc(L.dept || '—') + '</b></p>' +
+          '<p class="lsxd-note">Máy tham gia: ' + r.def.machines.map(function (m) { return esc(m + ' — ' + (MACHINES[m] || '')); }).join(' · ') + '</p></div>' +
+      '</div></div>';
+    document.body.appendChild(ov);
+    function close() { ov.remove(); document.removeEventListener('keydown', onKey, true); }
+    function onKey(e) { if (e.key === 'Escape') { e.stopImmediatePropagation(); close(); } }
+    document.addEventListener('keydown', onKey, true);
+    ov.addEventListener('click', function (e) {
+      if (e.target === ov || e.target.closest('[data-dw="close"]')) close();
+    });
+  }
+
+  /* ============================================================
+     8. Kho — nguyên liệu & thành phẩm
+     ============================================================ */
+  function nvlList() {
+    try {
+      if (window.ERPInv && ERPInv.allItems) {
+        var l = ERPInv.allItems().filter(function (i) { return i.kind === 'nvl'; });
+        if (l.length) return l;
+      }
+    } catch (e) {}
+    return NVL_FALLBACK;
+  }
+  function invItem(code) {
+    var l = nvlList();
+    for (var i = 0; i < l.length; i++) if (l[i].code === code) return l[i];
+    return null;
+  }
+  // Tìm dòng THÀNH PHẨM trong sổ kho khớp với sản phẩm của lệnh
+  // (ưu tiên mã, sau đó chấm điểm theo số từ khoá trùng trong tên)
+  function normTxt(s) {
+    return String(s || '').toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd')
+      .replace(/[^a-z0-9]+/g, ' ').trim();
+  }
+  function tpItem() {
+    var items = [];
+    try { if (window.ERPInv && ERPInv.allItems) items = ERPInv.allItems().filter(function (i) { return i.kind === 'tp'; }); } catch (e) {}
+    if (!items.length) return null;
+    var want = '';
+    try {
+      if (window.ERPBOM) {
+        var b = ERPBOM.get(LSX.productCode) || ERPBOM.byProduct(LSX.product);
+        if (b) want = b.productCode || '';
+      }
+    } catch (e) {}
+    var byCode = items.filter(function (i) { return i.code === LSX.productCode || (want && i.code === want); })[0];
+    if (byCode) return byCode;
+    var toks = normTxt(LSX.product).split(' ').filter(function (t) { return t.length > 1; });
+    var best = null, bestScore = 0;
+    items.forEach(function (i) {
+      var it = normTxt(i.name).split(' ');
+      var sc = 0;
+      toks.forEach(function (t) { if (it.indexOf(t) >= 0) sc++; });
+      if (sc > bestScore) { bestScore = sc; best = i; }
+    });
+    return bestScore >= 3 ? best : null;
+  }
+
+  function bomLines() {
+    try {
+      if (window.ERPBOM) {
+        var ti = tpItem();
+        var b = ERPBOM.get(LSX.productCode) || ERPBOM.byProduct(LSX.product) ||
+                (ti ? (ERPBOM.get(ti.code) || ERPBOM.byProduct(ti.name)) : null);
+        if (b && b.lines && b.lines.length) return b.lines;
+      }
+    } catch (e) {}
+    return BOM_FALLBACK;
+  }
+  // Đã cấp = các phiếu xuất NVL gắn ref = mã lệnh + nền demo của ca đang chạy
+  function issuedMap(qtyDone) {
+    var map = {};
+    bomLines().forEach(function (l, i) {
+      var std = (Number(l.qty) || 0) * qtyDone * (1 + (Number(l.waste) || 0) / 100);
+      var k = [1.02, 0.99, 1.0, 0.985, 1.012, 0.95, 1.0, 1.03, 1.0][i % 9];
+      map[l.matCode] = Math.round(std * k * 100) / 100;
+    });
+    try {
+      if (window.ERPInv && ERPInv.allTxns) {
+        ERPInv.allTxns().forEach(function (t) {
+          if (t.kind !== 'out' || t.ref !== LSX.id || !t._lsxIssue) return;
+          (t.lines || []).forEach(function (l) {
+            map[l.code] = Math.round(((map[l.code] || 0) + (Number(l.qty) || 0)) * 100) / 100;
+          });
+        });
+      }
+    } catch (e) {}
+    return map;
+  }
+
+  /* ---- modal NHẬP NGUYÊN LIỆU ---- */
+  function openNVL() {
+    var items = nvlList();
+    var opts = items.map(function (i) {
+      return '<option value="' + esc(i.code) + '">' + esc(i.name) + ' · tồn ' + nf2(i.onHand != null ? i.onHand : 0) + ' ' + esc(i.unit || '') + '</option>';
+    }).join('');
+    var body =
+      '<div class="lsxd-form" id="frmNVL">' +
+        '<div class="row3">' +
+          '<div class="fld" style="grid-column:span 2"><label>Nguyên vật liệu</label><select id="nvlCode">' + opts + '</select></div>' +
+          '<div class="fld"><label>Số lượng</label><input type="number" id="nvlQty" min="0" step="0.01" value="100"></div>' +
+        '</div>' +
+        '<div class="row3">' +
+          '<div class="fld"><label>Kho nguồn</label><select id="nvlKho">' + KHO_NVL.map(function (k) { return '<option>' + esc(k) + '</option>'; }).join('') + '</select></div>' +
+          '<div class="fld"><label>Người giao (thủ kho)</label><input id="nvlGiao" value="Trần Quốc Bảo"></div>' +
+          '<div class="fld"><label>Người nhận (xưởng)</label><input id="nvlNhan" value="Trần Văn Tú"></div>' +
+        '</div>' +
+        '<div class="fld"><label>Ghi chú</label><input id="nvlNote" value="Cấp nguyên liệu cho ' + esc(LSX.id) + '"></div>' +
+        '<p class="lsxd-note">Xác nhận sẽ <b>trừ tồn kho NVL</b> và ghi phiếu xuất kho (mẫu 02-VT). Tồn không đủ thì phiếu bị chặn, không ghi gì.</p>' +
+      '</div>';
+    ERPInteract.showModal({
+      title: '⬇ Nhập nguyên liệu cho ' + LSX.id,
+      body: body,
+      primaryText: 'Xác nhận xuất kho',
+      secondaryText: 'Huỷ',
+      onPrimary: function () {
+        var code = document.getElementById('nvlCode').value;
+        var qty = num(document.getElementById('nvlQty').value);
+        var kho = document.getElementById('nvlKho').value;
+        var giao = document.getElementById('nvlGiao').value.trim();
+        var nhan = document.getElementById('nvlNhan').value.trim();
+        var note = document.getElementById('nvlNote').value.trim();
+        if (qty <= 0) { toast('Số lượng phải lớn hơn 0', 'warning'); return false; }
+        if (!giao || !nhan) { toast('Nhập đủ người giao / người nhận', 'warning'); return false; }
+        var it = invItem(code) || { code: code, name: code, unit: '', price: 0 };
+        var txnId = '', okPost = false;
+        try {
+          if (window.ERPInv && ERPInv.post) {
+            var res = ERPInv.post({
+              kind: 'out', type: 'xuat_sx', typeLabel: 'Xuất NVL cho sản xuất',
+              partner: nhan + ' — xưởng cửa nhôm', ref: LSX.id, warehouse: kho,
+              deliverer: giao, receiver: nhan, note: note, _lsxIssue: true,
+              lines: [{ code: code, name: it.name, unit: it.unit, qty: qty, price: it.price }]
+            });
+            if (res && res.ok) { okPost = true; txnId = res.txn.id; }
+            else {
+              var e0 = (res && res.errors && res.errors[0]) || null;
+              toast(e0 ? ('Không đủ tồn <b>' + esc(e0.name) + '</b> — cần ' + nf2(e0.need) + ', còn ' + nf2(e0.have)) : 'Không ghi được phiếu xuất', 'error');
+              return false;
+            }
+          }
+        } catch (e) {}
+        if (!okPost) txnId = 'PXK-2026-' + ('000' + (Math.floor(Math.random() * 400) + 100)).slice(-4);
+        var doc = {
+          id: txnId, kho: kho, giao: giao, nhan: nhan, note: note,
+          lines: [{ code: code, name: it.name, unit: it.unit, qty: qty, price: it.price }]
+        };
+        toast('Đã xuất <b>' + nf2(qty) + ' ' + esc(it.unit || '') + '</b> ' + esc(it.name) + ' · phiếu <a href="05-kho.html?pxk=' + encodeURIComponent(txnId) + '" class="lnk">' + esc(txnId) + '</a>', 'success');
+        setTimeout(function () { askPreview('Xem trước phiếu xuất NVL', function () { printPXK(doc); }); }, 260);
+      }
+    });
+    if (window.lucide) window.lucide.createIcons();
+  }
+
+  /* ---- modal NHẬP THÀNH PHẨM ---- */
+  function openTP() {
+    var dq = doneQty() || Math.max(1, Math.round(LSX.qty * 0.9));
+    var body = '<div class="lsxd-form" id="frmTP">' +
+      '<div class="row3">' +
+        '<div class="fld"><label>SL đạt nhập kho (' + esc(LSX.unit) + ')</label><input type="number" id="tpQty" min="1" value="' + dq + '"></div>' +
+        '<div class="fld" style="grid-column:span 2"><label>Kho nhập</label><select id="tpKho">' + KHO_TP.map(function (k) { return '<option>' + esc(k) + '</option>'; }).join('') + '</select></div>' +
+      '</div>' +
+      '<div class="row2">' +
+        '<div class="fld"><label>Người giao (xưởng)</label><input id="tpGiao" value="Trần Văn Tú"></div>' +
+        '<div class="fld"><label>Người nhận (thủ kho)</label><input id="tpNhan" value="Trần Quốc Bảo"></div>' +
+      '</div>' +
+      '<div id="tpDiff"></div>' +
+      '<p class="lsxd-note">Xác nhận sẽ <b>tăng tồn thành phẩm</b>, <b>hoàn nhập NVL thừa</b> và <b>trừ thêm NVL thiếu</b> so với định mức BOM. Toàn bộ bút toán chạy một lần — lỗi thì không ghi gì.</p>' +
+      '</div>';
+    ERPInteract.showModal({
+      title: '⬆ Nhập kho thành phẩm từ ' + LSX.id,
+      body: body,
+      primaryText: 'Xác nhận nhập kho',
+      secondaryText: 'Huỷ',
+      onPrimary: function () {
+        var qty = num(document.getElementById('tpQty').value);
+        var kho = document.getElementById('tpKho').value;
+        var giao = document.getElementById('tpGiao').value.trim();
+        var nhan = document.getElementById('tpNhan').value.trim();
+        if (qty <= 0) { toast('SL đạt phải lớn hơn 0', 'warning'); return false; }
+        var cmp = diffRows(qty);
+        var pnk = '', ok = false;
+        try {
+          if (window.ERPInv && ERPInv.post) {
+            var tpi = tpItem();
+            var res = ERPInv.post({
+              kind: 'in', type: 'nhap_tp_lsx', typeLabel: 'Nhập kho thành phẩm từ sản xuất',
+              partner: 'Xưởng cửa nhôm — ' + (LSX.shift || 'Ca 1'), ref: LSX.id, warehouse: kho,
+              deliverer: giao, receiver: nhan, note: 'Nhập thành phẩm hoàn thành ' + LSX.id,
+              lines: [{ code: (tpi && tpi.code) || LSX.productCode, name: (tpi && tpi.name) || LSX.product, unit: (tpi && tpi.unit) || LSX.unit, qty: qty, price: (tpi && tpi.price) || 0 }]
+            });
+            if (res && res.ok) { ok = true; pnk = res.txn.id; }
+            else { toast('Không ghi được phiếu nhập kho thành phẩm', 'error'); return false; }
+            // hoàn nhập NVL thừa (đã cấp > định mức)
+            var backLines = cmp.filter(function (c) { return c.diff > 0.009; })
+              .map(function (c) { return { code: c.code, name: c.name, unit: c.unit, qty: Math.round(c.diff * 100) / 100, price: c.price }; });
+            if (backLines.length) {
+              ERPInv.post({
+                kind: 'in', type: 'nhap_mua', typeLabel: 'Hoàn nhập NVL thừa từ sản xuất',
+                partner: 'Xưởng cửa nhôm', ref: LSX.id, warehouse: KHO_NVL[0],
+                note: 'Hoàn nhập phần NVL cấp thừa so với định mức BOM của ' + LSX.id, lines: backLines
+              });
+            }
+            // cấp bù NVL thiếu (đã cấp < định mức)
+            var moreLines = cmp.filter(function (c) { return c.diff < -0.009; })
+              .map(function (c) { return { code: c.code, name: c.name, unit: c.unit, qty: Math.round(-c.diff * 100) / 100, price: c.price }; });
+            if (moreLines.length) {
+              ERPInv.post({
+                kind: 'out', type: 'xuat_sx', typeLabel: 'Cấp bù NVL thiếu so với định mức',
+                partner: 'Xưởng cửa nhôm', ref: LSX.id, warehouse: KHO_NVL[0], _lsxIssue: true,
+                note: 'Cấp bù phần NVL thiếu so với định mức BOM của ' + LSX.id, lines: moreLines
+              });
+            }
+          }
+        } catch (e) {}
+        if (!ok) pnk = 'PNK-2026-' + ('000' + (Math.floor(Math.random() * 400) + 100)).slice(-4);
+        toast('Đã nhập <b>' + nf(qty) + ' ' + esc(LSX.unit) + '</b> vào <b>' + esc(kho) + '</b> · phiếu <a href="05-kho.html?pnk=' + encodeURIComponent(pnk) + '" class="lnk">' + esc(pnk) + '</a>', 'success');
+        setTimeout(function () {
+          askPreview('Xem trước phiếu nhập kho', function () { printPNK({ id: pnk, kho: kho, giao: giao, nhan: nhan, qty: qty, cmp: cmp }); });
+        }, 260);
+      }
+    });
+    // bảng đối chiếu định mức
+    var box = document.getElementById('tpDiff');
+    var draw = function () {
+      var q = num(document.getElementById('tpQty').value) || 0;
+      box.innerHTML = diffTable(diffRows(q));
+    };
+    draw();
+    document.getElementById('tpQty').addEventListener('input', draw);
+    if (window.lucide) window.lucide.createIcons();
+  }
+
+  function diffRows(qty) {
+    var issued = issuedMap(qty);
+    return bomLines().map(function (l) {
+      var it = invItem(l.matCode) || {};
+      var std = Math.round((Number(l.qty) || 0) * qty * (1 + (Number(l.waste) || 0) / 100) * 100) / 100;
+      var got = Math.round((issued[l.matCode] || 0) * 100) / 100;
+      return {
+        code: l.matCode, name: l.matName || it.name || l.matCode, unit: l.unit || it.unit || '',
+        price: it.price || 0, std: std, got: got, diff: Math.round((got - std) * 100) / 100
+      };
+    });
+  }
+  function diffTable(rows) {
+    return '<table><thead><tr><th>Vật tư</th><th class="num">Định mức BOM</th><th class="num">Đã cấp</th><th class="num">Chênh lệch</th><th>Xử lý</th></tr></thead><tbody>' +
+      rows.map(function (r) {
+        // diff > 0: đã cấp nhiều hơn định mức → thừa, hoàn nhập kho
+        // diff < 0: đã cấp ít hơn định mức → thiếu, phải trừ thêm (cấp bù)
+        var cls = r.diff < -0.009 ? 'bad' : (r.diff > 0.009 ? 'good' : '');
+        var act = r.diff < -0.009 ? 'Trừ thêm (cấp bù)' : (r.diff > 0.009 ? 'Hoàn nhập kho' : '—');
+        return '<tr><td>' + esc(r.name) + '</td>' +
+          '<td class="num">' + nf2(r.std) + ' ' + esc(r.unit) + '</td>' +
+          '<td class="num">' + nf2(r.got) + ' ' + esc(r.unit) + '</td>' +
+          '<td class="num ' + cls + '">' + (r.diff > 0 ? '+' : '') + nf2(r.diff) + '</td>' +
+          '<td class="' + cls + '">' + act + '</td></tr>';
+      }).join('') + '</tbody></table>';
+  }
+
+  /* ---- hỏi xem trước bản in ---- */
+  function askPreview(label, fn) {
+    ERPInteract.showModal({
+      title: label,
+      body: '<p>Phiếu đã được ghi sổ. Xem trước bản in trước khi in giấy?</p>',
+      primaryText: label, secondaryText: 'Để sau',
+      onPrimary: fn
+    });
+  }
+
+  /* ============================================================
+     9. Bản in
+     ============================================================ */
+  function docHead() {
+    try { if (window.ERPPrint && ERPPrint.docHead) return ERPPrint.docHead(); } catch (e) {}
+    return '';
+  }
+  function preview(title, body) {
+    if (window.ERPPrint && ERPPrint.preview) ERPPrint.preview({ title: title, printTitle: title, bodyHtml: body });
+  }
+  function signRow(cols) {
+    return '<div class="pdoc-sign">' + cols.map(function (c) {
+      return '<div><b>' + esc(c) + '</b><i>(Ký, họ tên)</i><div class="sp"></div></div>';
+    }).join('') + '</div>';
+  }
+
+  function printPXK(doc) {
+    var tot = doc.lines.reduce(function (s, l) { return s + (l.qty * (l.price || 0)); }, 0);
+    var body = docHead() +
+      '<div style="display:flex;justify-content:space-between;align-items:flex-start">' +
+        '<div style="font-size:11px;color:#55524a">Mẫu số 02-VT<br>(Ban hành theo TT 200/2014/TT-BTC)</div>' +
+        qr('PXK|' + doc.id + '|' + LSX.id, doc.id, 84) +
+      '</div>' +
+      '<div class="pdoc-title">PHIẾU XUẤT KHO</div>' +
+      '<div class="pdoc-sub">Ngày ' + todayStr() + ' · Số: ' + esc(doc.id) + '</div>' +
+      '<table class="pdoc-rows">' +
+        '<tr><td>Lệnh sản xuất</td><td>' + esc(LSX.id) + ' — ' + esc(LSX.product) + '</td></tr>' +
+        '<tr><td>Kho xuất</td><td>' + esc(doc.kho) + '</td></tr>' +
+        '<tr><td>Người giao hàng</td><td>' + esc(doc.giao) + '</td></tr>' +
+        '<tr><td>Người nhận hàng</td><td>' + esc(doc.nhan) + '</td></tr>' +
+        '<tr><td>Lý do xuất</td><td>' + esc(doc.note || 'Cấp nguyên liệu cho sản xuất') + '</td></tr>' +
+      '</table>' +
+      '<table class="pdoc-items"><thead><tr><th>STT</th><th>Mã VT</th><th>Tên nguyên vật liệu</th><th>ĐVT</th><th>Số lượng</th><th>Đơn giá</th><th>Thành tiền</th></tr></thead><tbody>' +
+      doc.lines.map(function (l, i) {
+        return '<tr><td class="c">' + (i + 1) + '</td><td>' + esc(l.code) + '</td><td>' + esc(l.name) + '</td>' +
+          '<td class="c">' + esc(l.unit) + '</td><td class="r">' + nf2(l.qty) + '</td>' +
+          '<td class="r">' + nf(l.price) + '</td><td class="r">' + nf(l.qty * (l.price || 0)) + '</td></tr>';
+      }).join('') + '</tbody></table>' +
+      '<div class="pdoc-tot">Tổng giá trị: <b>' + money(tot) + '</b></div>' +
+      signRow(['Người lập phiếu', 'Người nhận hàng', 'Thủ kho', 'Giám đốc SX']);
+    preview('Phiếu xuất NVL ' + doc.id, body);
+  }
+
+  function printPNK(doc) {
+    var body = docHead() +
+      '<div style="display:flex;justify-content:space-between;align-items:flex-start">' +
+        '<div style="font-size:11px;color:#55524a">Mẫu số 01-VT<br>(Ban hành theo TT 200/2014/TT-BTC)</div>' +
+        qr('PNK|' + doc.id + '|' + LSX.id, doc.id, 84) +
+      '</div>' +
+      '<div class="pdoc-title">PHIẾU NHẬP KHO</div>' +
+      '<div class="pdoc-sub">Ngày ' + todayStr() + ' · Số: ' + esc(doc.id) + '</div>' +
+      '<table class="pdoc-rows">' +
+        '<tr><td>Lệnh sản xuất</td><td>' + esc(LSX.id) + '</td></tr>' +
+        '<tr><td>Khách hàng / đơn hàng</td><td>' + esc(LSX.customer) + ' · ' + esc(LSX.orderId || '—') + '</td></tr>' +
+        '<tr><td>Kho nhập</td><td>' + esc(doc.kho) + '</td></tr>' +
+        '<tr><td>Người giao (xưởng)</td><td>' + esc(doc.giao) + '</td></tr>' +
+        '<tr><td>Người nhận (thủ kho)</td><td>' + esc(doc.nhan) + '</td></tr>' +
+      '</table>' +
+      '<table class="pdoc-items"><thead><tr><th>STT</th><th>Mã TP</th><th>Tên thành phẩm</th><th>ĐVT</th><th>Số lượng</th></tr></thead><tbody>' +
+        '<tr><td class="c">1</td><td>' + esc((tpItem() || {}).code || LSX.productCode) + '</td><td>' + esc(LSX.product) + '</td><td class="c">' + esc(LSX.unit) + '</td><td class="r">' + nf(doc.qty) + '</td></tr>' +
+      '</tbody></table>' +
+      '<div class="pdoc-note"><b>Đối chiếu định mức nguyên vật liệu</b></div>' +
+      '<table class="pdoc-items"><thead><tr><th>Vật tư</th><th>ĐVT</th><th>Định mức BOM</th><th>Đã cấp</th><th>Chênh lệch</th></tr></thead><tbody>' +
+      doc.cmp.map(function (r) {
+        var color = r.diff < -0.009 ? '#8a1f1f' : (r.diff > 0.009 ? '#1f6b3a' : '#14130f');
+        return '<tr><td>' + esc(r.name) + '</td><td class="c">' + esc(r.unit) + '</td>' +
+          '<td class="r">' + nf2(r.std) + '</td><td class="r">' + nf2(r.got) + '</td>' +
+          '<td class="r" style="color:' + color + ';font-weight:700">' + (r.diff > 0 ? '+' : '') + nf2(r.diff) + '</td></tr>';
+      }).join('') + '</tbody></table>' +
+      signRow(['Người lập phiếu', 'Người giao hàng', 'Thủ kho', 'Kế toán trưởng']);
+    preview('Phiếu nhập kho ' + doc.id, body);
+  }
+
+  function printLSX() {
+    var rows = allRows();
+    var q = doneQty() || LSX.qty;
+    var bom = diffRows(LSX.qty);
+    var body = docHead() +
+      '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px">' +
+        '<div style="flex:1">' +
+          '<div class="pdoc-title" style="text-align:left">LỆNH SẢN XUẤT</div>' +
+          '<div class="pdoc-sub" style="text-align:left">Số: ' + esc(LSX.id) + ' · Ngày in ' + todayStr() + '</div>' +
+        '</div>' +
+        qr('LSX|' + LSX.id + '|' + LSX.productCode + '|' + LSX.qty, LSX.id, 96) +
+      '</div>' +
+      '<table class="pdoc-rows">' +
+        '<tr><td>Sản phẩm</td><td><b>' + esc(LSX.product) + '</b> (' + esc(LSX.productCode) + ')</td></tr>' +
+        '<tr><td>Số lượng kế hoạch / đã đạt</td><td>' + nf(LSX.qty) + ' ' + esc(LSX.unit) + ' / ' + nf(q) + ' ' + esc(LSX.unit) + '</td></tr>' +
+        '<tr><td>Khách hàng</td><td>' + esc(LSX.customer) + '</td></tr>' +
+        '<tr><td>Đơn hàng · Hợp đồng</td><td>' + esc(LSX.orderId || '—') + ' · ' + esc(LSX.contractId || '—') + '</td></tr>' +
+        '<tr><td>Ngày bắt đầu · Hạn giao</td><td>' + esc(LSX.dateStart || todayStr()) + ' · ' + esc(LSX.dateDelivery || '—') + '</td></tr>' +
+        '<tr><td>Quản đốc · Ca</td><td>' + esc(LSX.manager) + ' · ' + esc(LSX.shift) + '</td></tr>' +
+      '</table>' +
+      '<div class="pdoc-note"><b>ĐỊNH MỨC NGUYÊN VẬT LIỆU (cho ' + nf(LSX.qty) + ' ' + esc(LSX.unit) + ')</b></div>' +
+      '<table class="pdoc-items"><thead><tr><th>STT</th><th>Mã VT</th><th>Nguyên vật liệu</th><th>ĐVT</th><th>Định mức</th></tr></thead><tbody>' +
+      bom.map(function (r, i) {
+        return '<tr><td class="c">' + (i + 1) + '</td><td>' + esc(r.code) + '</td><td>' + esc(r.name) + '</td>' +
+          '<td class="c">' + esc(r.unit) + '</td><td class="r">' + nf2(r.std) + '</td></tr>';
+      }).join('') + '</tbody></table>' +
+      '<div class="pdoc-note"><b>QUY TRÌNH 6 BƯỚC SẢN XUẤT</b></div>' +
+      '<table class="pdoc-items"><thead><tr><th>#</th><th>Bước công nghệ</th><th>Máy</th><th>Người phụ trách</th><th>Giờ ĐM</th><th>SL đạt</th><th>Ký xác nhận</th></tr></thead><tbody>' +
+      rows.map(function (r, i) {
+        return '<tr><td class="c">' + (i + 1) + '</td><td>' + esc(r.def.name) + '</td>' +
+          '<td>' + r.def.machines.join(' · ') + '</td><td>' + esc(r.def.nvName) + '</td>' +
+          '<td class="r">' + nf1(r.stdH) + '</td><td class="r">' + (r.total ? nf(r.good) : '') + '</td>' +
+          '<td style="height:30px"></td></tr>';
+      }).join('') + '</tbody></table>' +
+      signRow(['Người lập phiếu', 'Quản đốc', 'Giám đốc SX']);
+    preview('In lệnh sản xuất ' + LSX.id, body);
+  }
+
+  function printTem() {
+    var n = Math.min(Math.max(doneQty() || LSX.qty, 1), 12);
+    var tem = '';
+    for (var i = 1; i <= n; i++) {
+      tem += '<div class="tem">' + qr(LSX.id + '|' + LSX.productCode + '|' + i, '', 62) +
+        '<div><b>' + esc(LSX.id) + '</b>' + esc(LSX.product) + '<br>SL: 1 ' + esc(LSX.unit) + ' · Kiện ' + i + '/' + n +
+        '<br>Ngày: ' + todayStr() + '</div></div>';
+    }
+    var body = docHead() +
+      '<div class="pdoc-title">TEM QR THÀNH PHẨM</div>' +
+      '<div class="pdoc-sub">' + esc(LSX.id) + ' · ' + esc(LSX.product) + ' · in ' + n + ' tem ngày ' + todayStr() + '</div>' +
+      '<div class="tem-grid">' + tem + '</div>' +
+      '<div class="pdoc-note">Dán tem lên mặt ngoài kiện gỗ, quét tem để tra cứu lệnh sản xuất và hồ sơ chất lượng của bộ cửa.</div>';
+    preview('In tem QR ' + LSX.id, body);
+  }
+
+  /* ============================================================
+     10. Báo sự cố máy → tạo phiếu sửa chữa
+     ============================================================ */
+  function nextSC() {
+    var arr = [];
+    try { arr = JSON.parse(localStorage.getItem(SC_KEY) || '[]') || []; } catch (e) {}
+    var max = 42;
+    arr.forEach(function (r) { var m = /SC-(\d+)/.exec(r.id || ''); if (m) max = Math.max(max, parseInt(m[1], 10)); });
+    return { id: 'SC-' + ('000' + (max + 1)).slice(-4), arr: arr };
+  }
+  function openSuCo() {
+    var mopts = Object.keys(MACHINES).map(function (c) {
+      return '<option value="' + c + '">' + esc(c + ' — ' + MACHINES[c]) + '</option>';
+    }).join('');
+    var body = '<div class="lsxd-form" id="frmSC">' +
+      '<div class="row2">' +
+        '<div class="fld"><label>Máy gặp sự cố</label><select id="scMay">' + mopts + '</select></div>' +
+        '<div class="fld"><label>Loại sự cố</label><select id="scLoai">' + SUCO_TYPES.map(function (t) { return '<option>' + esc(t) + '</option>'; }).join('') + '</select></div>' +
+      '</div>' +
+      '<div class="row2">' +
+        '<div class="fld"><label>Thời điểm xảy ra</label><input id="scLuc" value="' + todayStr() + ' ' + nowHM() + '"></div>' +
+        '<div class="fld"><label>Mức độ</label><select id="scMuc"><option>Khẩn cấp — dừng máy</option><option selected>Trung bình — chạy cầm chừng</option><option>Thấp — theo dõi</option></select></div>' +
+      '</div>' +
+      '<div class="fld"><label>Mô tả sự cố</label><textarea id="scMoTa" style="height:70px" placeholder="Hiện tượng, tiếng kêu, thông số bất thường, đã xử lý tạm thế nào..."></textarea></div>' +
+      '<p class="lsxd-note">Xác nhận sẽ tạo <b>phiếu sửa chữa</b> gắn với ' + esc(LSX.id) + ' và chuyển sang bộ phận Bảo trì cơ điện.</p>' +
+      '</div>';
+    ERPInteract.showModal({
+      title: '⚠ Báo sự cố máy',
+      body: body,
+      primaryText: 'Tạo phiếu sửa chữa',
+      secondaryText: 'Huỷ',
+      onPrimary: function () {
+        var may = document.getElementById('scMay').value;
+        var loai = document.getElementById('scLoai').value;
+        var luc = document.getElementById('scLuc').value.trim();
+        var muc = document.getElementById('scMuc').value;
+        var mt = document.getElementById('scMoTa').value.trim();
+        if (!mt) { toast('Nhập mô tả sự cố để bảo trì xử lý được', 'warning'); return false; }
+        var nx = nextSC();
+        nx.arr.unshift({
+          id: nx.id, machine: may, machineLabel: MACHINES[may] || '', type: loai,
+          at: luc, level: muc, desc: mt, lsx: LSX.id, by: LSX.manager || 'Xưởng',
+          status: 'Chờ tiếp nhận', created: todayStr()
+        });
+        try { localStorage.setItem(SC_KEY, JSON.stringify(nx.arr)); } catch (e) {}
+        toast('Đã tạo phiếu sửa chữa <a href="19-sua-chua.html?sc=' + encodeURIComponent(nx.id) + '" class="lnk">' + esc(nx.id) + '</a> cho máy <b>' + esc(may) + '</b> — bấm để mở', 'success');
+      }
+    });
+    if (window.lucide) window.lucide.createIcons();
+  }
+
+  /* ============================================================
+     11. Hành động điều khiển lệnh & bước
+     ============================================================ */
+  function setRun(mode, msg, type) {
+    ST.run = mode; saveState(); renderBar(); renderInfo();
+    toast(msg, type || 'success');
+  }
+  function stepStart(key) {
+    var d = ST.steps[key];
+    if (!d) return;
+    if (d.status === 'done') { toast('Bước này đã kết thúc — mở lại bằng nút Bắt đầu của lệnh', 'warning'); return; }
+    d.status = 'doing'; d.start = d.start || nowHM(); d.end = '';
+    if (ST.run !== 'running') ST.run = 'running';
+    saveState(); renderAll();
+    toast('Đã bắt đầu bước <b>' + esc(stepName(key)) + '</b> lúc ' + esc(d.start), 'success');
+  }
+  function stepEnd(key) {
+    var d = ST.steps[key];
+    if (!d) return;
+    d.status = 'done'; d.end = nowHM(); if (!d.start) d.start = d.end;
+    saveState(); renderAll();
+    toast('Đã kết thúc bước <b>' + esc(stepName(key)) + '</b> lúc ' + esc(d.end), 'success');
+  }
+  function stepName(key) {
+    var s = STEP_DEF.filter(function (x) { return x.key === key; })[0];
+    return s ? s.name : key;
+  }
+  function stepSave(key, card) {
+    var d = ST.steps[key];
+    if (!d) return;
+    card.querySelectorAll('[data-f]').forEach(function (el) {
+      var f = el.getAttribute('data-f');
+      d[f] = (f === 'err' || f === 'note') ? el.value : num(el.value);
+    });
+    if (d.good + d.defect + d.scrap > 0 && d.status === 'wait') d.status = 'doing';
+    saveState();
+    // ghi vào QuoteStore nếu có
+    try {
+      if (window.QuoteStore && QuoteStore.updateLSXProductProgress) {
+        QuoteStore.updateLSXProductProgress(LSX.id, key, [{
+          code: LSX.productCode, total: d.good + d.defect + d.scrap, good: d.good, defect: d.defect + d.scrap
+        }]);
+      }
+    } catch (e) {}
+    renderAll();
+    toast('Đã lưu bước <b>' + esc(stepName(key)) + '</b>: ' + nf(d.good) + ' đạt · ' + nf(d.defect) + ' lỗi · ' + nf(d.scrap) + ' phế', 'success');
+  }
+
+  /* ============================================================
+     12. Gắn sự kiện & khởi động
+     ============================================================ */
+  function renderAll() { renderBar(); renderInfo(); renderSteps(); renderLoss(); }
+
+  function onClick(e) {
+    var btn = e.target.closest('[data-act]');
+    if (btn) {
+      var act = btn.getAttribute('data-act');
+      if (btn.disabled) return;
+      if (act === 'lsx-start') return setRun('running', 'Đã <b>bắt đầu</b> lệnh ' + esc(LSX.id) + ' — ' + esc(LSX.shift), 'success');
+      if (act === 'lsx-pause') return setRun('paused', 'Đã <b>tạm dừng</b> lệnh ' + esc(LSX.id) + ' lúc ' + nowHM(), 'warning');
+      if (act === 'lsx-stop') {
+        return ERPInteract.showModal({
+          title: '■ Kết thúc lệnh ' + LSX.id,
+          body: '<p>Kết thúc lệnh sẽ chốt số liệu các bước và khoá nhập liệu. Bạn chắc chắn?</p>',
+          primaryText: 'Kết thúc lệnh', secondaryText: 'Quay lại',
+          onPrimary: function () { setRun('done', 'Đã <b>kết thúc</b> lệnh ' + esc(LSX.id) + ' · đạt ' + nf(doneQty()) + '/' + nf(LSX.qty) + ' ' + esc(LSX.unit), 'success'); }
+        });
+      }
+      if (act === 'sc-open') return openSuCo();
+      if (act === 'nvl-open') return openNVL();
+      if (act === 'tp-open') return openTP();
+      if (act === 'print-lsx') return printLSX();
+      if (act === 'print-tem') return printTem();
+      if (act === 'stp-start') return stepStart(btn.getAttribute('data-step'));
+      if (act === 'stp-end') return stepEnd(btn.getAttribute('data-step'));
+      if (act === 'stp-save') return stepSave(btn.getAttribute('data-step'), btn.closest('.stp'));
+    }
+    var tr = e.target.closest('[data-row-drill]');
+    if (tr && !e.target.closest('a')) openDrill(tr.getAttribute('data-row-drill'));
+  }
+
+  var booted = false;
+  function boot() {
+    if (booted) return;
+    if (!document.getElementById('lsxBar')) return;
+    booted = true;
+    LSX = pickLSX();
+    ST = loadState();
+    document.title = LSX.id + ' · Lệnh sản xuất — ERP NHÔM OWIN';
+    renderAll();
+    document.addEventListener('click', onClick);
+  }
+
+  document.addEventListener('erp:ready', boot);
+  document.addEventListener('DOMContentLoaded', function () { setTimeout(boot, 80); });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lịch sử xuất nhập kho — ERP NHÔM OWIN</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/css/style.css" />
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+  <style>
+    .tab.active { background: var(--canvas); color: var(--ink); box-shadow: 0 1px 0 var(--rule); }
+    .att-input { padding:8px 10px; border:1px solid var(--rule); border-radius:8px; font-size:13px; font-family:inherit; background:var(--canvas); color:var(--ink); }
+    .xnk-scroll thead th { position:sticky; top:0; background:var(--paper-2); z-index:1; }
+    [data-tab-pane="tab-ls"] .tbl { min-width:1040px; }
+    [data-tab-pane="tab-ls"] .tbl td:nth-child(1),
+    [data-tab-pane="tab-ls"] .tbl td:nth-child(2),
+    [data-tab-pane="tab-ls"] .tbl td:nth-child(4) { white-space:nowrap; }
+  </style>
+</head>
+<body>
+
+<div id="app-shell" data-active="kho-lichsu" data-title="Lịch sử xuất nhập kho" data-crumb="<b>Kho</b> · Lịch sử xuất nhập kho">
+
+  <div class="page-header">
+    <div>
+      <h1>Lịch sử xuất nhập kho</h1>
+      <p>Toàn bộ phiếu nhập · xuất · điều chuyển · kiểm kê của kho nhôm – kính, bán thành phẩm và thành phẩm</p>
+    </div>
+    <div class="actions">
+      <button class="btn btn-secondary"><i data-lucide="download" style="width:14px;height:14px"></i> Xuất Excel</button>
+      <button class="btn btn-primary"><i data-lucide="file-plus-2" style="width:14px;height:14px"></i> Tạo phiếu kho</button>
+    </div>
+  </div>
+
+  <!-- KPI -->
+  <div class="grid grid-4 mb-4">
+    <div class="card-feature-blue"><div class="t-micro-u" style="color:var(--steel)">PHIẾU KHO T6</div><div class="t-h2 mt-1">186</div><div class="t-caption" style="color:var(--steel)">tất cả các kho</div></div>
+    <div class="card-feature-teal"><div class="t-micro-u" style="color:var(--moss-deep)">GIÁ TRỊ NHẬP</div><div class="t-h2 mt-1">2.86<span style="font-size:15px"> tỷ</span></div><div class="t-caption" style="color:var(--moss-deep)">82 phiếu nhập</div></div>
+    <div class="card-feature-yellow"><div class="t-micro-u" style="color:var(--rust-deep)">GIÁ TRỊ XUẤT</div><div class="t-h2 mt-1">2.41<span style="font-size:15px"> tỷ</span></div><div class="t-caption" style="color:var(--rust-deep)">88 phiếu xuất</div></div>
+    <div class="card-feature-coral"><div class="t-micro-u" style="color:var(--coral-dark)">ĐIỀU CHUYỂN</div><div class="t-h2 mt-1">16</div><div class="t-caption" style="color:var(--coral-dark)">giữa các kho</div></div>
+  </div>
+
+  <!-- Tabs -->
+  <div data-tab-group>
+  <div class="tabs view-tabs mb-4">
+    <button class="tab active" data-tab="tab-ls"><i data-lucide="history" style="width:14px;height:14px;vertical-align:-2px"></i> Lịch sử xuất nhập</button>
+    <button class="tab" data-tab="tab-bc"><i data-lucide="bar-chart-3" style="width:14px;height:14px;vertical-align:-2px"></i> Báo cáo</button>
+  </div>
+
+  <!-- ===== LỊCH SỬ ===== -->
+  <div data-tab-pane="tab-ls">
+    <div class="card mb-4">
+      <div class="flex-between mb-3">
+        <div>
+          <div class="t-h5"><i data-lucide="history" style="width:16px;height:16px"></i> Lịch sử xuất nhập · tất cả kho</div>
+          <div class="t-caption mt-1">Lọc theo kho · loại phiếu · khoảng thời gian</div>
+        </div>
+      </div>
+      <!-- Bộ lọc -->
+      <div class="flex mb-3" style="gap:8px;flex-wrap:wrap">
+        <div style="position:relative;flex:1;min-width:200px">
+          <i data-lucide="search" style="width:14px;height:14px;position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--ash)"></i>
+          <input id="xnkSearch" class="att-input" type="text" placeholder="Tìm số phiếu / vật tư / lệnh SX / người…" style="width:100%;padding-left:30px">
+        </div>
+        <select id="xnkKho" class="att-input">
+          <option value="">Tất cả kho</option>
+          <option>Kho vật tư nhôm – kính</option><option>Kho bán thành phẩm</option><option>Kho thành phẩm</option><option>Kho vật liệu tiêu hao</option><option>Kho công cụ dụng cụ</option>
+        </select>
+        <select id="xnkLoai" class="att-input">
+          <option value="">Mọi loại</option><option>Nhập</option><option>Xuất</option><option>Điều chuyển</option><option>Kiểm kê</option>
+        </select>
+        <input id="xnkFrom" class="att-input" type="date" value="2026-06-01" title="Từ ngày">
+        <input id="xnkTo" class="att-input" type="date" value="2026-06-21" title="Đến ngày">
+      </div>
+      <div class="table-wrap xnk-scroll" style="border:none;max-height:520px;overflow:auto">
+        <table class="tbl">
+          <thead><tr>
+            <th>Thời gian</th><th>Số phiếu</th><th>Kho</th><th>Loại</th><th>Vật tư / Hàng</th><th class="num">Số lượng</th><th>Người thực hiện</th><th>Tham chiếu</th><th>Cảnh báo</th>
+          </tr></thead>
+          <tbody id="xnkTbody"></tbody>
+        </table>
+      </div>
+      <div class="t-caption mt-2" id="xnkCount"></div>
+    </div>
+  </div>
+
+  <!-- ===== BÁO CÁO ===== -->
+  <div data-tab-pane="tab-bc" style="display:none">
+    <div class="grid grid-12 mb-4">
+      <div class="card">
+        <div class="t-h5 mb-3"><i data-lucide="bar-chart-3" style="width:16px;height:16px"></i> Số phiếu theo kho · T6/2026</div>
+        <div id="chartKho" style="min-height:240px"></div>
+      </div>
+      <div class="card">
+        <div class="t-h5 mb-3"><i data-lucide="trending-up" style="width:16px;height:16px"></i> Giá trị Nhập vs Xuất 6 tháng (tỷ ₫)</div>
+        <div id="chartNX" style="min-height:240px"></div>
+      </div>
+    </div>
+    <div class="card mb-6">
+      <div class="t-h5 mb-3"><i data-lucide="table-2" style="width:16px;height:16px"></i> Tổng hợp xuất nhập theo kho · T6/2026</div>
+      <div class="table-wrap" style="border:none">
+        <table class="tbl">
+          <thead><tr><th>Kho</th><th class="num">Phiếu nhập</th><th class="num">Phiếu xuất</th><th class="num">Điều chuyển</th><th class="num">Giá trị nhập (₫)</th><th class="num">Giá trị xuất (₫)</th></tr></thead>
+          <tbody>
+            <tr><td>Kho vật tư nhôm – kính</td><td class="num">34</td><td class="num">41</td><td class="num">6</td><td class="num">1.520.000.000</td><td class="num">1.280.000.000</td></tr>
+            <tr><td>Kho bán thành phẩm</td><td class="num">18</td><td class="num">22</td><td class="num">8</td><td class="num">735.000.000</td><td class="num">648.000.000</td></tr>
+            <tr><td>Kho thành phẩm</td><td class="num">16</td><td class="num">14</td><td class="num">0</td><td class="num">486.000.000</td><td class="num">412.000.000</td></tr>
+            <tr><td>Kho vật liệu tiêu hao</td><td class="num">9</td><td class="num">7</td><td class="num">1</td><td class="num">38.000.000</td><td class="num">42.000.000</td></tr>
+            <tr><td>Kho công cụ dụng cụ</td><td class="num">5</td><td class="num">4</td><td class="num">1</td><td class="num">82.000.000</td><td class="num">48.000.000</td></tr>
+          </tbody>
+          <tfoot>
+            <tr style="background:var(--ink);color:#fff"><td><b style="color:#fff">Tổng</b></td><td class="num" style="color:#fff"><b>82</b></td><td class="num" style="color:#fff"><b>88</b></td><td class="num" style="color:#fff"><b>16</b></td><td class="num" style="color:var(--brand-yellow)"><b>2.861.000.000</b></td><td class="num" style="color:var(--brand-yellow)"><b>2.430.000.000</b></td></tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+  </div>
+  </div><!-- /tab-group -->
+
+</div>
+
+<script src="../assets/js/layout.js"></script>
+<script src="../assets/js/pricing-engine.js"></script>
+<script src="../assets/js/quote-data.js"></script>
+<script src="../assets/js/loss-data.js"></script>
+<script src="../assets/js/loss-ui.js"></script>
+<script>
+  document.addEventListener('erp:ready', () => {
+    /* ngày dạng yyyy-mm-dd để so sánh; hiển thị dd/mm */
+    const XNK = [
+      ['2026-06-21 09:42','PN-0612','Kho vật tư nhôm – kính','Nhập','Thanh nhôm hệ thuỷ lực 120 (6063-T5)','+12.000 kg','Thủ kho nhôm – kính','NCC Đùn ép Nhôm Đông Anh',''],
+      ['2026-06-21 08:15','PX-0588','Kho vật tư nhôm – kính','Xuất','Bộ bản lề thuỷ lực sàn (Đức)','−18 bộ','Thủ kho nhôm – kính','LSX-0319',''],
+      ['2026-06-20 16:30','PC-0142','Kho bán thành phẩm','Điều chuyển','Lô BTP-2261 · Nhôm thanh đã kiểm','3.200 kg','Tổ cắt CNC','→ Kho BTP','red|Hao cắt vượt ĐM +2,4%'],
+      ['2026-06-20 14:05','PN-0610','Kho thành phẩm','Nhập','Cửa thuỷ lực hệ 120 · 2 cánh (TP)','+8 bộ','Thủ kho TP','LSX-0319','green|Xong sớm 1 ngày'],
+      ['2026-06-20 10:20','PX-0585','Kho vật liệu tiêu hao','Xuất','Keo silicon trung tính','−48 tuýp','Tổ ép góc – lắp ráp','LSX-0331',''],
+      ['2026-06-19 15:48','PX-0582','Kho thành phẩm','Xuất','Vách kính khung nhôm Luxanode (TP)','−46 m²','Thủ kho TP','DH-0350 · Nhôm kính Phương Trang',''],
+      ['2026-06-19 11:10','PC-0140','Kho công cụ dụng cụ','Điều chuyển','Giác hút kính (2 bát)','1 bộ','Tổ hoàn thiện – đóng kiện','Cấp ra xưởng','red|1 bộ mất chân không'],
+      ['2026-06-19 08:40','PN-0608','Kho vật tư nhôm – kính','Nhập','Kính hộp 5-9-5 cường lực','+480 m²','Thủ kho nhôm – kính','NCC Kính Việt Nhật Hải Long',''],
+      ['2026-06-18 17:02','PK-0031','Kho vật tư nhôm – kính','Kiểm kê','Thanh nhôm Luxanode Anodized-ED 121','±0 kg','Kế toán kho','Kiểm kê định kỳ','green|Khớp sổ 100%'],
+      ['2026-06-18 13:25','PX-0579','Kho công cụ dụng cụ','Xuất','Đá cắt nhôm Ø355 (thay mới)','−6 viên','Tổ cắt CNC','Thay đá mòn máy CAT-01',''],
+      ['2026-06-17 09:55','PN-0605','Kho vật liệu tiêu hao','Nhập','Băng keo bảo vệ bề mặt nhôm','+60 cuộn','Tổ hoàn thiện – đóng kiện','NCC Bao bì Phú Mỹ',''],
+      ['2026-06-16 14:30','PX-0571','Kho bán thành phẩm','Xuất','Lô BTP-2255 · Thanh vòm đã uốn → ép góc','24 thanh','Thợ uốn vòm','LSX-0341','red|3 thanh nứt khi uốn'],
+    ];
+    /* chứng từ · lệnh SX · đơn hàng là liên kết bản ghi */
+    const ctLink = ct => /^PN/.test(ct) ? `<a href="05-kho.html?pnk=${encodeURIComponent(ct)}" class="lnk">${ct}</a>`
+      : /^(PX|PC|PK)/.test(ct) ? `<a href="05-kho.html?pxk=${encodeURIComponent(ct)}" class="lnk">${ct}</a>` : ct;
+    const refLink = ref => String(ref)
+      .replace(/(LSX-\d+)/g, m => `<a href="06-lsx-phieu-cong-nghe.html?id=${m}" class="lnk">${m}</a>`)
+      .replace(/(DH-\d+)/g, m => `<a href="03-don-hang.html?order=${m}" class="lnk">${m}</a>`);
+    /* Cảnh báo CHỌN LỌC: chỉ vài dòng có giá trị đỏ / xanh, còn lại "—" */
+    const flagCell = f => {
+      if (!f) return '<span style="color:var(--ash-3)">—</span>';
+      const [k, t] = String(f).split('|');
+      return k === 'red' ? `<span style="color:#8a1f1f;font-weight:700">${t}</span>` : `<span style="color:#1f6b3a;font-weight:700">${t}</span>`;
+    };
+    const loaiBadge = l => l==='Nhập' ? '<span class="badge badge-moss">Nhập</span>'
+      : l==='Xuất' ? '<span class="badge status-overdue">Xuất</span>'
+      : l==='Điều chuyển' ? '<span class="badge badge-orange">Điều chuyển</span>'
+      : '<span class="badge badge-steel">Kiểm kê</span>';
+    const ddmm = d => { const [y,m,da]=d.split(' ')[0].split('-'); return `${da}/${m} ${d.split(' ')[1]}`; };
+
+    const tbody = document.getElementById('xnkTbody');
+    const search = document.getElementById('xnkSearch');
+    const fKho = document.getElementById('xnkKho');
+    const fLoai = document.getElementById('xnkLoai');
+    const fFrom = document.getElementById('xnkFrom');
+    const fTo = document.getElementById('xnkTo');
+    const count = document.getElementById('xnkCount');
+
+    function apply(){
+      const q=(search?.value||'').toLowerCase().trim(), k=fKho?.value||'', l=fLoai?.value||'';
+      const from=fFrom?.value||'', to=fTo?.value||'';
+      const list = XNK.filter(r=>{
+        const day = r[0].split(' ')[0];
+        return (!q || (r[1]+r[4]+r[6]+r[7]).toLowerCase().includes(q)) &&
+          (!k || r[2]===k) && (!l || r[3]===l) &&
+          (!from || day>=from) && (!to || day<=to);
+      });
+      tbody.innerHTML = list.length ? list.map(r=>`<tr>
+        <td>${ddmm(r[0])}</td><td><b>${ctLink(r[1])}</b></td><td>${r[2]}</td><td>${loaiBadge(r[3])}</td>
+        <td>${r[4]}</td><td class="num">${r[5]}</td><td>${r[6]}</td><td class="t-caption">${refLink(r[7])}</td><td>${flagCell(r[8])}</td>
+      </tr>`).join('') : `<tr><td colspan="9" style="text-align:center;color:var(--ash);padding:18px">Không có phiếu phù hợp bộ lọc</td></tr>`;
+      if(window.lucide) window.lucide.createIcons();
+      if(count) count.textContent = `Hiển thị ${list.length}/${XNK.length} phiếu (demo) · dữ liệu thật phân trang theo ngày`;
+    }
+    [search,fKho,fLoai,fFrom,fTo].forEach(el=>{ el?.addEventListener('input', apply); el?.addEventListener('change', apply); });
+    apply();
+
+    let drawn=false;
+    function draw(){
+      if(drawn) return; drawn=true;
+      ERPCharts.bar('chartKho', { labels:['Nhôm – kính','BTP','TP','Tiêu hao','CCDC'], values:[81,48,30,17,10], colors:['#c5400a','#9c7714','#2f5d3a','#4a5560','#8a1f1f'] }, { height:240, unit:' phiếu' });
+      ERPCharts.groupedBar('chartNX', {
+        labels:['T1','T2','T3','T4','T5','T6'],
+        datasets:[ {name:'Nhập', values:[2.42,2.31,2.58,2.46,2.72,2.86], color:'#2f5d3a'}, {name:'Xuất', values:[2.05,2.12,2.24,2.18,2.33,2.41], color:'#c5400a'} ],
+      }, { height:240, unit:' tỷ' });
+    }
+    document.querySelector('[data-tab="tab-bc"]')?.addEventListener('click', ()=> setTimeout(draw, 60));
+  });
+</script>
+</body>
+</html>

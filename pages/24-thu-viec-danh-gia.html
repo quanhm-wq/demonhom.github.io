@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Thử việc &amp; Đánh giá — ERP NHÔM OWIN</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/css/style.css" />
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+  <style>
+    .tbl tbody tr[data-tv] { cursor:pointer; }
+
+    /* Profile head (reuse from 22) */
+    .pf-head { display:flex; gap:14px; align-items:center; }
+    .pf-avatar { width:52px; height:52px; border-radius:12px; background:var(--ink); color:var(--paper); display:inline-flex; align-items:center; justify-content:center; font-size:18px; font-weight:600; flex-shrink:0; letter-spacing:.02em; }
+
+    /* Info rows trong drawer */
+    .pf-info-row { display:flex; justify-content:space-between; gap:12px; padding:9px 0; border-bottom:1px solid var(--rule-hair); font-size:13px; }
+    .pf-info-row:last-child{ border-bottom:0; }
+    .pf-info-row .k { color:var(--ash); flex-shrink:0; }
+    .pf-info-row .v { font-weight:500; text-align:right; }
+
+    /* Alert box — sắp hết hạn */
+    .alert-box { background:var(--rust-soft); border:1px solid rgba(197,64,10,.28); border-left:4px solid var(--rust); border-radius:12px; padding:14px 16px; }
+    .alert-row { display:flex; align-items:center; gap:12px; padding:10px 0; border-bottom:1px dashed rgba(197,64,10,.25); }
+    .alert-row:last-child{ border-bottom:0; }
+    .alert-row .nm { font-weight:600; font-size:13.5px; }
+    .alert-row .meta { font-size:12px; color:var(--rust-deep); }
+    .alert-row .acts { margin-left:auto; display:flex; gap:7px; flex-shrink:0; }
+
+    /* Evaluation criteria row */
+    .crit { display:flex; align-items:center; gap:10px; padding:9px 0; border-bottom:1px solid var(--rule-hair); }
+    .crit:last-child{ border-bottom:0; }
+    .crit .cl { font-size:13px; flex:1; min-width:0; }
+    .crit .cl small { display:block; color:var(--ash); font-size:11px; }
+    .dots { display:flex; gap:5px; flex-shrink:0; }
+    .dot5 { width:14px; height:14px; border-radius:50%; background:var(--paper-3); border:1px solid var(--rule-soft); }
+    .dot5.on { background:var(--moss); border-color:var(--moss); }
+    .dot5.warn { background:var(--amber); border-color:var(--amber); }
+    .dot5.bad { background:var(--signal); border-color:var(--signal); }
+    .crit .pt { width:34px; text-align:right; font-weight:600; font-size:13px; color:var(--ink); flex-shrink:0; }
+
+    /* Timeline */
+    .tl { position:relative; padding-left:22px; }
+    .tl::before { content:""; position:absolute; left:6px; top:4px; bottom:4px; width:2px; background:var(--rule-soft); }
+    .tl-item { position:relative; padding:0 0 14px 4px; }
+    .tl-item:last-child{ padding-bottom:0; }
+    .tl-item .tdot { position:absolute; left:-19px; top:3px; width:12px; height:12px; border-radius:50%; background:var(--paper); border:2px solid var(--ash-2); }
+    .tl-item.done .tdot { background:var(--moss); border-color:var(--moss); }
+    .tl-item.now  .tdot { background:var(--rust); border-color:var(--rust); box-shadow:0 0 0 3px var(--rust-soft); }
+    .tl-item .td { font-size:11px; color:var(--ash); }
+    .tl-item .tt { font-size:13px; font-weight:500; }
+    .tl-item .tsub { font-size:11.5px; color:var(--ash); }
+
+    /* Mini stat */
+    .mstat { text-align:center; padding:10px 6px; border:1px solid var(--rule-soft); border-radius:10px; }
+    .mstat .mv { font-size:20px; font-weight:600; line-height:1.1; }
+    .mstat .mk { font-size:10.5px; color:var(--ash); margin-top:3px; }
+
+    .total-box { background:var(--paper-2); border:1px solid var(--rule-soft); border-radius:10px; padding:12px 14px; }
+
+    /* Drawer — trượt từ phải, cuộn dọc (copy từ 22/23) */
+    .drawer-overlay { position:fixed; inset:0; background:rgba(20,19,15,.42); backdrop-filter:blur(2px); z-index:80; opacity:0; pointer-events:none; transition:opacity .2s ease; }
+    .drawer-overlay.open { opacity:1; pointer-events:auto; }
+    .drawer { position:fixed; top:0; right:0; height:100vh; width:480px; max-width:94vw; background:var(--canvas); border-left:1px solid var(--rule); box-shadow:-12px 0 32px rgba(20,19,15,.16); z-index:81; transform:translateX(100%); transition:transform .26s cubic-bezier(.2,.8,.2,1); overflow-y:auto; padding:20px 22px 36px; }
+    .drawer.open { transform:translateX(0); }
+    .drawer::-webkit-scrollbar { width:8px; }
+    .drawer::-webkit-scrollbar-thumb { background:var(--rule); border-radius:9999px; }
+    .drawer-close { position:absolute; top:14px; right:14px; z-index:2; }
+  </style>
+</head>
+<body>
+
+<div id="app-shell" data-active="hr-danhgia" data-title="Thử việc &amp; Đánh giá" data-crumb="<b>Nhân sự</b> · Thử việc &amp; Đánh giá">
+
+  <div class="page-header">
+    <div>
+      <h1>Thử việc &amp; Đánh giá</h1>
+      <p>6 đang thử việc · 2 sắp hết hạn cần quyết định · tỷ lệ đạt 83% · hôm nay 20/06/2026</p>
+    </div>
+    <div class="actions">
+      <button class="btn btn-secondary"><i data-lucide="file-down" style="width:14px;height:14px"></i> Xuất biểu mẫu</button>
+      <button class="btn btn-primary" id="dg-add-btn"><i data-lucide="clipboard-pen" style="width:14px;height:14px"></i> Tạo phiếu đánh giá</button>
+    </div>
+  </div>
+
+  <!-- KPI -->
+  <div class="grid grid-4 mb-4">
+    <div class="card-feature-orange">
+      <div class="t-micro-u" style="color:var(--amber)">ĐANG THỬ VIỆC</div>
+      <div class="t-h2 mt-1">6</div>
+      <div class="t-caption" style="color:var(--amber)">Thử việc 1 tháng</div>
+    </div>
+    <div class="card-feature-yellow">
+      <div class="t-micro-u" style="color:var(--rust-deep)">SẮP HẾT HẠN — CẦN QUYẾT ĐỊNH</div>
+      <div class="t-h2 mt-1">2</div>
+      <div class="t-caption" style="color:var(--rust-deep)">Hệ thống tự cảnh báo</div>
+    </div>
+    <div class="card-feature-teal">
+      <div class="t-micro-u" style="color:var(--moss-deep)">ĐÃ ĐÁNH GIÁ THÁNG NÀY</div>
+      <div class="t-h2 mt-1">4</div>
+      <div class="t-caption" style="color:var(--moss-deep)">3 đạt · 1 không đạt</div>
+    </div>
+    <div class="card-feature-blue">
+      <div class="t-micro-u" style="color:var(--steel)">TỶ LỆ ĐẠT</div>
+      <div class="t-h2 mt-1">83%</div>
+      <div class="t-caption" style="color:var(--steel)">12 tháng gần nhất</div>
+    </div>
+  </div>
+
+  <!-- Cảnh báo sắp hết hạn -->
+  <div class="alert-box mb-4">
+    <div class="flex" style="gap:8px;align-items:center;margin-bottom:6px">
+      <i data-lucide="alert-triangle" style="width:18px;height:18px;color:var(--rust)"></i>
+      <span class="t-h5" style="color:var(--rust-deep)">Sắp hết hạn thử việc — cần quyết định nhận</span>
+      <span class="badge badge-rust" style="margin-left:auto">2 nhân sự</span>
+    </div>
+    <div class="alert-row">
+      <div class="pf-avatar" style="width:40px;height:40px;font-size:14px;background:var(--rust)">LN</div>
+      <div style="min-width:0">
+        <div class="nm">Lê Hoàng Nam <span class="t-caption" style="font-weight:400">· NV-042</span></div>
+        <div class="meta">Ép góc · Công nhân (Tổ 3) · vào 21/05/2026 · hết TV <b>24/06/2026 (còn 3 ngày)</b></div>
+      </div>
+      <div class="acts">
+        <button class="btn btn-primary btn-sm" onclick="ERPInteract&&ERPInteract.showToast&&ERPInteract.showToast('Đã nhận chính thức Lê Hoàng Nam (mô phỏng)','success')"><i data-lucide="user-check" style="width:13px;height:13px"></i> Nhận chính thức</button>
+        <button class="btn btn-secondary btn-sm" onclick="ERPInteract&&ERPInteract.showToast&&ERPInteract.showToast('Đã đánh dấu không nhận (mô phỏng)')">Không nhận</button>
+      </div>
+    </div>
+    <div class="alert-row">
+      <div class="pf-avatar" style="width:40px;height:40px;font-size:14px;background:var(--rust)">TH</div>
+      <div style="min-width:0">
+        <div class="nm">Phạm Thu Hà <span class="t-caption" style="font-weight:400">· NV-041</span></div>
+        <div class="meta">Văn phòng · Kế toán kho · vào 19/05/2026 · hết TV <b>26/06/2026 (còn 5 ngày)</b></div>
+      </div>
+      <div class="acts">
+        <button class="btn btn-primary btn-sm" onclick="ERPInteract&&ERPInteract.showToast&&ERPInteract.showToast('Đã nhận chính thức Phạm Thu Hà (mô phỏng)','success')"><i data-lucide="user-check" style="width:13px;height:13px"></i> Nhận chính thức</button>
+        <button class="btn btn-secondary btn-sm" onclick="ERPInteract&&ERPInteract.showToast&&ERPInteract.showToast('Đã đánh dấu không nhận (mô phỏng)')">Không nhận</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Danh sách thử việc — bảng full-width, bấm 1 dòng mở drawer -->
+  <div class="flex-between mb-2">
+    <div class="t-h5">Danh sách thử việc</div>
+    <div class="flex" style="gap:8px;flex-wrap:wrap">
+      <span class="filter-pill"><i data-lucide="building-2" style="width:13px;height:13px"></i> Bộ phận <i data-lucide="chevron-down" style="width:13px;height:13px"></i></span>
+      <span class="filter-pill"><i data-lucide="filter" style="width:13px;height:13px"></i> Trạng thái <i data-lucide="chevron-down" style="width:13px;height:13px"></i></span>
+    </div>
+  </div>
+  <div class="table-wrap">
+    <table class="tbl">
+      <thead>
+        <tr>
+          <th>Mã NV</th>
+          <th>Họ tên</th>
+          <th>Bộ phận · Vị trí</th>
+          <th class="num">Bắt đầu</th>
+          <th class="num">Kết thúc TV</th>
+          <th style="min-width:120px">Tiến độ TV</th>
+          <th>Hướng dẫn</th>
+          <th>Trạng thái</th>
+          <th>Cảnh báo</th>
+          <th class="center">Chi tiết</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr data-tv="NV-042">
+          <td><a href="22-nhan-su-ho-so.html?nv=NV-042" class="lnk"><b>NV-042</b></a></td>
+          <td>Lê Hoàng Nam</td>
+          <td>Hoàn thiện · Thợ đóng kiện<div class="t-caption">Tổ 3 (Đóng kiện)</div></td>
+          <td class="num">21/05/2026</td>
+          <td class="num">24/06/2026</td>
+          <td><div class="progress danger"><div style="width:90%"></div></div><div class="t-caption">90% · còn 3 ngày</div></td>
+          <td>Trần Văn Tú</td>
+          <td><span class="badge status-warning">Sắp hết hạn</span></td>
+          <td><span style="color:#8a1f1f;font-weight:700">Quá hạn quyết định · còn 3 ngày</span></td>
+          <td class="center"><i data-lucide="chevron-right" style="width:16px;height:16px;color:var(--ash-2)"></i></td>
+        </tr>
+        <tr data-tv="NV-041">
+          <td><a href="22-nhan-su-ho-so.html?nv=NV-041" class="lnk"><b>NV-041</b></a></td>
+          <td>Phạm Thu Hà</td>
+          <td>Văn phòng · Kế toán kho<div class="t-caption">Ca ngày</div></td>
+          <td class="num">19/05/2026</td>
+          <td class="num">26/06/2026</td>
+          <td><div class="progress warn"><div style="width:84%"></div></div><div class="t-caption">84% · còn 5 ngày</div></td>
+          <td>Đặng Thị Bích</td>
+          <td><span class="badge status-warning">Sắp hết hạn</span></td>
+          <td><span style="color:var(--rule)">—</span></td>
+          <td class="center"><i data-lucide="chevron-right" style="width:16px;height:16px;color:var(--ash-2)"></i></td>
+        </tr>
+        <tr data-tv="NV-040">
+          <td><a href="22-nhan-su-ho-so.html?nv=NV-040" class="lnk"><b>NV-040</b></a></td>
+          <td>Võ Minh Khôi</td>
+          <td>Ép góc · Phụ máy ép góc<div class="t-caption">Tổ 2 · Máy <a href="17-may-moc.html?may=EP-02" class="lnk">EP-02</a></div></td>
+          <td class="num">02/06/2026</td>
+          <td class="num">02/07/2026</td>
+          <td><div class="progress"><div style="width:60%"></div></div><div class="t-caption">60% · còn 12 ngày</div></td>
+          <td>Hoàng Văn Sơn</td>
+          <td><span class="badge badge-orange">Đang TV</span></td>
+          <td><span style="color:#8a1f1f;font-weight:700">Lỗi ép góc 5,2% · cân nhắc không nhận</span></td>
+          <td class="center"><i data-lucide="chevron-right" style="width:16px;height:16px;color:var(--ash-2)"></i></td>
+        </tr>
+        <tr data-tv="NV-039">
+          <td><a href="22-nhan-su-ho-so.html?nv=NV-039" class="lnk"><b>NV-039</b></a></td>
+          <td>Nguyễn Thị Diễm</td>
+          <td>KCS · KCS nhôm kính<div class="t-caption">Ca ngày</div></td>
+          <td class="num">05/06/2026</td>
+          <td class="num">05/07/2026</td>
+          <td><div class="progress"><div style="width:50%"></div></div><div class="t-caption">50% · còn 15 ngày</div></td>
+          <td>Nguyễn Thị Mai</td>
+          <td><span class="badge badge-orange">Đang TV</span></td>
+          <td><span style="color:var(--rule)">—</span></td>
+          <td class="center"><i data-lucide="chevron-right" style="width:16px;height:16px;color:var(--ash-2)"></i></td>
+        </tr>
+        <tr data-tv="NV-038">
+          <td><a href="22-nhan-su-ho-so.html?nv=NV-038" class="lnk"><b>NV-038</b></a></td>
+          <td>Lý Quốc Đạt</td>
+          <td>Cắt CNC · Phụ máy<div class="t-caption">Máy <a href="17-may-moc.html?may=CAT-02" class="lnk">CAT-02</a></div></td>
+          <td class="num">28/05/2026</td>
+          <td class="num">28/06/2026</td>
+          <td><div class="progress warn"><div style="width:74%"></div></div><div class="t-caption">74% · còn 8 ngày</div></td>
+          <td>Đỗ Văn Minh</td>
+          <td><span class="badge badge-orange">Đang TV</span></td>
+          <td><span style="color:var(--rule)">—</span></td>
+          <td class="center"><i data-lucide="chevron-right" style="width:16px;height:16px;color:var(--ash-2)"></i></td>
+        </tr>
+        <tr data-tv="NV-037">
+          <td><a href="22-nhan-su-ho-so.html?nv=NV-037" class="lnk"><b>NV-037</b></a></td>
+          <td>Trương Mỹ Linh</td>
+          <td>Uốn vòm · Thợ uốn vòm<div class="t-caption">Tổ 1 · Máy <a href="17-may-moc.html?may=UON-02" class="lnk">UON-02</a></div></td>
+          <td class="num">10/06/2026</td>
+          <td class="num">10/07/2026</td>
+          <td><div class="progress"><div style="width:33%"></div></div><div class="t-caption">33% · còn 20 ngày</div></td>
+          <td>Hoàng Văn Sơn</td>
+          <td><span class="badge badge-orange">Đang TV</span></td>
+          <td><span style="color:var(--rule)">—</span></td>
+          <td class="center"><i data-lucide="chevron-right" style="width:16px;height:16px;color:var(--ash-2)"></i></td>
+        </tr>
+        <tr data-tv="NV-036" style="opacity:.7">
+          <td><a href="22-nhan-su-ho-so.html?nv=NV-036" class="lnk"><b>NV-036</b></a></td>
+          <td>Phan Văn Hậu</td>
+          <td>Kho · Phụ kho nhôm – kính<div class="t-caption">Kho nhôm thanh</div></td>
+          <td class="num">12/05/2026</td>
+          <td class="num">12/06/2026</td>
+          <td><div class="progress success"><div style="width:100%"></div></div><div class="t-caption">Đã hoàn tất TV</div></td>
+          <td>Trần Quốc Bảo</td>
+          <td><span class="badge badge-steel">Đã đánh giá</span></td>
+          <td><span style="color:#1f6b3a;font-weight:700">Đạt 8,6/10 · đã nhận chính thức</span></td>
+          <td class="center"><i data-lucide="chevron-right" style="width:16px;height:16px;color:var(--ash-2)"></i></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="t-caption mt-2"><i data-lucide="info" style="width:13px;height:13px;vertical-align:-2px"></i> Bấm vào một nhân viên để xem phiếu đánh giá thử việc của người đó.</div>
+
+  <!-- Drawer phiếu đánh giá — hiện khi bấm 1 dòng -->
+  <div class="drawer-overlay" id="dg-overlay"></div>
+  <aside class="drawer" id="dg-drawer" aria-hidden="true">
+    <button class="btn-icon drawer-close" id="dg-close" title="Đóng"><i data-lucide="x" style="width:18px;height:18px"></i></button>
+    <div id="dg-body"></div>
+  </aside>
+
+  <!-- Drawer form tạo phiếu đánh giá -->
+  <div class="drawer-overlay" id="fm-overlay"></div>
+  <aside class="drawer" id="fm-drawer" aria-hidden="true">
+    <button class="btn-icon drawer-close" id="fm-close" title="Đóng"><i data-lucide="x" style="width:18px;height:18px"></i></button>
+    <div id="fm-body"></div>
+  </aside>
+
+  <div style="text-align:center;padding:16px">
+    <div class="sticky teal"><i data-lucide="link" style="width:14px;height:14px"></i> Đạt thử việc → tự đẩy sang Hồ sơ chính thức, tạo Hợp đồng lao động và khởi tạo bậc lương – KPI · một luồng liên thông</div>
+  </div>
+
+</div>
+
+<script src="../assets/js/layout.js"></script>
+<script src="../assets/js/pricing-engine.js"></script>
+<script src="../assets/js/quote-data.js"></script>
+<script src="../assets/js/loss-data.js"></script>
+<script src="../assets/js/loss-ui.js"></script>
+<script>
+  document.addEventListener('erp:ready', () => {
+
+    /* ===== Bộ biểu mẫu tiêu chí theo bộ phận ===== */
+    const FORMS = {
+      sanxuat: { label:'Sản xuất (Cắt CNC / Uốn vòm / Ép góc)', crit:[
+        ['Chấp hành nội quy','Giờ giấc, đồng phục, an toàn xưởng'],
+        ['An toàn lao động','Tuân thủ quy trình, dùng bảo hộ'],
+        ['Tay nghề / thao tác máy','Vận hành máy, xử lý sự cố'],
+        ['Năng suất','Sản lượng đạt định mức tổ'],
+        ['Chất lượng sản phẩm','Tỷ lệ lỗi, hàng đạt yêu cầu'],
+        ['Đúng giờ – chuyên cần','Ngày công, đi trễ'],
+        ['Tinh thần phối hợp','Hỗ trợ đồng đội, tiếp thu'],
+      ], radar:['Nội quy','An toàn','Tay nghề','Năng suất','Chất lượng','Chuyên cần','Phối hợp'] },
+      qa: { label:'KCS nhôm kính', crit:[
+        ['Chấp hành nội quy','Giờ giấc, đồng phục, an toàn xưởng'],
+        ['Hiểu tiêu chuẩn QC','Nắm yêu cầu chất lượng từng đơn'],
+        ['Độ tỉ mỉ – phát hiện lỗi','Soi mối ép góc, lớp anod, kín gioăng, cánh vênh'],
+        ['Tốc độ kiểm hàng','Đạt sản lượng kiểm theo ca'],
+        ['Ghi chép – biên bản','Lập phiếu lỗi, báo cáo rõ ràng'],
+        ['Đúng giờ – chuyên cần','Ngày công, đi trễ'],
+        ['Tinh thần phối hợp','Phản hồi với tổ sản xuất'],
+      ], radar:['Nội quy','Tiêu chuẩn','Tỉ mỉ','Tốc độ','Ghi chép','Chuyên cần','Phối hợp'] },
+      vanphong: { label:'Văn phòng', crit:[
+        ['Chấp hành nội quy','Giờ giấc, tác phong văn phòng'],
+        ['Nghiệp vụ chuyên môn','Kế toán, kho, chứng từ'],
+        ['Sử dụng phần mềm','Excel, phần mềm ERP/kế toán'],
+        ['Tính chính xác','Số liệu, sổ sách không sai sót'],
+        ['Xử lý công việc','Tiến độ, chủ động giải quyết'],
+        ['Đúng giờ – chuyên cần','Ngày công, đi trễ'],
+        ['Giao tiếp – phối hợp','Phối hợp các bộ phận'],
+      ], radar:['Nội quy','Nghiệp vụ','Phần mềm','Chính xác','Xử lý','Chuyên cần','Phối hợp'] },
+    };
+
+    const KETLUAN = {
+      dat:    { lbl:'ĐẠT',          cls:'badge-moss' },
+      khong:  { lbl:'KHÔNG ĐẠT',    cls:'status-overdue' },
+      theodoi:{ lbl:'ĐANG THEO DÕI', cls:'status-warning' },
+    };
+
+    /* ===== Dữ liệu thử việc từng nhân viên (đúng bảng) ===== */
+    const TV = {
+      'NV-042': { ten:'Lê Hoàng Nam', av:'LN', bp:'Ép góc', vitri:'Công nhân (Tổ 3)', form:'sanxuat',
+        batdau:'21/05/2026', ketthuc:'24/06/2026', stBadge:'status-warning', stLbl:'Sắp hết hạn · 3 ngày', hd:'Trần Văn Tú',
+        scores:[4,5,4,3,4,5,4], ketluan:'dat',
+        nhanxet:'Tiếp thu nhanh, chuyên cần tốt, an toàn lao động tốt. Cần cải thiện năng suất để đạt định mức tổ. Đề xuất nhận chính thức.',
+        stats:[['26/26','Ngày công'],['0','Đi trễ / nghỉ KP'],['1','Phiếu lỗi nhỏ'],['98%','Hàng đạt QC']],
+        tl:[
+          ['done','21/05/2026','Tiếp nhận & vào làm','Bàn giao bảo hộ, hồ sơ TV · HD: Trần Văn Tú'],
+          ['done','23–25/05/2026','Đào tạo nhập môn & an toàn','Nội quy xưởng, vận hành máy dán, ATLĐ · đạt'],
+          ['done','31/05/2026','Đánh giá giữa kỳ','Tiếp thu tốt · năng suất 70% định mức'],
+          ['done','07/06/2026','Phiếu lỗi nhỏ — BB-026','Lệch keo lô hộp HP-12, đã khắc phục'],
+          ['now','20/06/2026 · hôm nay','Đánh giá cuối kỳ','Tổng 29/35 (83%) — kết luận ĐẠT'],
+          ['','24/06/2026','Hết hạn thử việc','Cần quyết định: nhận / không nhận'],
+        ] },
+      'NV-041': { ten:'Phạm Thu Hà', av:'TH', bp:'Văn phòng', vitri:'Kế toán kho', form:'vanphong',
+        batdau:'19/05/2026', ketthuc:'26/06/2026', stBadge:'status-warning', stLbl:'Sắp hết hạn · 5 ngày', hd:'Đặng Thị Bích',
+        scores:[5,4,4,4,4,5,4], ketluan:'dat',
+        nhanxet:'Cẩn thận, số liệu chính xác, thành thạo phần mềm kho. Chủ động đối chiếu chứng từ. Đề xuất nhận chính thức.',
+        stats:[['28/28','Ngày công'],['0','Đi trễ / nghỉ KP'],['0','Sai sót sổ sách'],['100%','Chứng từ đúng hạn']],
+        tl:[
+          ['done','19/05/2026','Tiếp nhận & vào làm','Bàn giao tài khoản phần mềm · HD: Đặng Thị Bích'],
+          ['done','21–23/05/2026','Đào tạo nghiệp vụ kho','Quy trình nhập xuất, chứng từ · đạt'],
+          ['done','02/06/2026','Đánh giá giữa kỳ','Nắm nghiệp vụ nhanh · không sai sót'],
+          ['now','20/06/2026 · hôm nay','Đánh giá cuối kỳ','Tổng 30/35 (86%) — kết luận ĐẠT'],
+          ['','26/06/2026','Hết hạn thử việc','Cần quyết định: nhận / không nhận'],
+        ] },
+      'NV-040': { ten:'Võ Minh Khôi', av:'VK', bp:'Hoàn thiện', vitri:'Phụ máy (Tổ 2)', form:'sanxuat',
+        batdau:'02/06/2026', ketthuc:'02/07/2026', stBadge:'badge-orange', stLbl:'Đang TV · còn 12 ngày', hd:'Hoàng Văn Sơn',
+        scores:[4,4,3,3,4,4,4], ketluan:'theodoi',
+        nhanxet:'Chịu khó, đang quen máy ép góc. Tay nghề cần thêm thời gian rèn luyện. Tiếp tục theo dõi đến cuối kỳ.',
+        stats:[['18/18','Ngày công'],['0','Đi trễ / nghỉ KP'],['0','Phiếu lỗi'],['95%','Hàng đạt QC']],
+        tl:[
+          ['done','02/06/2026','Tiếp nhận & vào làm','Bàn giao bảo hộ · HD: Hoàng Văn Sơn'],
+          ['done','04–06/06/2026','Đào tạo nhập môn & an toàn','Vận hành máy ép góc, ATLĐ · đạt'],
+          ['now','20/06/2026 · hôm nay','Đánh giá giữa kỳ','Tổng 26/35 (74%) — đang theo dõi'],
+          ['','02/07/2026','Đánh giá cuối kỳ','Quyết định nhận chính thức'],
+        ] },
+      'NV-039': { ten:'Nguyễn Thị Diễm', av:'ND', bp:'KCS', vitri:'KCS nhôm kính', form:'qa',
+        batdau:'05/06/2026', ketthuc:'05/07/2026', stBadge:'badge-orange', stLbl:'Đang TV · còn 15 ngày', hd:'Nguyễn Thị Mai',
+        scores:[5,4,5,3,4,5,4], ketluan:'theodoi',
+        nhanxet:'Tỉ mỉ, phát hiện lỗi tốt, ghi chép biên bản rõ ràng. Tốc độ kiểm hàng cần nâng để theo kịp ca. Theo dõi tiếp.',
+        stats:[['14/14','Ngày công'],['0','Đi trễ / nghỉ KP'],['12','Lỗi phát hiện'],['—','—']],
+        tl:[
+          ['done','05/06/2026','Tiếp nhận & vào làm','Bàn giao tiêu chuẩn QC · HD: Nguyễn Thị Mai'],
+          ['done','07–09/06/2026','Đào tạo tiêu chuẩn kiểm','Soi mối ép góc / lớp anod / kín gioăng / cánh vênh · đạt'],
+          ['now','20/06/2026 · hôm nay','Đánh giá giữa kỳ','Tổng 30/35 (86%) — đang theo dõi'],
+          ['','05/07/2026','Đánh giá cuối kỳ','Quyết định nhận chính thức'],
+        ] },
+      'NV-038': { ten:'Lý Quốc Đạt', av:'LĐ', bp:'Cắt CNC', vitri:'Phụ máy (CAT-02)', form:'sanxuat',
+        batdau:'28/05/2026', ketthuc:'28/06/2026', stBadge:'badge-orange', stLbl:'Đang TV · còn 8 ngày', hd:'Đỗ Văn Minh',
+        scores:[3,4,3,2,3,3,3], ketluan:'theodoi',
+        nhanxet:'Thái độ ổn nhưng năng suất và chất lượng chưa đạt định mức. Đi trễ 2 buổi. Cần cải thiện rõ trước cuối kỳ, đang theo dõi sát.',
+        stats:[['21/23','Ngày công'],['2','Đi trễ / nghỉ KP'],['3','Phiếu lỗi nhỏ'],['92%','Hàng đạt QC']],
+        tl:[
+          ['done','28/05/2026','Tiếp nhận & vào làm','Bàn giao bảo hộ · HD: Đỗ Văn Minh'],
+          ['done','30/05–01/06/2026','Đào tạo nhập môn & an toàn','Vận hành phụ dây chuyền cắt CNC, ATLĐ · đạt'],
+          ['done','10/06/2026','Đánh giá giữa kỳ','Năng suất thấp · nhắc nhở đi trễ'],
+          ['now','20/06/2026 · hôm nay','Đánh giá cuối kỳ','Tổng 21/35 (60%) — đang theo dõi'],
+          ['','28/06/2026','Hết hạn thử việc','Cần quyết định: nhận / không nhận'],
+        ] },
+      'NV-037': { ten:'Trương Mỹ Linh', av:'TL', bp:'Uốn vòm', vitri:'Công nhân (Tổ 1)', form:'sanxuat',
+        batdau:'10/06/2026', ketthuc:'10/07/2026', stBadge:'badge-orange', stLbl:'Đang TV · còn 20 ngày', hd:'Hoàng Văn Sơn',
+        scores:[4,4,3,3,3,4,4], ketluan:'theodoi',
+        nhanxet:'Mới vào, đang làm quen máy uốn vòm. Thái độ tốt, cần thêm thời gian đánh giá tay nghề và năng suất.',
+        stats:[['9/9','Ngày công'],['0','Đi trễ / nghỉ KP'],['0','Phiếu lỗi'],['96%','Hàng đạt QC']],
+        tl:[
+          ['done','10/06/2026','Tiếp nhận & vào làm','Bàn giao bảo hộ · HD: Hoàng Văn Sơn'],
+          ['done','12–14/06/2026','Đào tạo nhập môn & an toàn','Vận hành máy uốn vòm, ATLĐ · đạt'],
+          ['now','20/06/2026 · hôm nay','Đánh giá tuần đầu','Tổng 25/35 (71%) — đang theo dõi'],
+          ['','10/07/2026','Đánh giá cuối kỳ','Quyết định nhận chính thức'],
+        ] },
+      'NV-036': { ten:'Phan Văn Hậu', av:'PH', bp:'Kho', vitri:'Phụ kho', form:'vanphong',
+        batdau:'12/05/2026', ketthuc:'12/06/2026', stBadge:'badge-steel', stLbl:'Đã đánh giá · không đạt', hd:'Trần Quốc Bảo',
+        scores:[3,2,2,2,3,2,3], ketluan:'khong',
+        nhanxet:'Chuyên cần kém (nghỉ 3 buổi không phép), nghiệp vụ sổ sách còn yếu, sai sót nhập kho nhiều lần. Kết luận không đạt thử việc.',
+        stats:[['19/22','Ngày công'],['3','Đi trễ / nghỉ KP'],['4','Sai sót sổ sách'],['—','—']],
+        tl:[
+          ['done','12/05/2026','Tiếp nhận & vào làm','Bàn giao phần mềm kho · HD: Trần Quốc Bảo'],
+          ['done','14–16/05/2026','Đào tạo nghiệp vụ kho','Quy trình nhập xuất · đạt một phần'],
+          ['done','29/05/2026','Đánh giá giữa kỳ','Nhắc nhở nghỉ KP, sai sót nhập kho'],
+          ['done','12/06/2026','Đánh giá cuối kỳ','Tổng 17/35 (49%) — KHÔNG ĐẠT'],
+        ] },
+    };
+
+    const TVKEYS = Object.keys(TV);
+
+    /* helpers chấm 5 dots theo điểm + kết luận */
+    function dotsHTML(v){
+      let h='';
+      for(let i=1;i<=5;i++){
+        if(i<=v){ const cls = v<=2 ? 'bad' : (v===3 ? 'warn' : 'on'); h+=`<span class="dot5 ${cls}"></span>`; }
+        else h+=`<span class="dot5"></span>`;
+      }
+      return h;
+    }
+    function critRow(label, sub, v){
+      return `<div class="crit"><div class="cl">${label}<small>${sub}</small></div><div class="dots">${dotsHTML(v)}</div><div class="pt">${v}/5</div></div>`;
+    }
+
+    const dgBody = document.getElementById('dg-body');
+    const dgDrawer = document.getElementById('dg-drawer');
+    const dgOverlay = document.getElementById('dg-overlay');
+    function openDG(){ dgDrawer.classList.add('open'); dgOverlay.classList.add('open'); dgDrawer.setAttribute('aria-hidden','false'); }
+    function closeDG(){ dgDrawer.classList.remove('open'); dgOverlay.classList.remove('open'); dgDrawer.setAttribute('aria-hidden','true'); document.querySelectorAll('.tbl tbody tr[data-tv]').forEach(r=>r.classList.remove('row-selected')); }
+
+    function critBlock(formKey, scores){
+      const f = FORMS[formKey];
+      return f.crit.map((c,i)=>critRow(c[0], c[1], scores[i])).join('');
+    }
+    function totalBlock(scores){
+      const total = scores.reduce((a,b)=>a+b,0), max = scores.length*5, pct = Math.round(total/max*100);
+      return { total, max, pct };
+    }
+
+    function render(ma){
+      const e = TV[ma]; if(!e || !dgBody) return;
+      const f = FORMS[e.form];
+      const t = totalBlock(e.scores);
+      const kl = KETLUAN[e.ketluan];
+      const klColor = e.ketluan==='dat'?'var(--moss-deep)':(e.ketluan==='khong'?'var(--signal)':'var(--amber)');
+      const tabsHTML = Object.keys(FORMS).map(k=>`<button class="tab ${k===e.form?'tab-active':''}">${FORMS[k].label}</button>`).join('');
+      const statsHTML = e.stats.map(s=>`<div class="mstat"><div class="mv">${s[0]}</div><div class="mk">${s[1]}</div></div>`).join('');
+      const tlHTML = e.tl.map(it=>`<div class="tl-item ${it[0]}"><span class="tdot"></span><div class="td">${it[1]}</div><div class="tt">${it[2]}</div><div class="tsub">${it[3]}</div></div>`).join('');
+
+      dgBody.innerHTML = `
+        <div class="pf-head mb-3" style="padding-right:28px">
+          <div class="pf-avatar">${e.av}</div>
+          <div style="min-width:0">
+            <div class="t-h4">${e.ten}</div>
+            <div class="t-caption">${ma} · ${e.bp} · ${e.vitri}</div>
+            <div class="mt-1"><span class="badge ${e.stBadge}">${e.stLbl}</span> <span class="badge badge-steel">TV: ${e.batdau.slice(0,5)} → ${e.ketthuc.slice(0,5)}</span></div>
+          </div>
+        </div>
+
+        <div class="t-micro-u mb-1">Phiếu đánh giá thử việc</div>
+        <div class="t-caption mb-2">Bộ biểu mẫu theo bộ phận</div>
+        <div class="tabs mb-3">${tabsHTML}</div>
+
+        <div id="dg-crit">${critBlock(e.form, e.scores)}</div>
+
+        <div class="total-box mt-3">
+          <div class="flex-between mb-1">
+            <span class="t-micro-u">Tổng điểm đánh giá</span>
+            <span class="t-h4" style="color:${klColor}">${t.total} / ${t.max}</span>
+          </div>
+          <div class="progress ${e.ketluan==='khong'?'danger':(e.ketluan==='theodoi'?'warn':'success')} mb-1"><div style="width:${t.pct}%"></div></div>
+          <div class="flex-between">
+            <span class="t-caption">Đạt ${t.pct}% — ngưỡng đạt ≥ 70%</span>
+            <span class="badge ${kl.cls}">Kết luận: ${kl.lbl}</span>
+          </div>
+        </div>
+
+        <div class="t-micro-u mt-3 mb-1">Nhận xét của quản lý</div>
+        <textarea class="input" rows="3" style="width:100%;resize:vertical">${e.nhanxet}</textarea>
+
+        <hr class="hr-soft">
+        <div class="t-micro-u mb-2">Chỉ số quá trình thử việc</div>
+        <div class="grid grid-4 mb-3">${statsHTML}</div>
+
+        <div class="t-micro-u mb-1">Phổ điểm đánh giá</div>
+        <div id="dg-radar" style="min-height:230px"></div>
+
+        <hr class="hr-soft">
+        <div class="t-micro-u mb-2">Quá trình thử việc</div>
+        <div class="tl">${tlHTML}</div>
+
+        <div class="flex" style="gap:8px;margin-top:16px">
+          <button class="btn btn-secondary btn-sm" style="flex:1" onclick="ERPInteract&&ERPInteract.showToast&&ERPInteract.showToast('Đã lưu đánh giá (mô phỏng)','success')"><i data-lucide="save" style="width:13px;height:13px"></i> Lưu đánh giá</button>
+          <button class="btn btn-primary btn-sm" style="flex:1" onclick="ERPInteract&&ERPInteract.showToast&&ERPInteract.showToast('Đã đề xuất nhận chính thức (mô phỏng)','success')"><i data-lucide="user-check" style="width:13px;height:13px"></i> Đề xuất nhận</button>
+        </div>`;
+
+      if(window.lucide) window.lucide.createIcons();
+      // radar có size cố định → render được trong drawer
+      ERPCharts.radar('dg-radar', {
+        labels: f.radar,
+        datasets: [
+          { name:'Điểm đạt được', values:e.scores.slice(), color:'#c5400a' },
+          { name:'Ngưỡng đạt',    values:f.radar.map(()=>3.5), color:'#4a5560' },
+        ],
+      }, { max: 5, size: 230 });
+      dgDrawer.scrollTop = 0;
+    }
+
+    document.querySelectorAll('.tbl tbody tr[data-tv]').forEach(tr=>{
+      tr.addEventListener('click', (ev)=>{
+        if(ev.target.closest('button, a, input')) return;
+        document.querySelectorAll('.tbl tbody tr[data-tv]').forEach(r=>r.classList.remove('row-selected'));
+        tr.classList.add('row-selected');
+        render(tr.dataset.tv);
+        openDG();
+      });
+    });
+    dgOverlay.addEventListener('click', closeDG);
+    document.getElementById('dg-close').addEventListener('click', closeDG);
+    document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closeDG(); });
+
+    /* ===== Form drawer: Tạo phiếu đánh giá ===== */
+    const fmBody = document.getElementById('fm-body');
+    const fmDrawer = document.getElementById('fm-drawer');
+    const fmOverlay = document.getElementById('fm-overlay');
+    function openFM(){ fmDrawer.classList.add('open'); fmOverlay.classList.add('open'); fmDrawer.setAttribute('aria-hidden','false'); }
+    function closeFM(){ fmDrawer.classList.remove('open'); fmOverlay.classList.remove('open'); fmDrawer.setAttribute('aria-hidden','true'); }
+    function fld(label, control){ return `<div style="margin-bottom:11px"><label class="t-caption-b" style="display:block;margin-bottom:4px">${label}</label>${control}</div>`; }
+    function scoreSelect(){ return `<select class="input" style="width:78px;text-align:center"><option>5</option><option>4</option><option selected>3</option><option>2</option><option>1</option></select>`; }
+
+    function buildCritInputs(formKey){
+      const f = FORMS[formKey];
+      return f.crit.map(c=>`<div class="flex" style="gap:10px;align-items:center;margin-bottom:8px"><div style="flex:1;font-size:13px">${c[0]}<div class="t-caption">${c[1]}</div></div>${scoreSelect()}</div>`).join('');
+    }
+
+    function renderForm(){
+      const empOpts = TVKEYS.map(k=>`<option value="${k}">${TV[k].ten} · ${k} · ${TV[k].bp}</option>`).join('');
+      const formOpts = Object.keys(FORMS).map(k=>`<option value="${k}">${FORMS[k].label}</option>`).join('');
+      fmBody.innerHTML = `
+        <div class="mb-3" style="padding-right:28px">
+          <div class="t-h4">Tạo phiếu đánh giá thử việc</div>
+          <div class="t-caption">Chọn nhân viên, bộ biểu mẫu và chấm điểm các tiêu chí</div>
+        </div>
+        ${fld('Nhân viên thử việc *',`<select class="input" id="fm-emp">${empOpts}</select>`)}
+        ${fld('Bộ biểu mẫu *',`<select class="input" id="fm-form">${formOpts}</select>`)}
+        <hr class="hr-soft">
+        <div class="t-micro-u mb-2">Chấm điểm tiêu chí (thang 1–5)</div>
+        <div id="fm-crit">${buildCritInputs('sanxuat')}</div>
+        <hr class="hr-soft">
+        ${fld('Kết luận *',`<select class="input"><option>Đạt</option><option>Không đạt</option><option>Đang theo dõi</option></select>`)}
+        ${fld('Nhận xét của quản lý',`<textarea class="input" rows="3" placeholder="Nhận xét, đề xuất bậc lương, lưu ý khi vào chính thức…"></textarea>`)}
+        <div class="flex" style="gap:8px;margin-top:14px">
+          <button class="btn btn-secondary btn-sm" style="flex:1" id="fm-cancel"><i data-lucide="x" style="width:13px;height:13px"></i> Hủy</button>
+          <button class="btn btn-primary btn-sm" style="flex:1" id="fm-save"><i data-lucide="check" style="width:13px;height:13px"></i> Lưu phiếu đánh giá</button>
+        </div>`;
+      if(window.lucide) window.lucide.createIcons();
+      fmDrawer.scrollTop = 0;
+      // đổi bộ tiêu chí theo lựa chọn
+      const empSel = document.getElementById('fm-emp');
+      const formSel = document.getElementById('fm-form');
+      function syncCrit(){ document.getElementById('fm-crit').innerHTML = buildCritInputs(formSel.value); }
+      empSel.addEventListener('change', ()=>{ formSel.value = TV[empSel.value].form; syncCrit(); });
+      formSel.addEventListener('change', syncCrit);
+      document.getElementById('fm-cancel').addEventListener('click', closeFM);
+      document.getElementById('fm-save').addEventListener('click', ()=>{ if(window.ERPInteract&&ERPInteract.showToast) ERPInteract.showToast('Đã lưu phiếu đánh giá (mô phỏng)','success'); closeFM(); });
+    }
+
+    const addBtn = document.getElementById('dg-add-btn');
+    if(addBtn) addBtn.addEventListener('click', ()=>{ renderForm(); openFM(); });
+    fmOverlay.addEventListener('click', closeFM);
+    document.getElementById('fm-close').addEventListener('click', closeFM);
+    document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closeFM(); });
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Định mức BOM — ERP NHÔM OWIN</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/css/style.css" />
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+  <style>
+    .att-input { padding:8px 10px; border:1px solid var(--rule); border-radius:8px; font-size:13px; font-family:inherit; background:var(--canvas); color:var(--ink); }
+    .wh-stat { border:1px solid var(--rule-soft); border-radius:10px; padding:11px 13px; background:var(--paper); }
+    .wh-stat .l { font-size:10.5px; text-transform:uppercase; letter-spacing:.06em; color:var(--ash); }
+    .wh-stat .v { font-size:18px; font-weight:700; margin-top:3px; font-variant-numeric:tabular-nums; }
+    .bm-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px 12px; }
+    .bm-grid label { display:block; font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:var(--ash); margin-bottom:4px; font-weight:600; }
+    .bm-grid input, .bm-grid select { width:100%; }
+    .bm-lines { width:100%; border-collapse:collapse; margin-top:6px; }
+    .bm-lines th { font-size:10.5px; text-transform:uppercase; letter-spacing:.05em; color:var(--ash); text-align:left; padding:6px 6px; border-bottom:1px solid var(--rule); }
+    .bm-lines td { padding:5px 6px; border-bottom:1px solid var(--rule-hair); vertical-align:middle; }
+    .bm-lines input, .bm-lines select { width:100%; }
+    .bm-lines .num, .bm-lines input.num { text-align:right; font-variant-numeric:tabular-nums; }
+    .bm-lines tfoot td { font-weight:700; border-top:1px solid var(--rule); border-bottom:none; }
+    .bm-group-row td { background:var(--paper-2); font-size:11px; text-transform:uppercase; letter-spacing:.05em; font-weight:700; color:var(--ash); }
+    .tbl tbody tr[data-bom] { cursor:pointer; }
+
+    /* ===== Drawer bản ghi BOM — trượt từ phải, sửa được tại chỗ ===== */
+    .bm-ov { position:fixed; inset:0; background:rgba(20,19,15,.42); backdrop-filter:blur(2px); z-index:120; opacity:0; pointer-events:none; transition:opacity .18s ease; }
+    .bm-ov.open { opacity:1; pointer-events:auto; }
+    .bm-dr { position:fixed; top:0; right:0; height:100%; width:760px; max-width:96vw; background:var(--paper); z-index:121; display:flex; flex-direction:column; box-shadow:-16px 0 48px rgba(20,19,15,.22); transform:translateX(100%); transition:transform .24s cubic-bezier(.2,.8,.2,1); }
+    .bm-dr.open { transform:translateX(0); }
+    .bm-dr-head { background:linear-gradient(135deg,var(--ink),#2e2b24); color:#f5f1e8; padding:16px 20px; flex-shrink:0; }
+    .bm-dr-head .ty { font-family:var(--ff-mono); font-size:9.5px; letter-spacing:.16em; text-transform:uppercase; color:#e8a075; }
+    .bm-dr-head .idrow { display:flex; align-items:center; gap:10px; margin-top:7px; flex-wrap:wrap; }
+    .bm-dr-head .bid { font-family:var(--ff-mono); font-size:21px; font-weight:700; }
+    .bm-dr-head .sub { font-size:12.5px; color:#c9c4b8; margin-top:5px; }
+    .bm-dr-head .acts { margin-left:auto; display:flex; gap:7px; }
+    .bm-dr-head .hbtn { display:inline-flex; align-items:center; gap:5px; padding:6px 12px; font-size:12px; background:rgba(245,241,232,.1); border:1px solid rgba(245,241,232,.26); border-radius:999px; color:#f5f1e8; cursor:pointer; }
+    .bm-dr-head .hbtn:hover { background:rgba(245,241,232,.2); }
+    .bm-dr-body { flex:1; overflow-y:auto; padding:14px 20px 24px; }
+    .bm-sec { font-family:var(--ff-mono); font-size:10px; font-weight:600; letter-spacing:.15em; text-transform:uppercase; color:var(--ink); display:flex; align-items:center; gap:7px; margin:16px 0 8px; }
+    .bm-sec::after { content:""; flex:1; height:1px; background:var(--rule); }
+    .bm-kv { display:grid; grid-template-columns:1fr 1fr; gap:8px 14px; }
+    .bm-cell { background:var(--canvas); border:1px solid var(--rule); border-radius:10px; padding:8px 12px; }
+    .bm-cell > span { display:block; font-family:var(--ff-mono); font-size:9px; letter-spacing:.12em; text-transform:uppercase; color:var(--ash); margin-bottom:3px; }
+    .bm-cell > b { font-size:13px; color:var(--ink); }
+    .bm-cell input, .bm-cell select { width:100%; padding:5px 7px; font-size:13px; border:1px solid var(--rule); border-radius:6px; background:var(--paper); color:var(--ink); font-family:inherit; }
+    .bm-dr-foot { padding:12px 20px; border-top:1px solid var(--rule); background:var(--canvas); display:flex; gap:8px; justify-content:flex-end; flex-shrink:0; }
+    .warn-red { color:#8a1f1f; font-weight:700; }
+    .warn-green { color:#1f6b3a; font-weight:700; }
+    .warn-none { color:var(--ash-2); }
+  </style>
+</head>
+<body>
+
+<div id="app-shell" data-active="bom" data-title="Định mức BOM" data-crumb="<b>Sản xuất</b> · Định mức BOM">
+
+  <div class="page-header">
+    <div>
+      <h1>Thiết lập định mức BOM</h1>
+      <p>Định mức nhôm thanh · phụ kiện · kính &amp; gioăng cho 1 đơn vị thành phẩm — căn cứ xuất vật tư tự động khi nhập kho thành phẩm.</p>
+    </div>
+    <div class="actions">
+      <button class="btn btn-primary" id="btnNewBOM" data-no-interact="true"><i data-lucide="plus" style="width:14px;height:14px"></i> + Thiết lập BOM</button>
+    </div>
+  </div>
+
+  <!-- 4 ô số nhỏ -->
+  <div class="grid grid-4 mb-4">
+    <div class="wh-stat"><div class="l">BOM đang áp dụng</div><div class="v" style="color:var(--moss-deep)" id="kpiActive">—</div></div>
+    <div class="wh-stat"><div class="l">Thành phẩm chưa có BOM</div><div class="v" style="color:var(--rust-deep)" id="kpiMissing">—</div></div>
+    <div class="wh-stat"><div class="l">Chi phí vật tư TB / đơn vị (₫)</div><div class="v" id="kpiAvgCost">—</div></div>
+    <div class="wh-stat"><div class="l">Hao hụt cắt nhôm TB</div><div class="v" id="kpiWaste">—</div></div>
+  </div>
+
+  <div class="card mb-6">
+    <div class="flex-between mb-3">
+      <div class="t-h5"><i data-lucide="list-tree" style="width:16px;height:16px"></i> Danh sách định mức BOM</div>
+      <span class="badge badge-steel">Nhôm hệ ~16 kg/m² · hao cắt đầu mẩu 6% · hao uốn vòm tới 11%</span>
+    </div>
+    <div class="table-wrap" style="border:none">
+      <table class="tbl">
+        <thead><tr>
+          <th>Mã BOM</th><th>Thành phẩm</th><th>ĐVT đầu ra</th><th>Phiên bản</th><th class="num">Số dòng vật tư</th>
+          <th class="num">Chi phí vật tư / đơn vị (₫)</th><th class="num">Hao hụt TB</th><th>Cảnh báo hao hụt</th><th>Trạng thái</th><th>Cập nhật</th><th></th>
+        </tr></thead>
+        <tbody id="bomBody"></tbody>
+      </table>
+    </div>
+    <div class="t-caption mt-2">Bấm vào dòng để mở bản ghi BOM (sửa được ngay trong drawer).</div>
+  </div>
+
+  <div class="card mb-6" id="missingCard" style="display:none">
+    <div class="t-h5 mb-3"><i data-lucide="alert-triangle" style="width:16px;height:16px"></i> Thành phẩm chưa thiết lập BOM</div>
+    <p class="t-caption mb-2">Các thành phẩm dưới đây <b>không thể nhập kho từ sản xuất</b> (không có căn cứ trừ vật tư) cho tới khi khai báo định mức.</p>
+    <div id="missingList"></div>
+  </div>
+
+</div>
+
+<!-- Drawer bản ghi BOM -->
+<div class="bm-ov" id="bmOverlay"></div>
+<aside class="bm-dr" id="bmDrawer" aria-hidden="true">
+  <div class="bm-dr-head" id="bmDrHead"></div>
+  <div class="bm-dr-body" id="bmDrBody"></div>
+  <div class="bm-dr-foot" id="bmDrFoot"></div>
+</aside>
+
+<script src="../assets/js/layout.js"></script>
+<script src="../assets/js/loss-data.js"></script>
+<script src="../assets/js/loss-ui.js"></script>
+<script src="../assets/js/pricing-engine.js"></script>
+<script src="../assets/js/quote-data.js"></script>
+<script src="../assets/js/stock-data.js"></script>
+<script src="../assets/js/bom-data.js"></script>
+<script src="../assets/js/inventory.js"></script>
+<script>
+  /* 4 nhóm vật tư ngành nhôm (giữ tương thích tên nhóm cũ nếu dữ liệu chưa chuyển) */
+  var GROUPS = ['Nguyên liệu chính', 'Phụ kiện', 'Kính & gioăng', 'Đóng gói'];
+  var GROUP_ALIAS = { 'Phụ gia': 'Phụ kiện', 'Bao bì': 'Kính & gioăng' };
+  var UNITS = ['bộ', 'm²', 'cánh', 'md', 'kg', 'cây', 'kiện'];
+
+  function grpOf(l) { var g = l && l.group; return GROUP_ALIAS[g] || (GROUPS.indexOf(g) >= 0 ? g : 'Nguyên liệu chính'); }
+  function fmt(n) { return Math.round(Number(n) || 0).toLocaleString('vi-VN'); }
+  function fmtQty(n) { n = Number(n) || 0; return n.toLocaleString('vi-VN', { maximumFractionDigits: 3 }); }
+  function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+  function icons() { if (window.lucide) window.lucide.createIcons(); }
+  function widenModal(px) {
+    var ovs = document.querySelectorAll('.erp-modal-overlay');
+    var ov = ovs[ovs.length - 1];
+    if (ov) { var m = ov.querySelector('.erp-modal'); if (m) m.style.maxWidth = (px || 920) + 'px'; }
+    return ov;
+  }
+  function avgWaste(b) {
+    if (!b.lines || !b.lines.length) return 0;
+    return b.lines.reduce(function (s, l) { return s + (Number(l.waste) || 0); }, 0) / b.lines.length;
+  }
+  function missingTPs() {
+    return ERPInv.allItems().filter(function (i) { return i.kind === 'tp' && !ERPBOM.byProduct(i.name); });
+  }
+  /* Cảnh báo hao hụt CHỌN LỌC: đỏ khi vượt ngưỡng, xanh khi dưới định mức, còn lại "—" */
+  function wasteFlag(b) {
+    var w = avgWaste(b);
+    if (w >= 4.5) return '<span class="warn-red">Hao vượt ĐM +' + (w - 3).toFixed(1) + '%</span>';
+    if (w > 0 && w <= 2.2) return '<span class="warn-green">Hao dưới ĐM −' + (3 - w).toFixed(1) + '%</span>';
+    return '<span class="warn-none">—</span>';
+  }
+  function matLink(code) {
+    if (!code) return '—';
+    return '<a href="05-kho.html?mat=' + encodeURIComponent(code) + '" class="lnk">' + esc(code) + '</a>';
+  }
+
+  document.addEventListener('erp:ready', function () {
+
+    /* ================= KPI + bảng ================= */
+    function renderAll() {
+      var boms = ERPBOM.list();
+      var active = boms.filter(function (b) { return b.status === 'áp dụng'; });
+      document.getElementById('kpiActive').textContent = active.length + ' / ' + boms.length + ' BOM';
+      var missing = missingTPs();
+      document.getElementById('kpiMissing').textContent = missing.length + ' thành phẩm';
+      var avg = boms.length ? boms.reduce(function (s, b) { return s + ERPBOM.unitCost(b); }, 0) / boms.length : 0;
+      document.getElementById('kpiAvgCost').textContent = fmt(avg);
+      var aw = boms.length ? boms.reduce(function (s, b) { return s + avgWaste(b); }, 0) / boms.length : 0;
+      document.getElementById('kpiWaste').textContent = aw.toLocaleString('vi-VN', { maximumFractionDigits: 1 }) + '%';
+
+      document.getElementById('bomBody').innerHTML = boms.map(function (b) {
+        return '<tr data-bom="' + esc(b.id) + '">' +
+          '<td><b>' + esc(b.id) + '</b></td>' +
+          '<td><b>' + esc(b.productName) + '</b>' + (b.note ? '<div class="t-caption">' + esc(b.note) + '</div>' : '') + '</td>' +
+          '<td>' + esc(b.outUnit) + '</td>' +
+          '<td><span class="badge badge-steel">' + esc(b.version) + '</span></td>' +
+          '<td class="num">' + b.lines.length + '</td>' +
+          '<td class="num" style="font-weight:600">' + fmt(ERPBOM.unitCost(b)) + '</td>' +
+          '<td class="num">' + avgWaste(b).toLocaleString('vi-VN', { maximumFractionDigits: 1 }) + '%</td>' +
+          '<td>' + wasteFlag(b) + '</td>' +
+          '<td>' + (b.status === 'áp dụng' ? '<span class="badge badge-moss">Áp dụng</span>' : '<span class="badge status-warning">Nháp</span>') + '</td>' +
+          '<td>' + esc(b.updated) + '</td>' +
+          '<td style="white-space:nowrap;text-align:right">' +
+            '<button class="btn btn-secondary btn-sm" data-no-interact="true" data-edit="' + esc(b.id) + '"><i data-lucide="pencil" style="width:13px;height:13px"></i> Sửa</button> ' +
+            '<button class="btn btn-secondary btn-sm" data-no-interact="true" data-print="' + esc(b.id) + '"><i data-lucide="printer" style="width:13px;height:13px"></i> In</button> ' +
+            '<button class="btn btn-secondary btn-sm" data-no-interact="true" data-del="' + esc(b.id) + '"><i data-lucide="trash-2" style="width:13px;height:13px"></i></button>' +
+          '</td></tr>';
+      }).join('') || '<tr><td colspan="11" class="t-caption" style="text-align:center;padding:20px">Chưa có BOM nào</td></tr>';
+
+      var card = document.getElementById('missingCard');
+      if (missing.length) {
+        card.style.display = '';
+        document.getElementById('missingList').innerHTML = missing.map(function (i) {
+          return '<span class="badge status-warning" style="margin:0 6px 6px 0">' + esc(i.name) + ' (' + esc(i.code) + ')</span>';
+        }).join('');
+      } else card.style.display = 'none';
+      icons();
+    }
+    window.renderAllBOM = renderAll;
+
+    document.getElementById('bomBody').addEventListener('click', function (e) {
+      var ed = e.target.closest('[data-edit]');
+      if (ed) { e.stopPropagation(); return openDrawer(ed.dataset.edit, true); }
+      var pr = e.target.closest('[data-print]');
+      if (pr) { e.stopPropagation(); return printBOM(pr.dataset.print); }
+      var del = e.target.closest('[data-del]');
+      if (del) {
+        e.stopPropagation();
+        var b = ERPBOM.get(del.dataset.del);
+        if (!b) return;
+        ERPInteract.showModal({
+          title: 'Xóa BOM ' + b.id + '?',
+          body: '<p>Xóa định mức của <b>' + esc(b.productName) + '</b>. Sau khi xóa, thành phẩm này sẽ <b>không nhập kho từ sản xuất được</b> (không có căn cứ trừ vật tư).</p>',
+          primaryText: 'Xóa BOM',
+          secondaryText: 'Hủy',
+          onPrimary: function () {
+            ERPBOM.remove(b.id);
+            ERPInteract.showToast('Đã xóa <b>' + esc(b.id) + '</b>', 'success');
+            renderAll();
+          }
+        });
+        return;
+      }
+      var row = e.target.closest('tr[data-bom]');
+      if (row) openDrawer(row.dataset.bom, false);
+    });
+
+    /* ================= In BOM ================= */
+    function printBOM(id) {
+      var b = ERPBOM.get(id); if (!b) return;
+      var rowsHtml = '';
+      GROUPS.forEach(function (g) {
+        var lines = b.lines.filter(function (l) { return grpOf(l) === g; });
+        if (!lines.length) return;
+        rowsHtml += '<tr><td colspan="7" style="background:#f3efe6;font-weight:700;text-transform:uppercase;font-size:10.5px;letter-spacing:.05em">' + g + '</td></tr>';
+        lines.forEach(function (l, i) {
+          var price = (window.StockStore && StockStore.getMaterial(l.matCode) || {}).price || 0;
+          var cost = (Number(l.qty) || 0) * (1 + (Number(l.waste) || 0) / 100) * price;
+          rowsHtml += '<tr><td class="c">' + (i + 1) + '</td><td>' + esc(l.matName) + (l.note ? ' <i>(' + esc(l.note) + ')</i>' : '') + '</td><td class="c">' + esc(l.matCode) + '</td>' +
+            '<td class="r">' + fmtQty(l.qty) + '</td><td class="c">' + esc(l.unit) + '</td>' +
+            '<td class="r">' + (Number(l.waste) || 0) + '%</td><td class="r">' + fmt(cost) + '</td></tr>';
+        });
+      });
+      var body = ERPPrint.docHead() +
+        '<div class="pdoc">' +
+        '<div class="pdoc-title">ĐỊNH MỨC VẬT TƯ (BOM)</div>' +
+        '<div class="pdoc-sub">Số: <b>' + esc(b.id) + '</b> · Phiên bản ' + esc(b.version) + ' · Cập nhật ' + esc(b.updated) + '</div>' +
+        '<table class="pdoc-rows">' +
+          '<tr><td>Thành phẩm</td><td><b>' + esc(b.productName) + '</b></td></tr>' +
+          '<tr><td>Đơn vị tính đầu ra</td><td>1 ' + esc(b.outUnit) + '</td></tr>' +
+          '<tr><td>Trạng thái</td><td>' + esc(b.status) + '</td></tr>' +
+          (b.note ? '<tr><td>Ghi chú</td><td>' + esc(b.note) + '</td></tr>' : '') +
+        '</table>' +
+        '<table class="pdoc-items"><thead><tr>' +
+          '<th>STT</th><th>Vật tư</th><th>Mã số</th><th>Định mức / 1 ' + esc(b.outUnit) + '</th><th>ĐVT</th><th>Hao hụt</th><th>Chi phí (₫)</th>' +
+        '</tr></thead><tbody>' + rowsHtml +
+          '<tr><td colspan="6" style="text-align:right"><b>Tổng chi phí vật tư / 1 ' + esc(b.outUnit) + '</b></td><td class="r"><b>' + fmt(ERPBOM.unitCost(b)) + '</b></td></tr>' +
+        '</tbody></table>' +
+        '<div class="pdoc-note">Chi phí dòng = định mức × (1 + hao hụt%) × đơn giá kho hiện hành. Định mức là căn cứ xuất vật tư tự động khi nhập kho thành phẩm.</div>' +
+        '<div class="pdoc-sign">' +
+          '<div><b>NGƯỜI LẬP</b><i>(Ký, họ tên)</i><div class="sp"></div></div>' +
+          '<div><b>QUẢN ĐỐC NHÀ MÁY</b><i>(Ký, họ tên)</i><div class="sp"></div></div>' +
+          '<div><b>KẾ TOÁN TRƯỞNG</b><i>(Ký, họ tên)</i><div class="sp"></div></div>' +
+        '</div></div>';
+      ERPPrint.preview({ title: 'BOM ' + b.id + ' — bản in', printTitle: 'Định mức BOM ' + b.id, bodyHtml: body });
+    }
+    window.printBOMDoc = printBOM;
+
+    /* ================= DRAWER bản ghi BOM (xem + sửa tại chỗ) ================= */
+    var ov = document.getElementById('bmOverlay'), dr = document.getElementById('bmDrawer');
+    var curId = null, editing = false;
+
+    function matOptions(selected) {
+      var mats = (window.StockStore && StockStore.MATERIALS) || [];
+      return '<option value="">— chọn vật tư —</option>' + mats.map(function (m) {
+        return '<option value="' + esc(m.code) + '"' + (m.code === selected ? ' selected' : '') + '>' + esc(m.name) + ' (' + esc(m.code) + ')</option>';
+      }).join('');
+    }
+    function groupOptions(selected) {
+      return GROUPS.map(function (g) { return '<option' + (g === selected ? ' selected' : '') + '>' + g + '</option>'; }).join('');
+    }
+    function lineCost(l) {
+      var m = (window.StockStore && StockStore.getMaterial(l.matCode)) || {};
+      return (Number(l.qty) || 0) * (1 + (Number(l.waste) || 0) / 100) * (m.price || 0);
+    }
+
+    function drawerLinesView(b) {
+      var html = '<table class="bm-lines"><thead><tr><th>Vật tư</th><th>Mã vật tư</th><th class="num">Định mức / 1 ' + esc(b.outUnit) + '</th><th>ĐVT</th><th class="num">Hao hụt</th><th class="num">Chi phí dòng (₫)</th></tr></thead><tbody>';
+      GROUPS.forEach(function (g) {
+        var lines = b.lines.filter(function (l) { return grpOf(l) === g; });
+        if (!lines.length) return;
+        html += '<tr class="bm-group-row"><td colspan="6">' + g + '</td></tr>';
+        lines.forEach(function (l) {
+          html += '<tr><td>' + esc(l.matName) + (l.note ? '<div class="t-caption">' + esc(l.note) + '</div>' : '') + '</td>' +
+            '<td>' + matLink(l.matCode) + '</td>' +
+            '<td class="num">' + fmtQty(l.qty) + '</td><td>' + esc(l.unit) + '</td>' +
+            '<td class="num">' + (Number(l.waste) || 0) + '%</td>' +
+            '<td class="num">' + fmt(lineCost(l)) + '</td></tr>';
+        });
+      });
+      html += '</tbody><tfoot><tr><td colspan="5" class="num">Tổng chi phí vật tư / 1 ' + esc(b.outUnit) + '</td><td class="num">' + fmt(ERPBOM.unitCost(b)) + '</td></tr></tfoot></table>';
+      return html;
+    }
+
+    function drawerLineRow(l) {
+      l = l || {};
+      return '<tr>' +
+        '<td style="width:150px"><select class="att-input bm-group">' + groupOptions(grpOf(l)) + '</select></td>' +
+        '<td style="min-width:230px"><select class="att-input bm-mat">' + matOptions(l.matCode) + '</select></td>' +
+        '<td style="width:110px"><input class="att-input num bm-qty" type="number" min="0" step="any" value="' + (l.qty != null ? l.qty : '') + '" placeholder="0"></td>' +
+        '<td class="bm-unit t-caption" style="min-width:44px">' + esc(l.unit || '—') + '</td>' +
+        '<td style="width:82px"><input class="att-input num bm-waste" type="number" min="0" step="any" value="' + (l.waste != null ? l.waste : '') + '" placeholder="0"></td>' +
+        '<td class="num bm-cost" style="width:110px;font-weight:600">0</td>' +
+        '<td style="width:34px"><button type="button" class="btn btn-secondary btn-sm bm-del" data-no-interact="true" title="Xóa dòng">✕</button></td>' +
+      '</tr>';
+    }
+
+    function drawerLinesEdit(b) {
+      var sorted = b.lines.slice().sort(function (a, c) { return GROUPS.indexOf(grpOf(a)) - GROUPS.indexOf(grpOf(c)); });
+      var rows = sorted.map(drawerLineRow).join('') || drawerLineRow();
+      return '<table class="bm-lines"><thead><tr><th>Nhóm</th><th>Vật tư</th><th class="num">Định mức / 1 đơn vị</th><th>ĐVT</th><th class="num">Hao hụt %</th><th class="num">Chi phí dòng (₫)</th><th></th></tr></thead>' +
+        '<tbody id="bmDrLines">' + rows + '</tbody>' +
+        '<tfoot><tr><td colspan="5" class="num">Tổng chi phí vật tư / 1 đơn vị</td><td class="num" id="bmDrTotal">0</td><td></td></tr></tfoot></table>' +
+        '<button type="button" class="btn btn-secondary btn-sm mt-2" id="bmDrAdd" data-no-interact="true">+ Thêm dòng vật tư</button>';
+    }
+
+    function cell(k, v) { return '<div class="bm-cell"><span>' + k + '</span><b>' + v + '</b></div>'; }
+    function cellIn(k, id, v, type) { return '<div class="bm-cell"><span>' + k + '</span><input id="' + id + '" type="' + (type || 'text') + '" value="' + esc(v) + '"></div>'; }
+    function cellSel(k, id, opts) { return '<div class="bm-cell"><span>' + k + '</span><select id="' + id + '">' + opts + '</select></div>'; }
+
+    function renderDrawer() {
+      var b = ERPBOM.get(curId); if (!b) return;
+      var tps = ERPInv.allItems().filter(function (i) { return i.kind === 'tp'; });
+      document.getElementById('bmDrHead').innerHTML =
+        '<div class="ty">Bản ghi định mức vật tư</div>' +
+        '<div class="idrow"><span class="bid">' + esc(b.id) + '</span>' +
+          (b.status === 'áp dụng' ? '<span class="badge badge-moss">Áp dụng</span>' : '<span class="badge status-warning">Nháp</span>') +
+          '<span class="badge badge-steel">' + esc(b.version) + '</span>' +
+          '<span class="acts">' +
+            (editing ? '' : '<button class="hbtn" id="bmEdit" data-no-interact="true"><i data-lucide="pencil" style="width:12px;height:12px"></i> Sửa</button>') +
+            '<button class="hbtn" id="bmPrint" data-no-interact="true"><i data-lucide="printer" style="width:12px;height:12px"></i> In</button>' +
+            '<button class="hbtn" id="bmClose" data-no-interact="true"><i data-lucide="x" style="width:12px;height:12px"></i></button>' +
+          '</span>' +
+        '</div>' +
+        '<div class="sub">' + esc(b.productName) + ' · định mức cho 1 ' + esc(b.outUnit) + '</div>';
+
+      var body = '<div class="bm-sec"><i data-lucide="info" style="width:12px;height:12px"></i> Thông tin chung</div>';
+      if (editing) {
+        var tpOpts = tps.map(function (i) { return '<option value="' + esc(i.name) + '"' + (i.name === b.productName ? ' selected' : '') + '>' + esc(i.name) + '</option>'; }).join('');
+        if (!tps.some(function (i) { return i.name === b.productName; })) tpOpts = '<option value="' + esc(b.productName) + '" selected>' + esc(b.productName) + '</option>' + tpOpts;
+        body += '<div class="bm-kv">' +
+          cellSel('Thành phẩm', 'bmDrSP', tpOpts) +
+          cellSel('ĐVT đầu ra', 'bmDrUnit', UNITS.map(function (u) { return '<option' + (u === b.outUnit ? ' selected' : '') + '>' + u + '</option>'; }).join('')) +
+          cellIn('Phiên bản', 'bmDrVer', b.version) +
+          cellSel('Trạng thái', 'bmDrStatus', '<option' + (b.status === 'áp dụng' ? ' selected' : '') + '>áp dụng</option><option' + (b.status === 'nháp' ? ' selected' : '') + '>nháp</option>') +
+          '<div class="bm-cell" style="grid-column:1/-1"><span>Ghi chú</span><input id="bmDrNote" value="' + esc(b.note || '') + '" placeholder="VD: 3,6 m² × 16 kg/m² nhôm hệ 120, hao cắt đầu mẩu 6%"></div>' +
+        '</div>';
+      } else {
+        body += '<div class="bm-kv">' +
+          cell('Thành phẩm', esc(b.productName)) +
+          cell('ĐVT đầu ra', '1 ' + esc(b.outUnit)) +
+          cell('Phiên bản', esc(b.version)) +
+          cell('Cập nhật', esc(b.updated)) +
+          '<div class="bm-cell" style="grid-column:1/-1"><span>Ghi chú</span><b>' + esc(b.note || '—') + '</b></div>' +
+        '</div>';
+      }
+
+      body += '<div class="bm-sec"><i data-lucide="calculator" style="width:12px;height:12px"></i> Giá vốn vật tư</div>' +
+        '<div class="bm-kv">' +
+          cell('Chi phí vật tư / 1 ' + esc(b.outUnit), fmt(ERPBOM.unitCost(b)) + ' ₫') +
+          cell('Hao hụt trung bình', avgWaste(b).toLocaleString('vi-VN', { maximumFractionDigits: 1 }) + '% ' + wasteFlag(b)) +
+        '</div>';
+
+      body += '<div class="bm-sec"><i data-lucide="list-tree" style="width:12px;height:12px"></i> Dòng vật tư theo nhóm (' + b.lines.length + ' dòng)</div>' +
+        (editing ? drawerLinesEdit(b) : drawerLinesView(b));
+
+      body += '<div class="bm-sec"><i data-lucide="link" style="width:12px;height:12px"></i> Liên kết</div>' +
+        '<div class="bm-kv">' +
+          '<div class="bm-cell"><span>Kho vật tư</span><b><a href="05-kho.html" class="lnk">Xem tồn kho nhôm – kính</a></b></div>' +
+          '<div class="bm-cell"><span>Kho thành phẩm</span><b><a href="22-kho-thanh-pham.html" class="lnk">Tồn thành phẩm</a></b></div>' +
+        '</div>';
+
+      document.getElementById('bmDrBody').innerHTML = body;
+
+      document.getElementById('bmDrFoot').innerHTML = editing
+        ? '<button class="btn btn-secondary" id="bmCancel" data-no-interact="true">Huỷ</button>' +
+          '<button class="btn btn-primary" id="bmSave" data-no-interact="true"><i data-lucide="save" style="width:14px;height:14px"></i> Lưu</button>'
+        : '<button class="btn btn-secondary" id="bmPrint2" data-no-interact="true"><i data-lucide="printer" style="width:14px;height:14px"></i> Xem trước &amp; In</button>' +
+          '<button class="btn btn-primary" id="bmEdit2" data-no-interact="true"><i data-lucide="pencil" style="width:14px;height:14px"></i> Sửa bản ghi</button>';
+
+      icons();
+      wireDrawer(b);
+    }
+
+    function wireDrawer(b) {
+      var on = function (id, fn) { var e = document.getElementById(id); if (e) e.addEventListener('click', fn); };
+      on('bmClose', closeDrawer);
+      on('bmPrint', function () { printBOM(b.id); });
+      on('bmPrint2', function () { printBOM(b.id); });
+      on('bmEdit', function () { editing = true; renderDrawer(); });
+      on('bmEdit2', function () { editing = true; renderDrawer(); });
+      on('bmCancel', function () { editing = false; renderDrawer(); });
+      on('bmSave', function () { saveDrawer(b); });
+
+      if (!editing) return;
+      var lines = document.getElementById('bmDrLines');
+      function recalc() {
+        var total = 0;
+        lines.querySelectorAll('tr').forEach(function (tr) {
+          var code = tr.querySelector('.bm-mat').value;
+          var m = code && window.StockStore ? StockStore.getMaterial(code) : null;
+          tr.querySelector('.bm-unit').textContent = m ? m.unit : '—';
+          var qty = Number(tr.querySelector('.bm-qty').value) || 0;
+          var waste = Number(tr.querySelector('.bm-waste').value) || 0;
+          var cost = m ? qty * (1 + waste / 100) * m.price : 0;
+          tr.querySelector('.bm-cost').textContent = fmt(cost);
+          total += cost;
+        });
+        document.getElementById('bmDrTotal').textContent = fmt(total);
+      }
+      lines.addEventListener('input', recalc);
+      lines.addEventListener('change', recalc);
+      lines.addEventListener('click', function (e) {
+        if (e.target.closest('.bm-del')) { e.target.closest('tr').remove(); recalc(); }
+      });
+      document.getElementById('bmDrAdd').addEventListener('click', function () {
+        lines.insertAdjacentHTML('beforeend', drawerLineRow()); recalc(); icons();
+      });
+      recalc();
+    }
+
+    function saveDrawer(b) {
+      var g = function (id) { return (document.getElementById(id) || {}).value || ''; };
+      var name = g('bmDrSP').trim();
+      if (!name) { ERPInteract.showToast('Chưa chọn thành phẩm', 'warning'); return; }
+      var lines = [];
+      document.querySelectorAll('#bmDrLines tr').forEach(function (tr) {
+        var code = tr.querySelector('.bm-mat').value;
+        var qty = Number(tr.querySelector('.bm-qty').value) || 0;
+        if (!code || qty <= 0) return;
+        var m = StockStore.getMaterial(code) || {};
+        lines.push({
+          matCode: code, matName: m.name || code,
+          group: tr.querySelector('.bm-group').value,
+          qty: qty, unit: m.unit || '',
+          waste: Number(tr.querySelector('.bm-waste').value) || 0
+        });
+      });
+      if (!lines.length) { ERPInteract.showToast('BOM phải có ít nhất 1 dòng vật tư với định mức > 0', 'warning'); return; }
+      if (!lines.some(function (l) { return l.group === 'Nguyên liệu chính'; })) {
+        ERPInteract.showToast('BOM phải có ít nhất 1 dòng thuộc nhóm <b>Nguyên liệu chính</b> (nhôm thanh)', 'warning');
+        return;
+      }
+      var tp = ERPInv.allItems().filter(function (i) { return i.name === name; })[0];
+      var saved = ERPBOM.save({
+        id: b.id, productCode: (tp && tp.code) || b.productCode || '', productName: name,
+        outUnit: g('bmDrUnit'), version: g('bmDrVer').trim() || 'v1', status: g('bmDrStatus'),
+        note: g('bmDrNote').trim(), lines: lines
+      });
+      editing = false; curId = saved.id;
+      ERPInteract.showToast('Đã lưu <b>' + esc(saved.id) + '</b> — ' + esc(saved.productName), 'success');
+      renderAll(); renderDrawer();
+    }
+
+    function openDrawer(id, edit) {
+      if (!ERPBOM.get(id)) return;
+      curId = id; editing = !!edit;
+      renderDrawer();
+      ov.classList.add('open'); dr.classList.add('open'); dr.setAttribute('aria-hidden', 'false');
+    }
+    function closeDrawer() {
+      ov.classList.remove('open'); dr.classList.remove('open'); dr.setAttribute('aria-hidden', 'true');
+      editing = false;
+    }
+    ov.addEventListener('click', closeDrawer);
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeDrawer(); });
+
+    /* ================= Tạo BOM mới (modal) ================= */
+    function openNewBOM() {
+      var tps = ERPInv.allItems().filter(function (i) { return i.kind === 'tp'; });
+      var tpOpts = tps.map(function (i) { return '<option value="' + esc(i.name) + '">' + esc(i.name) + '</option>'; }).join('') +
+        '<option value="__free__">— Nhập tên thành phẩm khác… —</option>';
+      var body =
+        '<div class="bm-grid">' +
+          '<div style="grid-column:span 2"><label>Thành phẩm</label>' +
+            '<select class="att-input" id="bmSP">' + tpOpts + '</select>' +
+            '<input class="att-input" id="bmSPFree" placeholder="Tên thành phẩm mới" style="display:none;margin-top:6px">' +
+          '</div>' +
+          '<div><label>ĐVT đầu ra</label><select class="att-input" id="bmDVT">' + UNITS.map(function (u) { return '<option>' + u + '</option>'; }).join('') + '</select></div>' +
+          '<div><label>Phiên bản</label><input class="att-input" id="bmVer" value="v1"></div>' +
+          '<div><label>Trạng thái</label><select class="att-input" id="bmStatus"><option>áp dụng</option><option>nháp</option></select></div>' +
+          '<div><label>Ghi chú</label><input class="att-input" id="bmNote" placeholder="VD: 3,6 m² × 16 kg/m² nhôm hệ 120"></div>' +
+        '</div>' +
+        '<table class="bm-lines" style="margin-top:14px"><thead><tr>' +
+          '<th>Nhóm</th><th>Vật tư</th><th class="num">Định mức / 1 đơn vị</th><th>ĐVT</th><th class="num">Hao hụt %</th><th class="num">Chi phí dòng (₫)</th><th></th>' +
+        '</tr></thead><tbody id="bmLines"></tbody>' +
+        '<tfoot><tr><td colspan="5" class="num">Tổng chi phí vật tư / 1 đơn vị</td><td class="num" id="bmTotal">0</td><td></td></tr></tfoot></table>' +
+        '<button type="button" class="btn btn-secondary btn-sm mt-2" id="bmAdd" data-no-interact="true">+ Thêm dòng vật tư</button>';
+
+      ERPInteract.showModal({
+        title: 'Thiết lập BOM mới', body: body, primaryText: 'Lưu BOM', secondaryText: 'Hủy',
+        onPrimary: function () { return saveNew(); }
+      });
+      var mov = widenModal(940); icons();
+      var linesBody = mov.querySelector('#bmLines');
+      var spSel = mov.querySelector('#bmSP'), spFree = mov.querySelector('#bmSPFree');
+      spSel.addEventListener('change', function () { spFree.style.display = spSel.value === '__free__' ? '' : 'none'; });
+      linesBody.insertAdjacentHTML('beforeend', drawerLineRow());
+
+      function recalc() {
+        var total = 0;
+        linesBody.querySelectorAll('tr').forEach(function (tr) {
+          var code = tr.querySelector('.bm-mat').value;
+          var m = code && window.StockStore ? StockStore.getMaterial(code) : null;
+          tr.querySelector('.bm-unit').textContent = m ? m.unit : '—';
+          var qty = Number(tr.querySelector('.bm-qty').value) || 0;
+          var waste = Number(tr.querySelector('.bm-waste').value) || 0;
+          var cost = m ? qty * (1 + waste / 100) * m.price : 0;
+          tr.querySelector('.bm-cost').textContent = fmt(cost);
+          total += cost;
+        });
+        mov.querySelector('#bmTotal').textContent = fmt(total);
+      }
+      linesBody.addEventListener('change', recalc);
+      linesBody.addEventListener('input', recalc);
+      linesBody.addEventListener('click', function (e) { if (e.target.closest('.bm-del')) { e.target.closest('tr').remove(); recalc(); } });
+      mov.querySelector('#bmAdd').addEventListener('click', function () { linesBody.insertAdjacentHTML('beforeend', drawerLineRow()); icons(); });
+      recalc();
+
+      function saveNew() {
+        var name = spSel.value === '__free__' ? spFree.value.trim() : spSel.value;
+        if (!name) { ERPInteract.showToast('Chưa chọn / nhập tên thành phẩm', 'warning'); return false; }
+        var lines = [];
+        linesBody.querySelectorAll('tr').forEach(function (tr) {
+          var code = tr.querySelector('.bm-mat').value;
+          var qty = Number(tr.querySelector('.bm-qty').value) || 0;
+          if (!code || qty <= 0) return;
+          var m = StockStore.getMaterial(code) || {};
+          lines.push({ matCode: code, matName: m.name || code, group: tr.querySelector('.bm-group').value, qty: qty, unit: m.unit || '', waste: Number(tr.querySelector('.bm-waste').value) || 0 });
+        });
+        if (!lines.length) { ERPInteract.showToast('BOM phải có ít nhất 1 dòng vật tư với định mức > 0', 'warning'); return false; }
+        if (!lines.some(function (l) { return l.group === 'Nguyên liệu chính'; })) {
+          ERPInteract.showToast('BOM phải có ít nhất 1 dòng thuộc nhóm <b>Nguyên liệu chính</b> (nhôm thanh)', 'warning');
+          return false;
+        }
+        var tp = ERPInv.allItems().filter(function (i) { return i.name === name; })[0];
+        var saved = ERPBOM.save({
+          id: null, productCode: (tp && tp.code) || '', productName: name,
+          outUnit: mov.querySelector('#bmDVT').value, version: mov.querySelector('#bmVer').value.trim() || 'v1',
+          status: mov.querySelector('#bmStatus').value, note: mov.querySelector('#bmNote').value.trim(), lines: lines
+        });
+        ERPInteract.showToast('Đã lưu <b>' + esc(saved.id) + '</b> — ' + esc(saved.productName), 'success');
+        renderAll();
+        return true;
+      }
+    }
+
+    document.getElementById('btnNewBOM').addEventListener('click', openNewBOM);
+    renderAll();
+
+    /* Deep-link: bom-dinh-muc.html?bom=BOM-001 */
+    var qbom = new URLSearchParams(location.search).get('bom');
+    if (qbom && ERPBOM.get(qbom)) openDrawer(qbom, false);
+  });
+</script>
+</body>
+</html>

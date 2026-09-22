@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chi tiết nhân sự — ERP NHÔM OWIN</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/css/style.css" />
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+  <style>
+    .nv-back { display:inline-flex; align-items:center; gap:6px; font-size:13px; color:var(--ash); text-decoration:none; margin-bottom:12px; }
+    .nv-back:hover { color:var(--rust); }
+    .nv-hero { display:flex; gap:18px; align-items:center; padding:20px 22px; }
+    .nv-ava { width:74px; height:74px; border-radius:16px; background:var(--ink); color:var(--paper); display:inline-flex; align-items:center; justify-content:center; font-size:27px; font-weight:600; flex-shrink:0; }
+    .nv-hero h1 { font-size:24px; margin:0; }
+    .nv-hero .sub { color:var(--ash); font-size:13.5px; margin-top:3px; }
+    .nv-hero .badges { margin-top:8px; display:flex; gap:6px; flex-wrap:wrap; }
+    .nv-hero .acts { margin-left:auto; display:flex; gap:8px; flex-wrap:wrap; }
+    .nv-grid { display:grid; grid-template-columns:1.6fr 1fr; gap:18px; align-items:start; margin-top:18px; }
+    @media (max-width:1100px){ .nv-grid { grid-template-columns:1fr; } }
+    .sec-h { font-family:var(--ff-mono); font-size:10px; letter-spacing:.12em; text-transform:uppercase; color:var(--ash); margin-bottom:12px; display:flex; align-items:center; gap:6px; }
+    /* Stepper vòng đời */
+    .stepper { display:flex; align-items:flex-start; }
+    .step { flex:1; text-align:center; position:relative; }
+    .step .dot { width:30px; height:30px; border-radius:50%; background:var(--rule); color:#fff; display:inline-flex; align-items:center; justify-content:center; position:relative; z-index:2; }
+    .step:not(:last-child)::after { content:''; position:absolute; top:15px; left:50%; width:100%; height:2px; background:var(--rule); z-index:1; }
+    .step.done .dot { background:var(--moss); } .step.done:not(:last-child)::after { background:var(--moss); }
+    .step.current .dot { background:var(--rust); }
+    .step .lbl { display:block; font-size:11.5px; margin-top:7px; color:var(--ash); }
+    .step.done .lbl, .step.current .lbl { color:var(--ink); font-weight:600; }
+    /* Spec rows */
+    .infor { display:flex; justify-content:space-between; gap:14px; padding:9px 0; border-bottom:1px solid var(--rule-hair); font-size:13px; }
+    .infor:last-child { border-bottom:0; }
+    .infor .k { color:var(--ash); flex-shrink:0; }
+    .infor .v { font-weight:600; text-align:right; }
+    /* Radar + dims */
+    .radarwrap { display:grid; grid-template-columns:auto 1fr; gap:18px; align-items:center; }
+    @media (max-width:560px){ .radarwrap { grid-template-columns:1fr; } }
+    .verdict { display:flex; gap:14px; align-items:center; padding:13px 15px; border-radius:12px; border:1px solid var(--rule); margin-bottom:14px; }
+    .verdict .sc { width:52px; height:52px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:21px; font-weight:700; color:#fff; flex-shrink:0; }
+    .verdict .lb { font-size:15px; font-weight:700; }
+    .verdict .rs { font-size:12px; color:var(--ash-2); margin-top:2px; line-height:1.45; }
+    .v-good { background:var(--moss-soft); border-color:var(--moss); } .v-good .sc { background:var(--moss); }
+    .v-mid { background:var(--amber-soft); border-color:var(--amber); } .v-mid .sc { background:var(--amber); }
+    .v-bad { background:var(--signal-soft); border-color:var(--signal); } .v-bad .sc { background:var(--signal); }
+    .pdim { display:grid; grid-template-columns:90px 1fr 36px; align-items:center; gap:10px; padding:6px 0; }
+    .pdim .l { font-size:12px; color:var(--ash); }
+    .pdim .bar { height:8px; border-radius:5px; background:var(--rule-soft); overflow:hidden; }
+    .pdim .bar > i { display:block; height:100%; border-radius:5px; }
+    .pdim .v { font-size:12.5px; font-weight:700; text-align:right; }
+    .pdim.low .l, .pdim.low .v { color:var(--signal); }
+    /* Defect accordion */
+    .def { border:1px solid var(--rule-soft); border-radius:10px; margin-bottom:8px; overflow:hidden; background:var(--paper); }
+    .def .h { display:flex; align-items:center; gap:9px; padding:11px 13px; cursor:pointer; }
+    .def .h:hover { background:var(--canvas); }
+    .def .tt { font-weight:600; font-size:12.5px; }
+    .def .sub { font-size:11px; color:var(--ash); margin-top:2px; }
+    .def .amt { margin-left:auto; font-weight:700; font-size:12.5px; color:var(--signal); white-space:nowrap; }
+    .def .chev { transition:transform .18s ease; color:var(--ash); flex-shrink:0; }
+    .def.open .chev { transform:rotate(90deg); }
+    .def .b { display:none; padding:0 13px 13px; border-top:1px solid var(--rule-hair); }
+    .def.open .b { display:block; }
+    .def .b .row { display:flex; justify-content:space-between; gap:12px; padding:7px 0; border-bottom:1px solid var(--rule-hair); font-size:12.5px; }
+    .def .b .row:last-child { border-bottom:0; }
+    .def .b .row .k { color:var(--ash); flex-shrink:0; }
+    .def .b .row .v { font-weight:600; text-align:right; }
+    .perf-empty { text-align:center; padding:22px 14px; color:var(--moss-deep); background:var(--moss-soft); border-radius:10px; font-size:13px; }
+    .chk { display:flex; align-items:center; gap:9px; padding:8px 10px; border-radius:8px; font-size:13px; margin-bottom:5px; }
+    .chk.ok { background:var(--moss-soft); color:var(--moss-deep); } .chk.miss { background:var(--signal-soft); color:var(--signal); }
+    .chk .ci { width:16px; height:16px; flex-shrink:0; } .chk .meta { margin-left:auto; font-size:11px; opacity:.8; }
+    .doc { display:flex; align-items:center; gap:10px; padding:9px 10px; border:1px solid var(--rule-soft); border-radius:8px; margin-bottom:6px; font-size:13px; }
+    .doc .di { width:18px; height:18px; color:var(--rust); flex-shrink:0; } .doc .dmeta { color:var(--ash); font-size:11px; } .doc .btn-icon { margin-left:auto; }
+  </style>
+</head>
+<body>
+
+<div id="app-shell" data-active="hr-hoso" data-title="Chi tiết nhân sự" data-crumb="<b>Nhân sự</b> · Hồ sơ · Chi tiết">
+  <a href="22-nhan-su-ho-so.html" class="nv-back"><i data-lucide="arrow-left" style="width:14px;height:14px"></i> Danh sách nhân sự</a>
+  <div id="nv-root"></div>
+</div>
+
+<script src="../assets/js/layout.js"></script>
+<script src="../assets/js/pricing-engine.js"></script>
+<script src="../assets/js/quote-data.js"></script>
+<script src="../assets/js/loss-data.js"></script>
+<script src="../assets/js/loss-ui.js"></script>
+<script src="../assets/js/hr-data.js"></script>
+<script>
+  function qs(k){ return new URLSearchParams(location.search).get(k); }
+  var _fmt = function(n){ return Number(n).toLocaleString('vi-VN'); };
+  function infoRows(arr){ return arr.map(function(p){ return '<div class="infor"><span class="k">'+p[0]+'</span><span class="v">'+p[1]+'</span></div>'; }).join(''); }
+  var okC = function(l,m){ return '<div class="chk ok"><i data-lucide="check-circle-2" class="ci"></i> '+l+' <span class="meta">'+m+'</span></div>'; };
+  var missC = function(l,m){ return '<div class="chk miss"><i data-lucide="alert-circle" class="ci"></i> '+l+' <span class="meta">'+m+'</span></div>'; };
+
+  function stepperHTML(status){
+    var steps=[['Tiếp nhận','check'],['Thử việc','check'],['Chính thức','check'],['Đang làm việc','briefcase'],['Nghỉ việc','log-out']];
+    var st = status==='thuviec' ? ['done','current','','',''] : status==='nghi' ? ['done','done','done','done','current'] : ['done','done','done','current',''];
+    return steps.map(function(s,i){ var cls=st[i]; var ic=cls==='done'?'check':s[1]; return '<div class="step '+cls+'"><span class="dot"><i data-lucide="'+ic+'" style="width:14px;height:14px"></i></span><span class="lbl">'+s[0]+'</span></div>'; }).join('');
+  }
+  function checklistBlock(e){
+    if(e.status==='thuviec') return { title:'Checklist hồ sơ (thử việc)', badgeCls:'badge-orange', badge:'4/5', html:[okC('Sơ yếu lý lịch','đã nộp'),okC('CMND/CCCD công chứng','đã nộp'),okC('Giấy khám sức khỏe','đã nộp'),okC('HĐ thử việc',e.hd),missC('Sổ BHXH','cấp khi chính thức')].join('') };
+    if(e.status==='nghi') return { title:'Checklist nghỉ việc & bàn giao', badgeCls:'badge-steel', badge:'Đã thanh lý', html:[okC('Đơn xin nghỉ việc','đã duyệt'),okC('Biên bản bàn giao','hoàn tất'),okC('Chốt & thanh toán lương','04/2026'),okC('Chốt sổ BHXH','đã trả NV')].join('') };
+    return { title:'Checklist hồ sơ (chính thức)', badgeCls:'badge-moss', badge:e.chkBadge||'6/6 đủ', html:[okC('Sơ yếu lý lịch','đã nộp'),okC('CMND/CCCD công chứng','đã nộp'),okC('Giấy khám sức khỏe','đã nộp'),okC('Hợp đồng lao động',e.hd),okC('Sổ BHXH','đã có'), e.missCert?missC('Bằng cấp / chứng chỉ nghề','thiếu'):okC('Bằng cấp / chứng chỉ nghề','đã nộp')].join('') };
+  }
+  function docsBlock(e){
+    var items;
+    if(e.status==='thuviec') items=[['file-text','HĐ thử việc '+e.hd+'.pdf','120 KB'],['file-text','Sơ yếu lý lịch.pdf','280 KB'],['image','CCCD (2 mặt).jpg','900 KB']];
+    else if(e.status==='nghi') items=[['file-text','Đơn xin nghỉ việc.pdf','90 KB · 03/2026'],['file-badge','QĐ thanh lý HĐ.pdf','110 KB · 04/2026'],['file-text','Biên bản bàn giao.pdf','150 KB · 04/2026']];
+    else items=[['file-text','HĐLĐ '+e.hd+'.pdf','320 KB'],['file-badge','Quyết định lương / đề bạt.pdf','180 KB'],['image','Giấy khám sức khỏe.jpg','1.2 MB']];
+    return items.map(function(d){ return '<div class="doc"><i data-lucide="'+d[0]+'" class="di"></i><div><div>'+d[1]+'</div><div class="dmeta">'+d[2]+'</div></div><button class="btn-icon" title="Tải về"><i data-lucide="download" style="width:15px;height:15px"></i></button></div>'; }).join('');
+  }
+  function perfBlock(ma){
+    var p = HR_PERF[ma];
+    if(!p) return '<div class="perf-empty">Nhân sự này chưa có dữ liệu hiệu suất sản xuất (không thuộc khối trực tiếp sản xuất hoặc đã nghỉ).</div>';
+    var v = HR_verdict(p);
+    var vcls = v.cls==='good'?'v-good':v.cls==='mid'?'v-mid':'v-bad';
+    var reason = p.defects.length
+      ? 'Điểm thấp nhất ở <b>'+v.low.toLowerCase()+'</b>. '+p.defects.length+' lỗi/biên bản ('+v.nBB+' biên bản) · thiệt hại <b>'+_fmt(v.dmg)+'₫</b>. Bấm từng dòng để xem gốc rễ.'
+      : 'Chưa ghi nhận lỗi/biên bản trong kỳ — chất lượng ổn định. Điểm thấp nhất: '+v.low.toLowerCase()+'.';
+    var dimRow=function(lbl,val){ var c=val>=85?'var(--moss)':val>=70?'var(--amber)':'var(--signal)'; return '<div class="pdim '+(lbl===v.low?'low':'')+'"><span class="l">'+lbl+'</span><div class="bar"><i style="width:'+val+'%;background:'+c+'"></i></div><span class="v">'+val+'</span></div>'; };
+    var defs = p.defects.length ? p.defects.map(function(d){
+      var badge=d.loai==='BB'?'<span class="badge badge-coral">Biên bản</span>':'<span class="badge badge-yellow">Phiếu lỗi</span>';
+      var rows=[['Đơn hàng / LSX',d.don],['Khách hàng',d.kh||'Nội bộ'],['Công đoạn',d.congDoan],['Số lượng hỏng',d.slHong],['Loại lỗi',d.loaiLoi],['Nguyên nhân gốc',d.nguyenNhan],['Ảnh hưởng',d.anhHuong],['Giá trị thiệt hại',_fmt(d.giaTri)+'₫'],['Trừ lương',d.truLuong]];
+      return '<div class="def"><div class="h"><div style="min-width:0"><div class="tt">'+badge+' '+d.loaiLoi+'</div><div class="sub">'+d.ma+' · '+d.congDoan+' · '+d.don+(d.ngay?' · '+d.ngay:'')+'</div></div><span class="amt">'+_fmt(d.giaTri)+'₫</span><i data-lucide="chevron-right" class="chev" style="width:16px;height:16px"></i></div>'+
+        '<div class="b">'+rows.map(function(r){return '<div class="row"><span class="k">'+r[0]+'</span><span class="v">'+r[1]+'</span></div>';}).join('')+
+        '<div class="flex" style="gap:8px;margin-top:10px"><a href="28-phieu-loi-bien-ban.html" class="btn btn-secondary btn-sm" style="flex:1"><i data-lucide="file-warning" style="width:13px;height:13px"></i> Mở '+(d.loai==='BB'?'biên bản':'phiếu lỗi')+'</a><a href="06-lsx-phieu-cong-nghe.html" class="btn btn-secondary btn-sm" style="flex:1"><i data-lucide="factory" style="width:13px;height:13px"></i> Mở LSX</a></div></div></div>';
+    }).join('') : '<div class="perf-empty"><i data-lucide="shield-check" style="width:18px;height:18px;vertical-align:-3px"></i> Chưa ghi nhận lỗi / biên bản — chất lượng ổn định.</div>';
+    var nBB=v.nBB, dmg=v.dmg;
+    return ''+
+      '<div class="verdict '+vcls+'"><div class="sc">'+p.diem+'</div><div style="min-width:0"><div class="lb">'+v.label+'</div><div class="rs">'+reason+'</div></div></div>'+
+      '<div class="radarwrap">'+
+        '<div id="nvRadar" style="width:260px"></div>'+
+        '<div>'+dimRow('Năng suất',p.ns)+dimRow('Chất lượng',p.cl)+dimRow('Đúng hạn',p.dh)+dimRow('Chấp hành',p.cp)+
+          '<div class="grid grid-2" style="gap:8px;margin-top:10px">'+
+            '<div class="card" style="padding:10px 12px;box-shadow:none"><div class="t-micro-u">Sản lượng kỳ</div><div style="font-weight:700;font-size:15px;margin-top:3px">'+p.sanLuong+'</div></div>'+
+            '<div class="card" style="padding:10px 12px;box-shadow:none"><div class="t-micro-u">Tỷ lệ lỗi</div><div style="font-weight:700;font-size:15px;margin-top:3px">'+p.tyLeLoi+'</div></div>'+
+          '</div>'+
+        '</div>'+
+      '</div>'+
+      '<hr class="hr-soft" style="margin:16px 0">'+
+      '<div class="flex-between mb-2"><div class="sec-h" style="margin-bottom:0"><i data-lucide="search" style="width:13px;height:13px"></i> Truy vết lỗi sản xuất · gốc rễ đánh giá</div><span class="t-caption">bấm 1 dòng để xem sâu</span></div>'+
+      defs;
+  }
+
+  document.addEventListener('erp:ready', function(){
+    var ma = qs('nv') || 'NV-018';
+    var e = HR_EMP[ma];
+    var root = document.getElementById('nv-root');
+    if(!e){ root.innerHTML = '<div class="card" style="padding:40px;text-align:center"><div class="t-h5">Không tìm thấy nhân sự</div><div class="t-caption mt-2">Mã '+ma+' không tồn tại. <a href="22-nhan-su-ho-so.html" class="btn-link">Về danh sách</a></div></div>'; return; }
+    var tvBtn = e.status==='thuviec' ? '<a href="24-thu-viec-danh-gia.html" class="btn btn-yellow btn-sm"><i data-lucide="user-check" style="width:13px;height:13px"></i> Đánh giá thử việc</a>' : '';
+    var cl = checklistBlock(e);
+    root.innerHTML =
+      '<div class="card nv-hero mb-2">'+
+        '<div class="nv-ava">'+e.init+'</div>'+
+        '<div style="min-width:0"><h1>'+e.ten+'</h1><div class="sub">'+e.sub+'</div><div class="badges">'+e.badges+'</div></div>'+
+        '<div class="acts">'+tvBtn+
+          '<a href="27-bac-luong-kpi.html" class="btn btn-secondary btn-sm"><i data-lucide="bar-chart-3" style="width:13px;height:13px"></i> KPI & lương</a>'+
+          '<a href="26-hop-dong-quyet-dinh.html" class="btn btn-secondary btn-sm"><i data-lucide="file-badge" style="width:13px;height:13px"></i> Hợp đồng</a>'+
+          '<button class="btn btn-primary btn-sm" data-toast-msg="Mở form sửa hồ sơ '+e.ten+'" data-toast-type="info"><i data-lucide="pen-line" style="width:13px;height:13px"></i> Sửa hồ sơ</button>'+
+        '</div>'+
+      '</div>'+
+      '<div class="nv-grid">'+
+        '<div>'+
+          '<div class="card mb-3"><div class="sec-h"><i data-lucide="route" style="width:13px;height:13px"></i> Vòng đời nhân sự</div><div class="stepper">'+stepperHTML(e.status)+'</div><div class="t-caption mt-3" style="text-align:center">'+e.lifeNote+'</div></div>'+
+          '<div class="card mb-3"><div class="sec-h"><i data-lucide="radar" style="width:13px;height:13px"></i> Đánh giá năng lực &amp; chất lượng (mạng nhện)</div>'+perfBlock(ma)+'</div>'+
+        '</div>'+
+        '<div>'+
+          '<div class="card mb-3"><div class="flex-between mb-2"><div class="sec-h" style="margin-bottom:0"><i data-lucide="user" style="width:13px;height:13px"></i> Thông tin cá nhân</div><span class="badge badge-steel" title="Tự điền vào HĐLĐ"><i data-lucide="link" style="width:11px;height:11px"></i> Tự điền HĐLĐ</span></div>'+infoRows(e.canhan)+'</div>'+
+          '<div class="card mb-3"><div class="sec-h"><i data-lucide="briefcase" style="width:13px;height:13px"></i> Công việc &amp; phòng ban</div>'+infoRows(e.congviec)+'</div>'+
+          '<div class="card mb-3"><div class="sec-h"><i data-lucide="wallet" style="width:13px;height:13px"></i> Lương &amp; bảo hiểm</div>'+infoRows(e.luong)+'</div>'+
+          '<div class="card mb-3"><div class="flex-between mb-2"><div class="sec-h" style="margin-bottom:0"><i data-lucide="clipboard-check" style="width:13px;height:13px"></i> '+cl.title+'</div><span class="badge '+cl.badgeCls+'">'+cl.badge+'</span></div>'+cl.html+'</div>'+
+          '<div class="card"><div class="flex-between mb-2"><div class="sec-h" style="margin-bottom:0"><i data-lucide="folder" style="width:13px;height:13px"></i> Hồ sơ &amp; tài liệu</div><button class="btn-link" style="font-size:12px">Tải lên</button></div>'+docsBlock(e)+
+            '<a href="26-hop-dong-quyet-dinh.html" class="btn btn-secondary btn-sm" style="width:100%;margin-top:8px"><i data-lucide="file-badge" style="width:13px;height:13px"></i> Hợp đồng &amp; quyết định liên quan</a></div>'+
+        '</div>'+
+      '</div>';
+
+    // Cập nhật tiêu đề topbar
+    var tt = document.querySelector('.topbar-title, [data-title-slot]'); if(tt) tt.textContent = e.ten;
+    if(window.lucide) lucide.createIcons();
+
+    // Radar mạng nhện
+    var p = HR_PERF[ma];
+    if(p && window.ERPCharts){ var rd = HR_radar(p); ERPCharts.radar('nvRadar', { labels: rd.labels, values: rd.values }, { size:260, max:100, color:'#c5400a' }); }
+
+    // Accordion lỗi
+    document.querySelectorAll('.def .h').forEach(function(h){ h.addEventListener('click', function(){ h.closest('.def').classList.toggle('open'); }); });
+  });
+</script>
+</body>
+</html>

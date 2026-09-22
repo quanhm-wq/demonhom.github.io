@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hồ sơ nhân sự — ERP NHÔM OWIN</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/css/style.css" />
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+  <style>
+    /* Master-detail */
+    .hr-split { display:grid; grid-template-columns: minmax(0,1.55fr) minmax(0,1fr); gap:16px; align-items:start; }
+    @media (max-width:1024px){ .hr-split{ grid-template-columns:1fr; } }
+
+    /* Profile panel */
+    .pf-head { display:flex; gap:14px; align-items:center; }
+    .pf-avatar { width:56px; height:56px; border-radius:12px; background:var(--ink); color:var(--paper); display:inline-flex; align-items:center; justify-content:center; font-size:20px; font-weight:600; flex-shrink:0; letter-spacing:.02em; }
+    .pf-info-row { display:flex; justify-content:space-between; padding:9px 0; border-bottom:1px solid var(--rule-hair); font-size:13px; }
+    .pf-info-row:last-child{ border-bottom:0; }
+    .pf-info-row .k { color:var(--ash); }
+    .pf-info-row .v { font-weight:500; text-align:right; }
+
+    /* Lifecycle stepper */
+    .stepper { display:flex; align-items:center; gap:0; margin:4px 0; }
+    .step { display:flex; flex-direction:column; align-items:center; gap:5px; flex:1; position:relative; }
+    .step .dot { width:26px; height:26px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; background:var(--paper-3); color:var(--ash); border:2px solid var(--paper-3); }
+    .step.done .dot { background:var(--moss); border-color:var(--moss); color:#fff; }
+    .step.current .dot { background:var(--rust); border-color:var(--rust); color:#fff; box-shadow:0 0 0 4px var(--rust-soft); }
+    .step .lbl { font-size:10.5px; font-weight:600; color:var(--ash); text-align:center; line-height:1.25; }
+    .step.done .lbl, .step.current .lbl { color:var(--ink); }
+    .step::before { content:""; position:absolute; top:13px; left:-50%; width:100%; height:2px; background:var(--paper-3); z-index:0; }
+    .step:first-child::before{ display:none; }
+    .step.done::before, .step.current::before { background:var(--moss); }
+    .step .dot { z-index:1; }
+
+    /* Checklist */
+    .chk { display:flex; align-items:center; gap:9px; padding:8px 10px; border-radius:8px; font-size:13px; margin-bottom:5px; }
+    .chk.ok { background:var(--moss-soft); color:var(--moss-deep); }
+    .chk.miss { background:var(--signal-soft); color:var(--signal); }
+    .chk .ci { width:16px; height:16px; flex-shrink:0; }
+    .chk .meta { margin-left:auto; font-size:11px; opacity:.8; }
+
+    /* Doc list */
+    .doc { display:flex; align-items:center; gap:10px; padding:9px 10px; border:1px solid var(--rule-soft); border-radius:8px; margin-bottom:6px; font-size:13px; }
+    .doc .di { width:18px; height:18px; color:var(--rust); flex-shrink:0; }
+    .doc .dmeta { color:var(--ash); font-size:11px; }
+    .doc .btn-icon { margin-left:auto; }
+
+    /* View tabs */
+    .tab.active { background:var(--canvas); color:var(--ink); box-shadow:0 1px 0 var(--rule); }
+    .tbl tbody tr[data-nv] { cursor:pointer; }
+
+    /* Detail drawer — trượt từ phải, cuộn dọc */
+    .drawer-overlay { position:fixed; inset:0; background:rgba(20,19,15,.42); backdrop-filter:blur(2px); z-index:80; opacity:0; pointer-events:none; transition:opacity .2s ease; }
+    .drawer-overlay.open { opacity:1; pointer-events:auto; }
+    .drawer { position:fixed; top:0; right:0; height:100vh; width:452px; max-width:94vw; background:var(--canvas); border-left:1px solid var(--rule); box-shadow:-12px 0 32px rgba(20,19,15,.16); z-index:81; transform:translateX(100%); transition:transform .26s cubic-bezier(.2,.8,.2,1); overflow-y:auto; padding:20px 22px 36px; }
+    .drawer.open { transform:translateX(0); }
+    .drawer::-webkit-scrollbar { width:8px; }
+    .drawer::-webkit-scrollbar-thumb { background:var(--rule); border-radius:9999px; }
+    .drawer-close { position:absolute; top:14px; right:14px; z-index:2; }
+
+    /* ===== Chân dung 360° — tab Hiệu suất & Chất lượng ===== */
+    .pf-tabs { display:flex; gap:4px; background:var(--paper); border:1px solid var(--rule); border-radius:10px; padding:3px; margin:4px 0 14px; }
+    .pf-tab { flex:1; text-align:center; padding:8px 10px; border-radius:7px; font-size:12.5px; font-weight:600; color:var(--ash); background:transparent; border:0; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:6px; transition:background .14s ease, color .14s ease; }
+    .pf-tab.active { background:var(--ink); color:var(--paper); }
+    .perf-verdict { display:flex; gap:14px; align-items:center; padding:14px 16px; border-radius:12px; border:1px solid var(--rule); margin-bottom:14px; }
+    .perf-verdict .pv-score { width:54px; height:54px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:22px; font-weight:700; flex-shrink:0; color:#fff; }
+    .perf-verdict .pv-label { font-size:15px; font-weight:700; }
+    .perf-verdict .pv-reason { font-size:12px; color:var(--ash-2); margin-top:3px; line-height:1.45; }
+    .pv-good { background:var(--moss-soft); border-color:var(--moss); } .pv-good .pv-score { background:var(--moss); }
+    .pv-mid  { background:var(--amber-soft); border-color:var(--amber); } .pv-mid .pv-score { background:var(--amber); }
+    .pv-bad  { background:var(--signal-soft); border-color:var(--signal); } .pv-bad .pv-score { background:var(--signal); }
+    .perf-dim { display:grid; grid-template-columns:96px 1fr 40px; align-items:center; gap:10px; padding:7px 0; }
+    .perf-dim .pd-l { font-size:12px; color:var(--ash); }
+    .perf-dim .pd-bar { height:8px; border-radius:5px; background:var(--rule-soft); overflow:hidden; }
+    .perf-dim .pd-bar > i { display:block; height:100%; border-radius:5px; }
+    .perf-dim .pd-v { font-size:12.5px; font-weight:700; text-align:right; }
+    .perf-dim.low .pd-l, .perf-dim.low .pd-v { color:var(--signal); }
+    .perf-stats { display:grid; grid-template-columns:repeat(2,1fr); gap:8px; margin:6px 0 4px; }
+    .perf-stat { border:1px solid var(--rule-soft); border-radius:9px; padding:10px 12px; background:var(--paper); }
+    .perf-stat .ps-l { font-size:10.5px; text-transform:uppercase; letter-spacing:.06em; color:var(--ash); }
+    .perf-stat .ps-v { font-size:16px; font-weight:700; margin-top:3px; }
+    .perf-def { border:1px solid var(--rule-soft); border-radius:10px; margin-bottom:8px; overflow:hidden; background:var(--paper); }
+    .perf-def .pd-head { display:flex; align-items:center; gap:9px; padding:11px 13px; cursor:pointer; }
+    .perf-def .pd-head:hover { background:var(--canvas); }
+    .perf-def .pd-tt { font-weight:600; font-size:12.5px; }
+    .perf-def .pd-sub { font-size:11px; color:var(--ash); margin-top:2px; }
+    .perf-def .pd-amt { margin-left:auto; font-weight:700; font-size:12.5px; color:var(--signal); white-space:nowrap; }
+    .perf-def .pd-chev { transition:transform .18s ease; flex-shrink:0; color:var(--ash); }
+    .perf-def.open .pd-chev { transform:rotate(90deg); }
+    .perf-def .pd-body { display:none; padding:0 13px 13px; border-top:1px solid var(--rule-hair); }
+    .perf-def.open .pd-body { display:block; }
+    .perf-def .pd-body .row { display:flex; justify-content:space-between; gap:12px; padding:7px 0; border-bottom:1px solid var(--rule-hair); font-size:12.5px; }
+    .perf-def .pd-body .row:last-child { border-bottom:0; }
+    .perf-def .pd-body .row .k { color:var(--ash); flex-shrink:0; }
+    .perf-def .pd-body .row .v { font-weight:600; text-align:right; }
+    .perf-empty { text-align:center; padding:22px 14px; color:var(--moss-deep); background:var(--moss-soft); border-radius:10px; font-size:13px; }
+  </style>
+</head>
+<body>
+
+<div id="app-shell" data-active="hr-hoso" data-title="Hồ sơ nhân sự" data-crumb="<b>Nhân sự</b> · Hồ sơ nhân sự">
+
+  <div class="page-header">
+    <div>
+      <h1>Hồ sơ nhân sự</h1>
+      <p>Nhà máy cửa nhôm Owin — Số 8 Giá Ngự, Xâm Xuyên, Thường Tín, Hà Nội · 42 nhân sự · 34 chính thức · 6 thử việc · 2 sắp hết hạn thử việc</p>
+    </div>
+    <div class="actions">
+      <button class="btn btn-secondary"><i data-lucide="download" style="width:14px;height:14px"></i> Xuất danh sách</button>
+      <button class="btn btn-primary"><i data-lucide="user-plus" style="width:14px;height:14px"></i> Thêm nhân sự</button>
+    </div>
+  </div>
+
+  <!-- KPI -->
+  <div class="grid grid-4 mb-4">
+    <div class="card-feature-blue">
+      <div class="t-micro-u" style="color:var(--steel)">TỔNG NHÂN SỰ</div>
+      <div class="t-h2 mt-1">42</div>
+      <div class="t-caption" style="color:var(--steel)">8 phòng/tổ</div>
+    </div>
+    <div class="card-feature-teal">
+      <div class="t-micro-u" style="color:var(--moss-deep)">CHÍNH THỨC</div>
+      <div class="t-h2 mt-1">34</div>
+      <div class="t-caption" style="color:var(--moss-deep)">81% nhân sự</div>
+    </div>
+    <div class="card-feature-orange">
+      <div class="t-micro-u" style="color:var(--amber)">ĐANG THỬ VIỆC</div>
+      <div class="t-h2 mt-1">6</div>
+      <div class="t-caption" style="color:var(--amber)">1 tháng thử việc</div>
+    </div>
+    <div class="card-feature-yellow">
+      <div class="t-micro-u" style="color:var(--rust-deep)">SẮP HẾT THỬ VIỆC</div>
+      <div class="t-h2 mt-1">2</div>
+      <div class="t-caption" style="color:var(--rust-deep)">Cần quyết định nhận</div>
+    </div>
+  </div>
+
+  <!-- View tabs -->
+  <div data-tab-group>
+  <div class="tabs view-tabs mb-4">
+    <button class="tab active" data-tab="tab-list"><i data-lucide="table-2" style="width:14px;height:14px;vertical-align:-2px"></i> Danh sách nhân sự</button>
+    <button class="tab" data-tab="tab-report"><i data-lucide="bar-chart-3" style="width:14px;height:14px;vertical-align:-2px"></i> Biểu đồ & Báo cáo</button>
+  </div>
+
+  <!-- ===================== PANE: DANH SÁCH ===================== -->
+  <div data-tab-pane="tab-list">
+
+  <!-- Filter bar -->
+  <div class="card mb-4" style="padding:12px 14px">
+    <div class="flex-between" style="flex-wrap:wrap;gap:10px">
+      <div class="tabs">
+        <button class="tab tab-active">Tất cả (42)</button>
+        <button class="tab">Chính thức (34)</button>
+        <button class="tab">Thử việc (6)</button>
+        <button class="tab">Sắp hết hạn (2)</button>
+        <button class="tab">Đã nghỉ</button>
+      </div>
+      <div class="flex" style="gap:8px;flex-wrap:wrap">
+        <span class="filter-pill"><i data-lucide="building-2" style="width:13px;height:13px"></i> Phòng/Tổ <i data-lucide="chevron-down" style="width:13px;height:13px"></i></span>
+        <span class="filter-pill"><i data-lucide="file-badge" style="width:13px;height:13px"></i> Loại HĐ <i data-lucide="chevron-down" style="width:13px;height:13px"></i></span>
+        <div style="position:relative">
+          <i data-lucide="search" style="width:14px;height:14px;position:absolute;left:10px;top:9px;color:var(--ash-2)"></i>
+          <input class="input" placeholder="Tìm tên, mã NV…" style="padding-left:30px;width:200px"/>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bảng nhân sự đầy đủ thông tin — bấm 1 dòng để mở hồ sơ chi tiết -->
+  <div class="table-wrap">
+    <table class="tbl">
+      <thead>
+        <tr>
+          <th>Mã NV</th>
+          <th>Họ tên · Cá nhân</th>
+          <th>Bộ phận · Vị trí</th>
+          <th>Loại HĐ</th>
+          <th>Liên hệ</th>
+          <th>Bậc · Lương CB</th>
+          <th>Trạng thái</th>
+          <th class="num">Ngày vào</th>
+          <th>Cảnh báo</th>
+          <th class="center">Chi tiết</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr data-nv="NV-018">
+          <td><a href="22-nhan-su-ho-so.html?nv=NV-018" class="lnk"><b>NV-018</b></a></td>
+          <td>Trần Văn Tú<div class="t-caption">Nam · 14/08/1990</div></td>
+          <td>Cắt CNC · Thợ cắt CNC chính<div class="t-caption">Xưởng sản xuất · Tổ Cắt CNC · Máy <a href="17-may-moc.html?may=CAT-01" class="lnk">CAT-01</a></div></td>
+          <td>Vô thời hạn</td>
+          <td>0938 552 112<div class="t-caption">tu.tv@owin.vn</div></td>
+          <td>Bậc 5/7<div class="t-caption">6.000.000đ</div></td>
+          <td><span class="badge badge-moss">Chính thức</span></td>
+          <td class="num">12/03/2021</td>
+          <td><span style="color:#1f6b3a;font-weight:700">Tỷ lệ lỗi 0,6%</span></td>
+          <td class="center"><i data-lucide="chevron-right" style="width:16px;height:16px;color:var(--ash-2)"></i></td>
+        </tr>
+        <tr data-nv="NV-031">
+          <td><a href="22-nhan-su-ho-so.html?nv=NV-031" class="lnk"><b>NV-031</b></a></td>
+          <td>Nguyễn Thị Mai<div class="t-caption">Nữ · 22/03/1995</div></td>
+          <td>KCS · KCS nhôm kính<div class="t-caption">Khối KCS · Phòng KCS nhôm kính · Ca ngày</div></td>
+          <td>HĐ 1 năm</td>
+          <td>0907 441 220<div class="t-caption">mai.nt@owin.vn</div></td>
+          <td>Bậc 3/7<div class="t-caption">7.000.000đ</div></td>
+          <td><span class="badge badge-moss">Chính thức</span></td>
+          <td class="num">05/09/2024</td>
+          <td><span style="color:#8a1f1f;font-weight:700">Sót lỗi hở gioăng ra khách · 4,5M₫</span></td>
+          <td class="center"><i data-lucide="chevron-right" style="width:16px;height:16px;color:var(--ash-2)"></i></td>
+        </tr>
+        <tr data-nv="NV-042">
+          <td><a href="22-nhan-su-ho-so.html?nv=NV-042" class="lnk"><b>NV-042</b></a></td>
+          <td>Lê Hoàng Nam<div class="t-caption">Nam · 07/05/1998</div></td>
+          <td>Hoàn thiện · Thợ đóng kiện<div class="t-caption">Xưởng hoàn thiện · Tổ 3 (Đóng kiện)</div></td>
+          <td>Thử việc</td>
+          <td>0356 778 991<div class="t-caption">nam.lh@owin.vn</div></td>
+          <td>Thử việc<div class="t-caption">6.000.000đ</div></td>
+          <td><span class="badge status-warning">Sắp hết TV · 3 ngày</span></td>
+          <td class="num">21/05/2026</td>
+          <td><span style="color:#8a1f1f;font-weight:700">Hết thử việc sau 3 ngày</span></td>
+          <td class="center"><i data-lucide="chevron-right" style="width:16px;height:16px;color:var(--ash-2)"></i></td>
+        </tr>
+        <tr data-nv="NV-041">
+          <td><a href="22-nhan-su-ho-so.html?nv=NV-041" class="lnk"><b>NV-041</b></a></td>
+          <td>Phạm Thu Hà<div class="t-caption">Nữ · 11/11/1999</div></td>
+          <td>Văn phòng · Kế toán kho<div class="t-caption">Phòng Kế toán · Ca ngày</div></td>
+          <td>Thử việc</td>
+          <td>0987 220 113<div class="t-caption">ha.pt@owin.vn</div></td>
+          <td>Thử việc<div class="t-caption">7.200.000đ</div></td>
+          <td><span class="badge status-warning">Sắp hết TV · 5 ngày</span></td>
+          <td class="num">19/05/2026</td>
+          <td><span style="color:var(--rule)">—</span></td>
+          <td class="center"><i data-lucide="chevron-right" style="width:16px;height:16px;color:var(--ash-2)"></i></td>
+        </tr>
+        <tr data-nv="NV-040">
+          <td><a href="22-nhan-su-ho-so.html?nv=NV-040" class="lnk"><b>NV-040</b></a></td>
+          <td>Võ Minh Khôi<div class="t-caption">Nam · 02/09/2001</div></td>
+          <td>Ép góc · Phụ máy ép góc<div class="t-caption">Xưởng lắp ráp · Tổ 2 (Ép góc) · Máy <a href="17-may-moc.html?may=EP-02" class="lnk">EP-02</a></div></td>
+          <td>Thử việc</td>
+          <td>0344 990 112<div class="t-caption">khoi.vm@owin.vn</div></td>
+          <td>Thử việc<div class="t-caption">5.600.000đ</div></td>
+          <td><span class="badge badge-orange">Thử việc</span></td>
+          <td class="num">02/06/2026</td>
+          <td><span style="color:#8a1f1f;font-weight:700">Lỗi ép góc 5,2% · vượt ngưỡng</span></td>
+          <td class="center"><i data-lucide="chevron-right" style="width:16px;height:16px;color:var(--ash-2)"></i></td>
+        </tr>
+        <tr data-nv="NV-022">
+          <td><a href="22-nhan-su-ho-so.html?nv=NV-022" class="lnk"><b>NV-022</b></a></td>
+          <td>Đỗ Văn Minh<div class="t-caption">Nam · 30/06/1992</div></td>
+          <td>Cắt CNC · Tổ trưởng cắt CNC<div class="t-caption">Xưởng sản xuất · Tổ Cắt CNC · Máy <a href="17-may-moc.html?may=CAT-02" class="lnk">CAT-02</a></div></td>
+          <td>HĐ 3 năm</td>
+          <td>0909 332 551<div class="t-caption">minh.dv@owin.vn</div></td>
+          <td>Bậc 4/7<div class="t-caption">6.500.000đ</div></td>
+          <td><span class="badge badge-moss">Chính thức</span></td>
+          <td class="num">15/01/2023</td>
+          <td><span style="color:var(--rule)">—</span></td>
+          <td class="center"><i data-lucide="chevron-right" style="width:16px;height:16px;color:var(--ash-2)"></i></td>
+        </tr>
+        <tr data-nv="NV-009">
+          <td><a href="22-nhan-su-ho-so.html?nv=NV-009" class="lnk"><b>NV-009</b></a></td>
+          <td>Bùi Thị Lan<div class="t-caption">Nữ · 15/02/1989</div></td>
+          <td>Kinh doanh dự án · NV phát triển đại lý<div class="t-caption">Phòng Kinh doanh dự án · Khu vực Miền Bắc</div></td>
+          <td>Vô thời hạn</td>
+          <td>0902 118 446<div class="t-caption">lan.bt@owin.vn</div></td>
+          <td>Bậc 4/7<div class="t-caption">8.000.000đ</div></td>
+          <td><span class="badge badge-moss">Chính thức</span></td>
+          <td class="num">08/07/2020</td>
+          <td><span style="color:#1f6b3a;font-weight:700">KPI 90 · đạt chỉ tiêu đại lý</span></td>
+          <td class="center"><i data-lucide="chevron-right" style="width:16px;height:16px;color:var(--ash-2)"></i></td>
+        </tr>
+        <tr data-nv="NV-035">
+          <td><a href="22-nhan-su-ho-so.html?nv=NV-035" class="lnk"><b>NV-035</b></a></td>
+          <td>Hoàng Văn Sơn<div class="t-caption">Nam · 09/12/1996</div></td>
+          <td>Uốn vòm · Thợ uốn vòm<div class="t-caption">Xưởng định hình · Tổ 1 (Uốn vòm) · Máy <a href="17-may-moc.html?may=UON-01" class="lnk">UON-01</a></div></td>
+          <td>HĐ 1 năm</td>
+          <td>0356 220 778<div class="t-caption">son.hv@owin.vn</div></td>
+          <td>Bậc 2/7<div class="t-caption">5.800.000đ</div></td>
+          <td><span class="badge badge-moss">Chính thức</span></td>
+          <td class="num">03/02/2025</td>
+          <td><span style="color:var(--rule)">—</span></td>
+          <td class="center"><i data-lucide="chevron-right" style="width:16px;height:16px;color:var(--ash-2)"></i></td>
+        </tr>
+        <tr data-nv="NV-014" style="opacity:.6">
+          <td><a href="22-nhan-su-ho-so.html?nv=NV-014" class="lnk"><b>NV-014</b></a></td>
+          <td>Trần Quốc Bảo<div class="t-caption">Nam · 25/07/1990</div></td>
+          <td>Kho · Thủ kho nhôm – kính<div class="t-caption">Kho nhôm – kính</div></td>
+          <td>Đã thanh lý</td>
+          <td>0908 110 556<div class="t-caption">—</div></td>
+          <td>Bậc 4/7 (cũ)<div class="t-caption">Đã thanh lý</div></td>
+          <td><span class="badge">Đã nghỉ · 04/2026</span></td>
+          <td class="num">11/2019</td>
+          <td><span style="color:var(--rule)">—</span></td>
+          <td class="center"><i data-lucide="chevron-right" style="width:16px;height:16px;color:var(--ash-2)"></i></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  </div><!-- /PANE Danh sách -->
+
+  <!-- ===================== PANE: BIỂU ĐỒ & BÁO CÁO ===================== -->
+  <div data-tab-pane="tab-report" style="display:none">
+
+  <!-- Phân bố nhân sự -->
+  <div class="grid grid-12 mt-4">
+    <div class="card">
+      <div class="t-h5 mb-1">Phân bố nhân sự theo bộ phận</div>
+      <div class="t-caption mb-3">Định biên vs thực tế · tháng 6/2026</div>
+      <div id="chartDept" style="min-height:240px"></div>
+    </div>
+    <div class="card">
+      <div class="t-h5 mb-3">Cơ cấu loại hợp đồng</div>
+      <div id="chartContract"></div>
+      <div class="flex" style="gap:14px;flex-wrap:wrap;margin-top:10px;font-size:11px;color:var(--ash)">
+        <span><span class="badge-dot" style="background:var(--ink);margin-right:4px"></span>Vô thời hạn (18)</span>
+        <span><span class="badge-dot" style="background:var(--steel);margin-right:4px"></span>HĐ 3 năm (9)</span>
+        <span><span class="badge-dot" style="background:var(--moss);margin-right:4px"></span>HĐ 1 năm (9)</span>
+        <span><span class="badge-dot" style="background:var(--amber);margin-right:4px"></span>Thử việc (6)</span>
+      </div>
+    </div>
+  </div>
+
+  </div><!-- /PANE Báo cáo -->
+  </div><!-- /tab-group -->
+
+  <!-- Drawer hồ sơ chi tiết — chỉ hiện khi bấm vào 1 nhân viên -->
+  <div class="drawer-overlay" id="pf-overlay"></div>
+  <aside class="drawer" id="pf-drawer" aria-hidden="true">
+    <button class="btn-icon drawer-close" id="pf-close" title="Đóng"><i data-lucide="x" style="width:18px;height:18px"></i></button>
+    <div id="pf-body"></div>
+  </aside>
+
+  <div style="text-align:center;padding:16px">
+    <div class="sticky teal"><i data-lucide="link" style="width:14px;height:14px"></i> Hồ sơ nhân sự liên thông trực tiếp tới Hợp đồng, Bậc lương–KPI và Chấm công–Lương · một nguồn dữ liệu duy nhất</div>
+  </div>
+
+</div>
+
+<script src="../assets/js/layout.js"></script>
+<script src="../assets/js/pricing-engine.js"></script>
+<script src="../assets/js/quote-data.js"></script>
+<script src="../assets/js/loss-data.js"></script>
+<script src="../assets/js/loss-ui.js"></script>
+<script>
+  document.addEventListener('erp:ready', () => {
+    /* Biểu đồ vẽ lười khi mở tab Báo cáo (pane ẩn lúc đầu → width=0 nếu vẽ ngay) */
+    let chartsDrawn = false;
+    function drawCharts(){
+      if(chartsDrawn) return; chartsDrawn = true;
+      ERPCharts.groupedBar('chartDept', {
+        labels: ['Cắt CNC','KCS','Ép góc','Hoàn thiện','Uốn vòm','Kho','KD','VP'],
+        datasets: [
+          { name:'Định biên', values:[8,5,9,4,4,3,5,4], color:'#b8b2a2' },
+          { name:'Thực tế',   values:[8,5,7,4,3,2,5,4], color:'#c5400a' },
+        ],
+      }, { height: 240, unit:'người' });
+      ERPCharts.donut('chartContract', {
+        labels: ['Vô thời hạn','HĐ 3 năm','HĐ 1 năm','Thử việc'],
+        values: [18, 9, 9, 6],
+        colors: ['#14130f','#4a5560','#2f5d3a','#9c7714'],
+      }, { centerLabel: 'Tổng', centerValue: '42' });
+    }
+    const reportTab = document.querySelector('[data-tab="tab-report"]');
+    if(reportTab) reportTab.addEventListener('click', () => setTimeout(drawCharts, 40));
+
+    /* ===== Hồ sơ chi tiết — render động khi click dòng ===== */
+    const EMP = {
+      'NV-018': { init:'TT', ten:'Trần Văn Tú', sub:'NV-018 · Cắt CNC · Vận hành chính', status:'chinhthuc', hd:'HĐLĐ-2024-018', missCert:true, chkBadge:'5/6 đủ',
+        badges:'<span class="badge badge-moss">Chính thức</span> <span class="badge badge-steel">Vô thời hạn</span>',
+        lifeNote:'Vào làm 12/03/2021 · thâm niên 5 năm 3 tháng',
+        canhan:[['Giới tính','Nam'],['Ngày sinh · Nơi sinh','14/08/1990 · Hà Nội'],['Số CCCD','001090001221'],['Cấp ngày · Nơi cấp','10/05/2021 · Cục CS QLHC TTXH'],['Thường trú','Xâm Xuyên, Thường Tín, Hà Nội'],['Điện thoại','0938 552 112'],['Email','tu.tv@owin.vn'],['Liên hệ khẩn cấp','Vợ · 0907 233 540']],
+        congviec:[['Phòng / Bộ phận','Xưởng sản xuất · Tổ Cắt CNC'],['Chức danh','Thợ cắt CNC chính'],['Máy phụ trách','Máy cắt nhôm 2 đầu lưỡi 500 CAT-01'],['Quản lý trực tiếp','Đỗ Văn Minh (Tổ trưởng cắt CNC)'],['Ngày vào làm','12/03/2021'],['Loại hợp đồng','Vô thời hạn · HĐLĐ-2024-018']],
+        luong:[['Bậc lương','Bậc 5/7 · CN sản xuất'],['Hình thức lương','Khoán theo cây nhôm cắt'],['Lương cơ bản (BHXH)','6.000.000 đ'],['Số sổ BHXH','7921000482'],['MST cá nhân','8012449106'],['Ngân hàng · STK','Vietcombank · 0071000615']] },
+
+      'NV-031': { init:'NM', ten:'Nguyễn Thị Mai', sub:'NV-031 · KCS · KCS nhôm kính', status:'chinhthuc', hd:'HĐLĐ-2024-031', missCert:false, chkBadge:'6/6 đủ',
+        badges:'<span class="badge badge-moss">Chính thức</span> <span class="badge badge-orange">HĐ 1 năm</span>',
+        lifeNote:'Vào làm 05/09/2024 · thâm niên 1 năm 9 tháng · HĐ hết hạn 05/09/2026',
+        canhan:[['Giới tính','Nữ'],['Ngày sinh · Nơi sinh','22/03/1995 · Hà Nội'],['Số CCCD','001195003311'],['Cấp ngày · Nơi cấp','14/08/2021 · Cục CS QLHC TTXH'],['Thường trú','Tứ Hiệp, Thanh Trì, Hà Nội'],['Điện thoại','0907 441 220'],['Email','mai.nt@owin.vn'],['Liên hệ khẩn cấp','Chồng · 0938 110 022']],
+        congviec:[['Phòng / Bộ phận','Khối KCS · Phòng KCS nhôm kính'],['Chức danh','KCS nhôm kính'],['Ca làm việc','Ca ngày (07:30–16:30)'],['Quản lý trực tiếp','Trần Thị Hồng (Trưởng KCS)'],['Ngày vào làm','05/09/2024'],['Loại hợp đồng','HĐ 1 năm · HĐLĐ-2024-031']],
+        luong:[['Bậc lương','Bậc 3/7 · Khối KCS'],['Hình thức lương','Theo thời gian'],['Lương cơ bản (BHXH)','7.000.000 đ'],['Số sổ BHXH','7921003311'],['MST cá nhân','8033210577'],['Ngân hàng · STK','ACB · 0270114882']] },
+
+      'NV-042': { init:'LN', ten:'Lê Hoàng Nam', sub:'NV-042 · Hoàn thiện · Thợ đóng kiện', status:'thuviec', hd:'HĐTV-2026-042',
+        badges:'<span class="badge badge-orange">Thử việc</span> <span class="badge status-warning">Sắp hết TV · 3 ngày</span>',
+        lifeNote:'Thử việc 21/05/2026 – 20/06/2026 · còn 3 ngày · cần quyết định nhận',
+        canhan:[['Giới tính','Nam'],['Ngày sinh · Nơi sinh','07/05/1998 · Hà Nội'],['Số CCCD','001098001234'],['Cấp ngày · Nơi cấp','12/06/2021 · Cục CS QLHC TTXH'],['Thường trú','Thôn Giá Ngự, Xâm Xuyên, Thường Tín, Hà Nội'],['Điện thoại','0356 778 991'],['Email','nam.lh@owin.vn'],['Liên hệ khẩn cấp','Mẹ · 0903 221 765']],
+        congviec:[['Phòng / Bộ phận','Xưởng hoàn thiện · Tổ 3 (Đóng kiện)'],['Chức danh','Thợ hoàn thiện – đóng kiện'],['Khu vực','Xưởng hoàn thiện – đóng kiện'],['Người hướng dẫn','Phạm Văn Nam (Tổ trưởng Tổ 3)'],['Ngày vào làm','21/05/2026'],['Loại hợp đồng','Thử việc 1 tháng · HĐTV-2026-042']],
+        luong:[['Bậc lương','Thử việc (85% bậc 1)'],['Hình thức lương','Theo thời gian (TV)'],['Lương thử việc','6.000.000 đ'],['Lương cơ bản (BHXH)','Đóng khi ký chính thức'],['Số sổ BHXH','Cấp khi chính thức'],['Ngân hàng · STK','Chưa cập nhật']] },
+
+      'NV-041': { init:'PH', ten:'Phạm Thu Hà', sub:'NV-041 · Văn phòng · Kế toán kho', status:'thuviec', hd:'HĐTV-2026-041',
+        badges:'<span class="badge badge-orange">Thử việc</span> <span class="badge status-warning">Sắp hết TV · 5 ngày</span>',
+        lifeNote:'Thử việc 19/05/2026 – 18/06/2026 · còn 5 ngày · cần quyết định nhận',
+        canhan:[['Giới tính','Nữ'],['Ngày sinh · Nơi sinh','11/11/1999 · Hà Nội'],['Số CCCD','001199004422'],['Cấp ngày · Nơi cấp','20/03/2022 · Cục CS QLHC TTXH'],['Thường trú','P. Xuân Phương, Hà Nội'],['Điện thoại','0987 220 113'],['Email','ha.pt@owin.vn'],['Liên hệ khẩn cấp','Bố · 0913 556 008']],
+        congviec:[['Phòng / Bộ phận','Văn phòng · Phòng Kế toán'],['Chức danh','Kế toán kho'],['Ca làm việc','Ca ngày (07:30–16:30)'],['Người hướng dẫn','Lê Thị Ngọc (Kế toán trưởng)'],['Ngày vào làm','19/05/2026'],['Loại hợp đồng','Thử việc 1 tháng · HĐTV-2026-041']],
+        luong:[['Bậc lương','Thử việc (85% bậc 2)'],['Hình thức lương','Theo thời gian (TV)'],['Lương thử việc','7.200.000 đ'],['Lương cơ bản (BHXH)','Đóng khi ký chính thức'],['Số sổ BHXH','Cấp khi chính thức'],['Ngân hàng · STK','Chưa cập nhật']] },
+
+      'NV-040': { init:'VK', ten:'Võ Minh Khôi', sub:'NV-040 · Ép góc · Phụ máy', status:'thuviec', hd:'HĐTV-2026-040',
+        badges:'<span class="badge badge-orange">Thử việc</span>',
+        lifeNote:'Thử việc 02/06/2026 – 01/07/2026 · còn 11 ngày',
+        canhan:[['Giới tính','Nam'],['Ngày sinh · Nơi sinh','02/09/2001 · Hà Nội'],['Số CCCD','001201005533'],['Cấp ngày · Nơi cấp','05/07/2022 · Cục CS QLHC TTXH'],['Thường trú','Xã Hồng Vân, Thường Tín, Hà Nội'],['Điện thoại','0344 990 112'],['Email','khoi.vm@owin.vn'],['Liên hệ khẩn cấp','Mẹ · 0908 771 332']],
+        congviec:[['Phòng / Bộ phận','Xưởng lắp ráp · Tổ 2 (Ép góc)'],['Chức danh','Phụ máy ép góc'],['Khu vực','Máy ép góc cơ EP-02'],['Người hướng dẫn','Nguyễn Văn Hải'],['Ngày vào làm','02/06/2026'],['Loại hợp đồng','Thử việc 1 tháng · HĐTV-2026-040']],
+        luong:[['Bậc lương','Thử việc (85% bậc 1)'],['Hình thức lương','Theo thời gian (TV)'],['Lương thử việc','5.600.000 đ'],['Lương cơ bản (BHXH)','Đóng khi ký chính thức'],['Số sổ BHXH','Cấp khi chính thức'],['Ngân hàng · STK','Chưa cập nhật']] },
+
+      'NV-022': { init:'ĐM', ten:'Đỗ Văn Minh', sub:'NV-022 · Cắt CNC · Tổ trưởng cắt CNC', status:'chinhthuc', hd:'HĐLĐ-2023-022', missCert:false, chkBadge:'6/6 đủ',
+        badges:'<span class="badge badge-moss">Chính thức</span> <span class="badge badge-rust">HĐ 3 năm</span>',
+        lifeNote:'Vào làm 15/01/2023 · thâm niên 3 năm 5 tháng · HĐ hết hạn 15/01/2027',
+        canhan:[['Giới tính','Nam'],['Ngày sinh · Nơi sinh','30/06/1992 · Hà Nội'],['Số CCCD','001092006644'],['Cấp ngày · Nơi cấp','18/01/2021 · Cục CS QLHC TTXH'],['Thường trú','TT. Thường Tín, Hà Nội'],['Điện thoại','0909 332 551'],['Email','minh.dv@owin.vn'],['Liên hệ khẩn cấp','Vợ · 0938 220 119']],
+        congviec:[['Phòng / Bộ phận','Xưởng sản xuất · Tổ Cắt CNC'],['Chức danh','Tổ trưởng cắt CNC'],['Máy phụ trách','Máy cắt nhôm 2 đầu lưỡi 500 CAT-02'],['Quản lý trực tiếp','Quản đốc nhà máy'],['Ngày vào làm','15/01/2023'],['Loại hợp đồng','HĐ 3 năm · HĐLĐ-2023-022']],
+        luong:[['Bậc lương','Bậc 4/7 · CN sản xuất'],['Hình thức lương','Khoán theo cây nhôm cắt'],['Lương cơ bản (BHXH)','6.500.000 đ'],['Số sổ BHXH','7921006644'],['MST cá nhân','8044663012'],['Ngân hàng · STK','Vietcombank · 0071009223']] },
+
+      'NV-009': { init:'BL', ten:'Bùi Thị Lan', sub:'NV-009 · Kinh doanh dự án · NV phát triển đại lý', status:'chinhthuc', hd:'HĐLĐ-2020-009', missCert:false, chkBadge:'6/6 đủ',
+        badges:'<span class="badge badge-moss">Chính thức</span> <span class="badge badge-steel">Vô thời hạn</span>',
+        lifeNote:'Vào làm 08/07/2020 · thâm niên 5 năm 11 tháng',
+        canhan:[['Giới tính','Nữ'],['Ngày sinh · Nơi sinh','15/02/1989 · Hà Nội'],['Số CCCD','001189007755'],['Cấp ngày · Nơi cấp','22/04/2021 · Cục CS QLHC TTXH'],['Thường trú','P. Xuân Phương, Hà Nội'],['Điện thoại','0902 118 446'],['Email','lan.bt@owin.vn'],['Liên hệ khẩn cấp','Chồng · 0907 556 223']],
+        congviec:[['Phòng / Bộ phận','Phòng Kinh doanh dự án'],['Chức danh','Nhân viên phát triển đại lý'],['Khu vực phụ trách','Miền Bắc'],['Quản lý trực tiếp','Trưởng phòng Kinh doanh dự án'],['Ngày vào làm','08/07/2020'],['Loại hợp đồng','Vô thời hạn · HĐLĐ-2020-009']],
+        luong:[['Bậc lương','Bậc 4/7 · Khối KD'],['Hình thức lương','Lương + hoa hồng doanh số'],['Lương cơ bản (BHXH)','8.000.000 đ'],['Số sổ BHXH','7920007755'],['MST cá nhân','8025778009'],['Ngân hàng · STK','Techcombank · 1903556771']] },
+
+      'NV-035': { init:'HS', ten:'Hoàng Văn Sơn', sub:'NV-035 · Uốn vòm · Thợ uốn vòm', status:'chinhthuc', hd:'HĐLĐ-2025-035', missCert:true, chkBadge:'5/6 đủ',
+        badges:'<span class="badge badge-moss">Chính thức</span> <span class="badge badge-orange">HĐ 1 năm</span>',
+        lifeNote:'Vào làm 03/02/2025 · thâm niên 1 năm 4 tháng · HĐ hết hạn 02/02/2027',
+        canhan:[['Giới tính','Nam'],['Ngày sinh · Nơi sinh','09/12/1996 · Hà Nội'],['Số CCCD','001096008866'],['Cấp ngày · Nơi cấp','30/09/2021 · Cục CS QLHC TTXH'],['Thường trú','Xã Vân Tảo, Thường Tín, Hà Nội'],['Điện thoại','0356 220 778'],['Email','son.hv@owin.vn'],['Liên hệ khẩn cấp','Mẹ · 0905 332 110']],
+        congviec:[['Phòng / Bộ phận','Xưởng định hình · Tổ 1 (Uốn vòm)'],['Chức danh','Thợ uốn vòm'],['Máy phụ trách','Máy uốn vòm nhôm CNC 3 trục UON-01'],['Quản lý trực tiếp','Tổ trưởng Tổ 1'],['Ngày vào làm','03/02/2025'],['Loại hợp đồng','HĐ 1 năm · HĐLĐ-2025-035']],
+        luong:[['Bậc lương','Bậc 2/7 · CN sản xuất'],['Hình thức lương','Khoán theo mét dài uốn vòm'],['Lương cơ bản (BHXH)','5.800.000 đ'],['Số sổ BHXH','7921008866'],['MST cá nhân','8056889035'],['Ngân hàng · STK','Agribank · 6300118035']] },
+
+      'NV-014': { init:'TB', ten:'Trần Quốc Bảo', sub:'NV-014 · Kho · Thủ kho nhôm – kính (đã nghỉ)', status:'nghi', hd:'HĐLĐ-2022-014',
+        badges:'<span class="badge">Đã nghỉ việc · 04/2026</span>',
+        lifeNote:'Vào làm 11/2019 · nghỉ việc 04/2026 · đã thanh lý hợp đồng',
+        canhan:[['Giới tính','Nam'],['Ngày sinh · Nơi sinh','25/07/1990 · Hà Nội'],['Số CCCD','001090009977'],['Cấp ngày · Nơi cấp','15/11/2020 · Cục CS QLHC TTXH'],['Thường trú','Xã Hồng Vân, Thường Tín, Hà Nội'],['Điện thoại','0908 110 556'],['Email','—'],['Liên hệ khẩn cấp','—']],
+        congviec:[['Phòng / Bộ phận','Kho · Kho nhôm – kính'],['Chức danh','Thủ kho nhôm – kính'],['Ngày vào làm','11/2019'],['Ngày nghỉ việc','04/2026'],['Lý do','Chuyển công tác'],['Loại hợp đồng','Đã thanh lý HĐ']],
+        luong:[['Bậc lương','Bậc 4/7 (cũ)'],['Hình thức lương','Theo thời gian'],['Tình trạng lương','Đã chốt & thanh toán 04/2026'],['Sổ BHXH','Đã chốt & trả NV'],['MST cá nhân','8011990014'],['Ngân hàng · STK','Đã ngừng chi trả']] }
+    }
+
+    /* ===== Chân dung hiệu suất & lỗi sản xuất (nguồn: KPI 27 + Biên bản 28) ===== */
+    const PERF = {
+      'NV-018': { diem:94, ns:96, cl:95, dh:92, cp:100, sanLuong:'86.500 kg nhôm cắt CNC', tyLeLoi:'0,6%', defects:[
+        { ma:'BB-2026-018', loai:'BB', ngay:'09/06/2026', loaiLoi:'CAT-SAI-KT · Cắt sai kích thước (>2mm)', congDoan:'Cắt CNC · máy CAT-01', don:'LSX-2206', kh:'Nhôm kính Đại Phát', slHong:'48 cây nhôm phải cắt lại', giaTri:1200000, anhHuong:'Nội bộ (xử lý lại)', truLuong:'Đang trừ · 1 kỳ', nguyenNhan:'Nhập sai kích thước trên máy cắt, không cắt thử cây đầu trước khi chạy loạt' },
+        { ma:'PL-2026-049', loai:'PL', ngay:'12/06/2026', loaiLoi:'Cài đặt máy chậm gây trễ ca', congDoan:'Chuẩn bị lệnh cắt', don:'LSX-2211', kh:'Nội bộ', slHong:'Không thiệt hại vật tư · nhắc nhở', giaTri:180000, anhHuong:'Nội bộ', truLuong:'Chưa trừ · nhắc nhở', nguyenNhan:'Lấy nhôm thanh từ kho chậm, lập trình CNC chậm đầu ca' } ] },
+      'NV-022': { diem:88, ns:90, cl:85, dh:88, cp:86, sanLuong:'74.200 kg nhôm cắt CNC', tyLeLoi:'0,9%', defects:[
+        { ma:'BB-2026-022', loai:'BB', ngay:'06/06/2026', loaiLoi:'Hao hụt cắt nhôm vượt định mức (đầu mẩu)', congDoan:'Cắt CNC · máy CAT-02', don:'LSX-2208', kh:'Nội bộ', slHong:'+128 kg nhôm đầu mẩu vượt định mức', giaTri:620000, anhHuong:'Nội bộ', truLuong:'Đã trừ xong', nguyenNhan:'Không tối ưu sơ đồ cắt trên cây 5,8m, bỏ nhiều đầu mẩu dài' } ] },
+      'NV-035': { diem:80, ns:82, cl:74, dh:84, cp:80, sanLuong:'1.860 md uốn vòm', tyLeLoi:'1,8%', defects:[
+        { ma:'BB-2026-035', loai:'BB', ngay:'05/06/2026', loaiLoi:'UON-NUT · Nứt/gãy thanh khi uốn vòm', congDoan:'Uốn vòm · máy UON-01', don:'LSX-2205', kh:'Nội bộ', slHong:'6 cây nhôm 120 nứt, bồi thường giá thành lô', giaTri:480000, anhHuong:'Nội bộ', truLuong:'Đã trừ xong', nguyenNhan:'Bán kính uốn nhỏ hơn cho phép, không gia nhiệt trước khi uốn' },
+        { ma:'PL-2026-044', loai:'PL', ngay:'11/06/2026', loaiLoi:'UON-MEO · Méo tiết diện sau uốn', congDoan:'Uốn vòm · máy UON-01', don:'LSX-2209', kh:'Nội bộ', slHong:'2,4 md thanh vòm lỗi nhẹ (đã loại)', giaTri:95000, anhHuong:'Nội bộ', truLuong:'Chưa trừ · nhắc nhở', nguyenNhan:'Không thay con lăn đỡ đúng tiết diện hệ 120 đầu ca' } ] },
+      'NV-040': { diem:68, ns:70, cl:60, dh:75, cp:68, sanLuong:'TV · 460 khung cánh ép góc', tyLeLoi:'5,2%', defects:[
+        { ma:'BB-2026-040', loai:'BB', ngay:'08/06/2026', loaiLoi:'EP-HO-MOI · Mối ép góc hở, lộ khe', congDoan:'Ép góc · máy EP-02', don:'LSX-2210', kh:'Nội bộ', slHong:'26 khung cánh phải ép lại', giaTri:850000, anhHuong:'Nội bộ', truLuong:'Đang trừ · 2 kỳ', nguyenNhan:'Canh dao ép sai, không kiểm mối ép cánh đầu chuyền — thao tác chưa thành thạo (đang thử việc)' },
+        { ma:'PL-2026-047', loai:'PL', ngay:'10/06/2026', loaiLoi:'Vi phạm an toàn lao động', congDoan:'Ép góc · máy EP-02', don:'—', kh:'Nội bộ', slHong:'Quên dán nhãn cảnh báo khu vực dao ép', giaTri:120000, anhHuong:'An toàn LĐ', truLuong:'Chưa trừ · nhắc nhở', nguyenNhan:'Quên quy định dán nhãn cảnh báo khu vực dao ép máy ép góc' } ] },
+      'NV-031': { diem:79, ns:85, cl:70, dh:80, cp:78, sanLuong:'KCS 62 bộ cửa / kỳ', tyLeLoi:'Sót 1 lô ra khách', defects:[
+        { ma:'BB-2026-031', loai:'BB', ngay:'07/06/2026', loaiLoi:'GIOANG-HO · Kiểm hàng sót lỗi hở gioăng', congDoan:'KCS xuất xưởng', don:'DH-0312', kh:'Nhôm kính Đại Phát', slHong:'Cả lô đã giao bị hở gioăng, không kín nước', giaTri:4500000, anhHuong:'Khách hàng', truLuong:'Đang trừ · dồn nhiều kỳ', nguyenNhan:'Bỏ sót bước thử kín nước, tần suất lấy mẫu kiểm chưa đủ' },
+        { ma:'PL-2026-051', loai:'PL', ngay:'11/06/2026', loaiLoi:'Đếm thiếu phụ kiện khi đóng kiện', congDoan:'Hoàn thiện · đóng kiện', don:'LSX-2207', kh:'Nội bộ', slHong:'Thiếu 2 bộ khoá · đã bù nội bộ', giaTri:350000, anhHuong:'Nội bộ', truLuong:'Chưa trừ', nguyenNhan:'Đếm thủ công, không đối chiếu phiếu đóng kiện' } ] },
+      'NV-042': { diem:85, ns:86, cl:84, dh:85, cp:88, sanLuong:'TV · 318 bộ cửa đóng kiện', tyLeLoi:'0,7%', defects:[] },
+      'NV-041': { diem:84, ns:84, cl:86, dh:82, cp:88, sanLuong:'Văn phòng · 19 phiếu/ngày', tyLeLoi:'—', defects:[] },
+      'NV-009': { diem:90, ns:92, cl:90, dh:88, cp:92, sanLuong:'KD · 36 đơn / kỳ', tyLeLoi:'—', defects:[] }
+    }
+    const _fmt = n => Number(n).toLocaleString('vi-VN');
+    function perfVerdict(p){
+      const dims=[['Năng suất',p.ns],['Chất lượng',p.cl],['Đúng hạn',p.dh],['Chấp hành',p.cp]];
+      const low=dims.reduce((a,b)=>b[1]<a[1]?b:a);
+      let cls,label;
+      if(p.diem>=90){cls='pv-good';label='Xuất sắc';}
+      else if(p.diem>=80){cls='pv-good';label='Tốt';}
+      else if(p.diem>=70){cls='pv-mid';label='Cần cải thiện';}
+      else {cls='pv-bad';label='Chưa đạt';}
+      const nBB=p.defects.filter(d=>d.loai==='BB').length;
+      const dmg=p.defects.reduce((s,d)=>s+d.giaTri,0);
+      const reason = p.defects.length
+        ? `Điểm thấp nhất ở <b>${low[0].toLowerCase()}</b> (${low[1]}/100). ${p.defects.length} lỗi/biên bản (${nBB} biên bản) · thiệt hại <b>${_fmt(dmg)}₫</b>. Bấm từng dòng dưới để xem gốc rễ.`
+        : `Chưa ghi nhận lỗi/biên bản trong kỳ — chất lượng ổn định. Điểm thấp nhất: ${low[0].toLowerCase()} (${low[1]}/100).`;
+      return {cls,label,reason,low:low[0]};
+    }
+    function perfPane(ma){
+      const p=PERF[ma];
+      if(!p) return `<div class="perf-empty">Nhân sự này chưa có dữ liệu hiệu suất sản xuất (không thuộc khối trực tiếp sản xuất hoặc đã nghỉ việc).</div>`;
+      const v=perfVerdict(p);
+      const dimRow=(lbl,val)=>{
+        const c = val>=85?'var(--moss)':val>=70?'var(--amber)':'var(--signal)';
+        return `<div class="perf-dim ${lbl===v.low?'low':''}"><span class="pd-l">${lbl}</span><div class="pd-bar"><i style="width:${val}%;background:${c}"></i></div><span class="pd-v">${val}</span></div>`;
+      };
+      const nBB=p.defects.filter(d=>d.loai==='BB').length, dmg=p.defects.reduce((s,d)=>s+d.giaTri,0);
+      const stat=(l,vv)=>`<div class="perf-stat"><div class="ps-l">${l}</div><div class="ps-v">${vv}</div></div>`;
+      const defItems = p.defects.length ? p.defects.map((d,i)=>{
+        const badge = d.loai==='BB'?'<span class="badge badge-coral">Biên bản</span>':'<span class="badge badge-yellow">Phiếu lỗi</span>';
+        const rows=[['Đơn hàng / LSX',d.don],['Khách hàng',d.kh||'Nội bộ'],['Công đoạn',d.congDoan],['Số lượng hỏng',d.slHong],['Loại lỗi',d.loaiLoi],['Nguyên nhân gốc',d.nguyenNhan],['Ảnh hưởng',d.anhHuong],['Giá trị thiệt hại',_fmt(d.giaTri)+'₫'],['Trừ lương',d.truLuong]];
+        return `<div class="perf-def" data-defidx="${i}">
+          <div class="pd-head">
+            <div style="min-width:0"><div class="pd-tt">${badge} ${d.loaiLoi}</div><div class="pd-sub">${d.ma} · ${d.congDoan} · ${d.don}${d.ngay?' · '+d.ngay:''}</div></div>
+            <span class="pd-amt">${_fmt(d.giaTri)}₫</span>
+            <i data-lucide="chevron-right" class="pd-chev" style="width:16px;height:16px"></i>
+          </div>
+          <div class="pd-body">
+            ${rows.map(([k,vv])=>`<div class="row"><span class="k">${k}</span><span class="v">${vv}</span></div>`).join('')}
+            <div class="flex" style="gap:8px;margin-top:10px">
+              <a href="28-phieu-loi-bien-ban.html" class="btn btn-secondary btn-sm" style="flex:1"><i data-lucide="file-warning" style="width:13px;height:13px"></i> Mở ${d.loai==='BB'?'biên bản':'phiếu lỗi'}</a>
+              <a href="06-lsx-phieu-cong-nghe.html" class="btn btn-secondary btn-sm" style="flex:1"><i data-lucide="factory" style="width:13px;height:13px"></i> Mở LSX</a>
+            </div>
+          </div>
+        </div>`;
+      }).join('') : `<div class="perf-empty"><i data-lucide="shield-check" style="width:18px;height:18px;vertical-align:-3px"></i> Chưa ghi nhận lỗi / biên bản trong kỳ — chất lượng ổn định.</div>`;
+      return `
+        <div class="perf-verdict ${v.cls}">
+          <div class="pv-score">${p.diem}</div>
+          <div style="min-width:0"><div class="pv-label">${v.label}</div><div class="pv-reason">${v.reason}</div></div>
+        </div>
+        <div class="t-micro-u mb-1">Điểm thành phần KPI · nguồn: Sản xuất · QC · Chấm công · Biên bản</div>
+        ${dimRow('Năng suất',p.ns)}${dimRow('Chất lượng',p.cl)}${dimRow('Đúng hạn',p.dh)}${dimRow('Chấp hành',p.cp)}
+        <div class="perf-stats">
+          ${stat('Sản lượng kỳ',p.sanLuong)}
+          ${stat('Tỷ lệ lỗi',p.tyLeLoi)}
+          ${stat('Phiếu lỗi / Biên bản',p.defects.length+' phiếu · '+nBB+' BB')}
+          ${stat('Thiệt hại luỹ kế',_fmt(dmg)+'₫')}
+        </div>
+        <hr class="hr-soft">
+        <div class="flex-between mb-1"><div class="t-micro-u">Truy vết lỗi sản xuất · gốc rễ đánh giá</div><span class="t-caption">bấm 1 dòng để xem sâu</span></div>
+        ${defItems}
+        <a href="27-bac-luong-kpi.html" class="btn btn-primary btn-sm" style="width:100%;margin-top:12px"><i data-lucide="external-link" style="width:13px;height:13px"></i> Xem KPI &amp; ảnh hưởng tới lương</a>`;
+    }
+
+    const infoRows = arr => arr.map(([k,v]) => `<div class="pf-info-row"><span class="k">${k}</span><span class="v">${v}</span></div>`).join('');
+    const okC   = (l,m) => `<div class="chk ok"><i data-lucide="check-circle-2" class="ci"></i> ${l} <span class="meta">${m}</span></div>`;
+    const missC = (l,m) => `<div class="chk miss"><i data-lucide="alert-circle" class="ci"></i> ${l} <span class="meta">${m}</span></div>`;
+
+    function stepperHTML(status){
+      const steps = [['Tiếp nhận','check'],['Thử việc','check'],['Chính thức','check'],['Đang làm việc','briefcase'],['Nghỉ việc','log-out']];
+      let st;
+      if(status==='thuviec') st=['done','current','','',''];
+      else if(status==='nghi') st=['done','done','done','done','current'];
+      else st=['done','done','done','current',''];
+      return steps.map(([lbl,ic],i)=>{
+        const cls=st[i]; const icon = cls==='done' ? 'check' : ic;
+        return `<div class="step ${cls}"><span class="dot"><i data-lucide="${icon}" style="width:12px;height:12px"></i></span><span class="lbl">${lbl}</span></div>`;
+      }).join('');
+    }
+
+    function checklistBlock(e){
+      if(e.status==='thuviec') return { title:'Checklist hồ sơ (thử việc · trong 7 ngày)', badgeCls:'badge-orange', badge:'4/5',
+        html:[okC('Sơ yếu lý lịch','đã nộp'),okC('CMND/CCCD công chứng','đã nộp'),okC('Giấy khám sức khỏe','đã nộp'),okC('HĐ thử việc',e.hd),missC('Sổ BHXH','cấp khi chính thức')].join('') };
+      if(e.status==='nghi') return { title:'Checklist nghỉ việc & bàn giao', badgeCls:'badge-steel', badge:'Đã thanh lý',
+        html:[okC('Đơn xin nghỉ việc','đã duyệt'),okC('Biên bản bàn giao','hoàn tất'),okC('Chốt & thanh toán lương','04/2026'),okC('Chốt sổ BHXH','đã trả NV')].join('') };
+      return { title:'Checklist hồ sơ (chính thức)', badgeCls:'badge-moss', badge:e.chkBadge||'6/6 đủ',
+        html:[okC('Sơ yếu lý lịch','đã nộp'),okC('CMND/CCCD công chứng','đã nộp'),okC('Giấy khám sức khỏe','đã nộp'),okC('Hợp đồng lao động',e.hd),okC('Sổ BHXH','đã có'), e.missCert?missC('Bằng cấp / chứng chỉ nghề','thiếu'):okC('Bằng cấp / chứng chỉ nghề','đã nộp')].join('') };
+    }
+
+    function docsBlock(e){
+      let items;
+      if(e.status==='thuviec') items=[['file-text','HĐ thử việc '+e.hd+'.pdf','120 KB'],['file-text','Sơ yếu lý lịch.pdf','280 KB'],['image','CCCD (2 mặt).jpg','900 KB']];
+      else if(e.status==='nghi') items=[['file-text','Đơn xin nghỉ việc.pdf','90 KB · 03/2026'],['file-badge','QĐ thanh lý HĐ.pdf','110 KB · 04/2026'],['file-text','Biên bản bàn giao.pdf','150 KB · 04/2026']];
+      else items=[['file-text','HĐLĐ '+e.hd+'.pdf','320 KB'],['file-badge','Quyết định lương / đề bạt.pdf','180 KB'],['image','Giấy khám sức khỏe.jpg','1.2 MB']];
+      return items.map(([ic,nm,me])=>`<div class="doc"><i data-lucide="${ic}" class="di"></i><div><div>${nm}</div><div class="dmeta">${me}</div></div><button class="btn-icon" title="Tải về"><i data-lucide="download" style="width:15px;height:15px"></i></button></div>`).join('');
+    }
+
+    const body = document.getElementById('pf-body');
+    const drawer = document.getElementById('pf-drawer');
+    const overlay = document.getElementById('pf-overlay');
+    function openDrawer(){ drawer.classList.add('open'); overlay.classList.add('open'); drawer.setAttribute('aria-hidden','false'); }
+    function closeDrawer(){ drawer.classList.remove('open'); overlay.classList.remove('open'); drawer.setAttribute('aria-hidden','true'); document.querySelectorAll('.tbl tbody tr[data-nv]').forEach(r=>r.classList.remove('row-selected')); }
+    function render(ma){
+      const e = EMP[ma]; if(!e || !body) return;
+      const cl = checklistBlock(e);
+      const tvBtn = e.status==='thuviec' ? `<a href="24-thu-viec-danh-gia.html" class="btn btn-yellow btn-sm" style="width:100%;margin-top:8px"><i data-lucide="user-check" style="width:13px;height:13px"></i> Đánh giá thử việc</a>` : '';
+      body.innerHTML = `
+        <div class="pf-head mb-3">
+          <div class="pf-avatar">${e.init}</div>
+          <div style="min-width:0">
+            <div class="t-h4">${e.ten}</div>
+            <div class="t-caption">${e.sub}</div>
+            <div class="mt-1">${e.badges}</div>
+          </div>
+        </div>
+        <div class="pf-tabs">
+          <button class="pf-tab active" data-pftab="profile"><i data-lucide="id-card" style="width:14px;height:14px"></i> Hồ sơ</button>
+          <button class="pf-tab" data-pftab="perf"><i data-lucide="activity" style="width:14px;height:14px"></i> Hiệu suất &amp; Chất lượng</button>
+        </div>
+        <div data-pfpane="perf" style="display:none">${perfPane(ma)}</div>
+        <div data-pfpane="profile">
+        <div class="t-micro-u mb-2">Vòng đời nhân sự</div>
+        <div class="stepper mb-1">${stepperHTML(e.status)}</div>
+        <div class="t-caption mb-3" style="text-align:center">${e.lifeNote}</div>
+        <hr class="hr-soft">
+        <div class="flex-between mb-1"><div class="t-micro-u">Thông tin cá nhân</div><span class="badge badge-steel" title="Các trường này tự điền vào hợp đồng lao động"><i data-lucide="link" style="width:11px;height:11px"></i> Tự điền vào HĐLĐ</span></div>
+        ${infoRows(e.canhan)}
+        <hr class="hr-soft">
+        <div class="t-micro-u mb-1">Công việc & phòng ban</div>
+        ${infoRows(e.congviec)}
+        <hr class="hr-soft">
+        <div class="t-micro-u mb-1">Lương & bảo hiểm</div>
+        ${infoRows(e.luong)}
+        <hr class="hr-soft">
+        <div class="flex-between mb-1"><div class="t-micro-u">${cl.title}</div><span class="badge ${cl.badgeCls}">${cl.badge}</span></div>
+        ${cl.html}
+        <hr class="hr-soft">
+        <div class="flex-between mb-1"><div class="t-micro-u">Tài liệu đính kèm</div><button class="btn-link" style="font-size:12px">Tải lên</button></div>
+        ${docsBlock(e)}
+        <a href="26-hop-dong-quyet-dinh.html" class="btn btn-secondary btn-sm" style="width:100%;margin-top:14px"><i data-lucide="file-badge" style="width:13px;height:13px"></i> Xem hợp đồng lao động & quyết định</a>
+        ${tvBtn}
+        <div class="flex" style="gap:8px;margin-top:8px">
+          <button class="btn btn-secondary btn-sm" style="flex:1"><i data-lucide="pen-line" style="width:13px;height:13px"></i> Sửa hồ sơ</button>
+          <a href="27-bac-luong-kpi.html" class="btn btn-primary btn-sm" style="flex:1"><i data-lucide="external-link" style="width:13px;height:13px"></i> Xem KPI & lương</a>
+        </div>
+        </div><!-- /pane profile -->`;
+      if(window.lucide) window.lucide.createIcons();
+      drawer.scrollTop = 0;
+      body.querySelectorAll('.pf-tab').forEach(t=>t.addEventListener('click',()=>{
+        body.querySelectorAll('.pf-tab').forEach(x=>x.classList.remove('active'));
+        t.classList.add('active');
+        const v=t.dataset.pftab;
+        body.querySelectorAll('[data-pfpane]').forEach(p=>p.style.display=(p.dataset.pfpane===v)?'':'none');
+        drawer.scrollTop=0;
+      }));
+      body.querySelectorAll('.perf-def .pd-head').forEach(h=>h.addEventListener('click',()=>{
+        h.closest('.perf-def').classList.toggle('open');
+      }));
+    }
+
+    document.querySelectorAll('.tbl tbody tr[data-nv]').forEach(tr=>{
+      tr.addEventListener('click', (ev)=>{
+        if(ev.target.closest('button, a, input')) return;
+        window.location.href = '30-nhan-su-chi-tiet.html?nv=' + encodeURIComponent(tr.dataset.nv);
+      });
+    });
+    overlay.addEventListener('click', closeDrawer);
+    document.getElementById('pf-close').addEventListener('click', closeDrawer);
+    document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closeDrawer(); });
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,2035 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ERP NHÔM OWIN — Vận hành nhà máy cửa nhôm trên một nền tảng</title>
+  <link rel="stylesheet" href="assets/css/style.css" />
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+  <style>
+    body { background: var(--paper); }
+
+    /* ============================================================
+       Top utility strip
+       ============================================================ */
+    .top-strip {
+      background: #14130f;
+      color: #f5f1e8;
+      font-family: var(--ff-mono);
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      padding: 9px 0;
+    }
+    .top-strip-inner {
+      max-width: 1480px; margin: 0 auto; padding: 0 32px;
+      display: flex; justify-content: space-between; align-items: center; gap: 16px;
+    }
+    .top-strip .group { display: inline-flex; align-items: center; gap: 14px; }
+    .top-strip .pulse {
+      width: 6px; height: 6px; background: #e85a2a; border-radius: 9999px;
+      animation: ts-pulse 2.4s ease-in-out infinite;
+    }
+    @keyframes ts-pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(1.6); }
+    }
+    .top-strip .sep { opacity: 0.4; }
+
+    /* ============================================================
+       Sticky nav
+       ============================================================ */
+    .top-nav {
+      background: var(--paper);
+      border-bottom: 1px solid var(--rule);
+      position: sticky; top: 0; z-index: 30;
+    }
+    .top-nav-inner {
+      max-width: 1480px; margin: 0 auto;
+      padding: 14px 32px;
+      display: grid; grid-template-columns: auto 1fr auto;
+      gap: 24px; align-items: center;
+    }
+    .nav-brand { display: inline-flex; align-items: center; gap: 12px; text-decoration: none; }
+    .nav-brand-img {
+      width: 40px; height: 40px;
+      object-fit: contain;
+      border-radius: 6px;
+      background: var(--paper);
+      padding: 2px;
+      flex-shrink: 0;
+    }
+    .nav-brand-mark {
+      width: 38px; height: 38px;
+      background: #14130f;
+      color: #f5f1e8;
+      border-radius: 4px;
+      display: inline-flex; align-items: center; justify-content: center;
+      font-weight: 600; font-size: 15px;
+      letter-spacing: -0.01em;
+      position: relative;
+    }
+    .nav-brand-mark::after {
+      content: ""; position: absolute; right: -2px; bottom: -2px;
+      width: 7px; height: 7px; background: #c5400a; border-radius: 9999px;
+    }
+    .nav-brand-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+    .nav-brand-name { font-size: 14px; font-weight: 600; letter-spacing: -0.005em; color: var(--ink); }
+    .nav-brand-sub { font-family: var(--ff-mono); font-size: 9px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--ash); }
+
+    .top-nav-links { display: inline-flex; gap: 4px; justify-self: center; }
+    .top-nav-links a {
+      padding: 8px 14px;
+      font-size: 13px; font-weight: 500;
+      color: var(--ash);
+      border-radius: var(--r-3);
+      text-decoration: none;
+      transition: color 140ms ease, background 140ms ease;
+    }
+    .top-nav-links a:hover { color: var(--ink); background: var(--paper-2); }
+    .top-nav-links a.active { color: var(--ink); background: var(--paper-2); }
+
+    .top-nav-right { display: inline-flex; align-items: center; gap: 12px; }
+
+    .nav-toggle {
+      display: inline-flex; align-items: center; gap: 10px;
+      padding: 7px 14px;
+      background: var(--canvas);
+      border: 1px solid var(--rule);
+      border-radius: 9999px;
+      font-size: 12px; font-weight: 500;
+      color: var(--ink);
+      cursor: pointer;
+      transition: border-color 140ms ease;
+    }
+    .nav-toggle .pill {
+      width: 24px; height: 12px; background: var(--rule); border-radius: 9999px;
+      position: relative; transition: background 140ms ease;
+    }
+    .nav-toggle .pill::after {
+      content: ""; position: absolute; top: 1px; left: 1px;
+      width: 10px; height: 10px; background: var(--canvas); border-radius: 9999px;
+      box-shadow: 0 1px 1px rgba(0,0,0,0.1);
+      transition: transform 140ms ease;
+    }
+    .nav-toggle.on { border-color: #c5400a; color: var(--ink); }
+    .nav-toggle.on .pill { background: #c5400a; }
+    .nav-toggle.on .pill::after { transform: translateX(12px); }
+
+    /* ============================================================
+       Hero
+       ============================================================ */
+    .hero {
+      max-width: 1480px; margin: 0 auto; padding: 72px 32px 56px;
+    }
+    .hero-meta {
+      display: flex; justify-content: space-between; align-items: center; gap: 16px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--rule-soft);
+      font-family: var(--ff-mono);
+      font-size: 10px; font-weight: 500;
+      letter-spacing: 0.18em; text-transform: uppercase;
+      color: var(--ash);
+      flex-wrap: wrap;
+    }
+    .hero-meta .left { display: inline-flex; align-items: center; gap: 16px; }
+    .hero-meta .left::before { content: ""; width: 36px; height: 1px; background: var(--ink); }
+
+    .hero-main {
+      display: grid;
+      grid-template-columns: minmax(0, 1.4fr) minmax(360px, 1fr);
+      gap: 64px;
+      align-items: end;
+      margin-top: 48px;
+    }
+    @media (max-width: 1100px) { .hero-main { grid-template-columns: 1fr; gap: 40px; } }
+
+    .hero-copy h1 {
+      font-size: clamp(48px, 6.5vw, 88px);
+      font-weight: 500;
+      line-height: 1;
+      letter-spacing: -0.03em;
+      color: var(--ink);
+      max-width: 920px;
+    }
+    .hero-copy h1 .mark {
+      background: #c5400a;
+      color: #f5f1e8;
+      padding: 0 14px;
+      border-radius: 8px;
+      display: inline-block;
+      font-weight: 500;
+    }
+    .hero-copy h1 .dim { color: var(--ash); }
+    .hero-copy .lead {
+      margin-top: 28px;
+      max-width: 560px;
+      font-size: 17px;
+      line-height: 1.55;
+      color: var(--ash);
+    }
+    .hero-copy .lead b { color: var(--ink); font-weight: 500; }
+    .hero-copy .cta-row {
+      margin-top: 28px;
+      display: flex; gap: 20px; align-items: center; flex-wrap: wrap;
+    }
+    .btn-hero {
+      padding: 12px 22px;
+      background: var(--ink);
+      color: var(--paper);
+      border: 0;
+      border-radius: 9999px;
+      font-size: 14px; font-weight: 500;
+      text-decoration: none;
+      display: inline-flex; align-items: center; gap: 8px;
+      transition: background 140ms ease, transform 80ms ease;
+      cursor: pointer;
+    }
+    .btn-hero:hover { background: #000; transform: translateY(-1px); }
+    .btn-hero-ghost {
+      background: transparent; color: var(--ink);
+      border-bottom: 1px solid var(--ink);
+      border-radius: 0;
+      padding: 11px 0;
+    }
+    .btn-hero-ghost:hover { background: transparent; transform: none; padding-bottom: 8px; }
+
+    /* ============================================================
+       Live Pulse Panel
+       ============================================================ */
+    .pulse-panel {
+      background: #14130f;
+      color: #f5f1e8;
+      border-radius: var(--r-5);
+      padding: 22px 24px;
+      position: relative;
+      overflow: hidden;
+    }
+    .pulse-panel::before {
+      content: ""; position: absolute; top: 0; left: 0;
+      width: 100%; height: 3px; background: #c5400a;
+    }
+    .pulse-panel .pp-head {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 18px;
+    }
+    .pulse-panel .pp-title {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-family: var(--ff-mono);
+      font-size: 10px; font-weight: 500;
+      letter-spacing: 0.18em; text-transform: uppercase;
+      color: rgba(245, 241, 232, 0.7);
+    }
+    .pulse-panel .pp-title .live-dot {
+      width: 7px; height: 7px;
+      background: #5d9b6c;
+      border-radius: 9999px;
+      animation: ts-pulse 2.4s ease-in-out infinite;
+    }
+    .pulse-panel .pp-clock {
+      font-family: var(--ff-mono);
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      color: rgba(245, 241, 232, 0.55);
+      font-variant-numeric: tabular-nums;
+    }
+    .pulse-panel .pp-clock b { color: #f5f1e8; font-weight: 600; }
+
+    .pp-rows { display: flex; flex-direction: column; }
+    .pp-row {
+      display: grid;
+      grid-template-columns: 26px minmax(0, 1fr) auto;
+      gap: 12px;
+      padding: 12px 0;
+      border-bottom: 1px solid rgba(245, 241, 232, 0.1);
+      align-items: center;
+    }
+    .pp-row:last-child { border-bottom: 0; }
+    .pp-row .ic {
+      width: 26px; height: 26px;
+      background: rgba(245, 241, 232, 0.06);
+      border-radius: var(--r-2);
+      display: inline-flex; align-items: center; justify-content: center;
+      color: rgba(245, 241, 232, 0.65);
+      flex-shrink: 0;
+    }
+    .pp-row.warn .ic { background: rgba(232, 138, 94, 0.15); color: #e88a5e; }
+    .pp-row.good .ic { background: rgba(93, 155, 108, 0.15); color: #5d9b6c; }
+    .pp-row .pp-lbl { font-size: 12px; color: rgba(245, 241, 232, 0.65); line-height: 1.3; }
+    .pp-row .pp-sub { font-size: 10px; color: rgba(245, 241, 232, 0.45); margin-top: 2px; font-family: var(--ff-mono); letter-spacing: 0.08em; }
+    .pp-row .pp-val {
+      font-family: var(--ff-mono);
+      font-size: 16px;
+      font-weight: 600;
+      color: #f5f1e8;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: -0.005em;
+      text-align: right;
+    }
+    .pp-row.warn .pp-val { color: #e88a5e; }
+    .pp-row.good .pp-val { color: #5d9b6c; }
+    .pp-row .pp-val .unit { font-size: 10px; color: rgba(245, 241, 232, 0.5); font-weight: 400; }
+
+    .pp-row .progress-mini {
+      width: 60px;
+      height: 4px;
+      background: rgba(245, 241, 232, 0.12);
+      border-radius: 9999px;
+      overflow: hidden;
+      margin-top: 6px;
+    }
+    .pp-row .progress-mini > div {
+      height: 100%;
+      background: #c5400a;
+      transition: width 320ms ease;
+    }
+
+    /* Machine row indicators */
+    .pp-machines { display: inline-flex; gap: 3px; }
+    .pp-machines .m {
+      width: 6px; height: 14px;
+      background: rgba(245, 241, 232, 0.18);
+      border-radius: 1px;
+    }
+    .pp-machines .m.on { background: #5d9b6c; animation: m-pulse 2.4s ease-in-out infinite; }
+    .pp-machines .m.idle { background: #e88a5e; }
+    .pp-machines .m.down { background: #c43838; }
+    @keyframes m-pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.55; }
+    }
+
+    /* ============================================================
+       Section frame
+       ============================================================ */
+    .section { padding: 88px 0 80px; }
+    .section-paper { background: var(--paper-2); }
+    .section-head {
+      max-width: 1480px; margin: 0 auto;
+      padding: 0 32px 48px;
+      display: grid; grid-template-columns: 220px minmax(0, 1fr);
+      gap: 56px; align-items: start;
+    }
+    @media (max-width: 1100px) { .section-head { grid-template-columns: 1fr; gap: 24px; } }
+
+    .section-sig {
+      display: flex; flex-direction: column; gap: 8px;
+      padding-top: 14px;
+      border-top: 1px solid var(--rule);
+    }
+    .section-sig .num {
+      font-family: var(--ff-mono);
+      font-size: 11px; font-weight: 500;
+      letter-spacing: 0.18em; text-transform: uppercase;
+      color: var(--ash);
+    }
+    .section-sig .role { font-size: 14px; color: var(--ash); }
+
+    .section-head h2 {
+      font-size: clamp(32px, 4.5vw, 52px);
+      font-weight: 500;
+      line-height: 1.05;
+      letter-spacing: -0.02em;
+      color: var(--ink);
+      max-width: 860px;
+    }
+    .section-head h2 .accent { color: #c5400a; }
+    .section-head .lead {
+      margin-top: 22px;
+      max-width: 660px;
+      font-size: 16px;
+      line-height: 1.55;
+      color: var(--ash);
+    }
+
+    /* ============================================================
+       Architecture (modules)
+       ============================================================ */
+    .arch-wrap { max-width: 1480px; margin: 0 auto; padding: 0 32px; }
+
+    /* Foundation row PH1 */
+    .arch-foundation {
+      background: var(--canvas);
+      border: 1px solid var(--rule-soft);
+      border-radius: var(--r-5);
+      padding: 22px 28px;
+      display: grid;
+      grid-template-columns: 80px minmax(0, 1.4fr) auto auto;
+      gap: 28px;
+      align-items: center;
+      text-decoration: none; color: inherit;
+      transition: border-color 160ms ease, transform 160ms ease;
+      margin-bottom: 14px;
+    }
+    .arch-foundation:hover { border-color: var(--ink); text-decoration: none; transform: translateY(-1px); }
+    .arch-foundation .idx {
+      font-size: 56px;
+      font-weight: 500;
+      line-height: 0.85;
+      letter-spacing: -0.025em;
+      color: var(--ink);
+      font-variant-numeric: tabular-nums;
+    }
+    .arch-foundation .body { min-width: 0; }
+    .arch-foundation .tag {
+      font-family: var(--ff-mono);
+      font-size: 10px; font-weight: 500;
+      letter-spacing: 0.18em; text-transform: uppercase;
+      color: var(--ash);
+    }
+    .arch-foundation .name {
+      font-size: 24px; font-weight: 500;
+      letter-spacing: -0.01em;
+      margin-top: 4px;
+      color: var(--ink);
+    }
+    .arch-foundation .desc {
+      font-size: 13px;
+      color: var(--ash);
+      margin-top: 6px;
+      max-width: 720px;
+      line-height: 1.5;
+    }
+    .arch-foundation .mini-stat {
+      display: flex; flex-direction: column; gap: 4px; text-align: right;
+    }
+    .arch-foundation .mini-stat .v {
+      font-family: var(--ff-mono);
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--ink);
+      font-variant-numeric: tabular-nums;
+      letter-spacing: -0.01em;
+    }
+    .arch-foundation .mini-stat .l {
+      font-family: var(--ff-mono);
+      font-size: 9px;
+      letter-spacing: 0.14em; text-transform: uppercase;
+      color: var(--ash);
+    }
+    .arch-foundation .open {
+      font-family: var(--ff-mono);
+      font-size: 11px; font-weight: 500;
+      letter-spacing: 0.14em; text-transform: uppercase;
+      color: var(--ink);
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 9px 14px;
+      background: var(--paper-2);
+      border-radius: var(--r-3);
+      transition: background 140ms ease;
+    }
+    .arch-foundation:hover .open { background: var(--ink); color: var(--paper); }
+
+    .flow-marker {
+      padding: 24px 0;
+      display: flex; align-items: center; justify-content: center;
+      gap: 14px;
+    }
+    .flow-marker .line { flex: 1; height: 1px; background: var(--rule); max-width: 220px; position: relative; }
+    .flow-marker .label {
+      font-family: var(--ff-mono);
+      font-size: 10px; font-weight: 500;
+      letter-spacing: 0.18em; text-transform: uppercase;
+      color: var(--ash);
+      max-width: 540px; text-align: center;
+    }
+
+    /* Core 4 cards */
+    .core-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 12px;
+    }
+    @media (max-width: 900px) { .core-grid { grid-template-columns: 1fr; } }
+    .core-card {
+      background: var(--canvas);
+      border: 1px solid var(--rule-soft);
+      border-radius: var(--r-5);
+      padding: 28px;
+      text-decoration: none; color: inherit;
+      display: flex; flex-direction: column;
+      gap: 18px;
+      transition: border-color 160ms ease, transform 160ms ease;
+      position: relative;
+      min-width: 0;
+    }
+    .core-card::before {
+      content: "";
+      position: absolute; top: -1px; left: 28px;
+      width: 32px; height: 3px;
+      background: var(--ink);
+      border-radius: 0 0 2px 2px;
+    }
+    .core-card.acc-rust::before  { background: #c5400a; }
+    .core-card.acc-moss::before  { background: #2f5d3a; }
+    .core-card.acc-steel::before { background: #4a5560; }
+    .core-card.acc-amber::before { background: #9c7714; }
+    .core-card:hover { border-color: var(--ink); text-decoration: none; transform: translateY(-2px); }
+
+    .core-card .ch-head {
+      display: grid; grid-template-columns: auto minmax(0, 1fr) auto;
+      gap: 20px; align-items: start;
+    }
+    .core-card .idx {
+      font-size: 56px;
+      font-weight: 500;
+      line-height: 0.85;
+      letter-spacing: -0.025em;
+      color: var(--ink);
+      font-variant-numeric: tabular-nums;
+    }
+    .core-card .ch-text { padding-top: 4px; min-width: 0; }
+    .core-card .tag {
+      font-family: var(--ff-mono);
+      font-size: 10px; font-weight: 500;
+      letter-spacing: 0.18em; text-transform: uppercase;
+      color: var(--ash);
+    }
+    .core-card .nm {
+      font-size: 24px; font-weight: 500; letter-spacing: -0.01em;
+      margin-top: 4px;
+      color: var(--ink);
+    }
+    .core-card .live-stat {
+      display: flex; flex-direction: column; gap: 2px;
+      text-align: right;
+    }
+    .core-card .live-stat .v {
+      font-family: var(--ff-mono);
+      font-size: 14px; font-weight: 700;
+      color: var(--ink);
+      font-variant-numeric: tabular-nums;
+    }
+    .core-card .live-stat .l {
+      font-family: var(--ff-mono);
+      font-size: 9px;
+      letter-spacing: 0.14em; text-transform: uppercase;
+      color: var(--ash);
+    }
+    .core-card .lede {
+      font-size: 14px;
+      color: var(--ash);
+      line-height: 1.55;
+      max-width: 540px;
+    }
+    .core-card ul { list-style: none; }
+    .core-card ul li {
+      display: grid; grid-template-columns: 20px minmax(0, 1fr) auto;
+      gap: 12px;
+      padding: 10px 0;
+      font-size: 13px;
+      color: var(--ink);
+      border-top: 1px solid var(--rule-hair);
+      align-items: baseline;
+    }
+    .core-card ul li:first-child { border-top: 1px solid var(--rule-soft); padding-top: 14px; }
+    .core-card ul li .li-num {
+      font-family: var(--ff-mono);
+      font-size: 10px;
+      color: var(--ash-2);
+    }
+    .core-card .open {
+      font-family: var(--ff-mono);
+      font-size: 11px; font-weight: 500;
+      letter-spacing: 0.14em; text-transform: uppercase;
+      align-self: flex-start;
+      display: inline-flex; align-items: center; gap: 6px;
+      color: var(--ink);
+      padding-bottom: 2px;
+      border-bottom: 1px solid var(--ink);
+    }
+
+    /* New tag */
+    .new-tag {
+      display: inline-flex; align-items: center; gap: 4px;
+      font-family: var(--ff-mono);
+      font-size: 9px; font-weight: 500;
+      letter-spacing: 0.18em; text-transform: uppercase;
+      color: #c5400a;
+      padding: 2px 6px;
+      border: 1px solid #c5400a;
+      border-radius: 2px;
+    }
+    body[data-show-new="off"] .new-tag { display: none; }
+    body[data-show-new="off"] .is-new-row .li-num { color: var(--ash-2) !important; }
+    .is-new-row .li-num { color: #c5400a !important; }
+
+    /* Dark band PH6 */
+    .dark-band {
+      background: #14130f;
+      color: #f5f1e8;
+      border-radius: var(--r-5);
+      padding: 48px;
+      margin-top: 32px;
+      display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 48px;
+      position: relative;
+    }
+    .dark-band::before {
+      content: "";
+      position: absolute; top: -1px; left: 48px;
+      width: 32px; height: 3px;
+      background: #c5400a;
+      border-radius: 0 0 2px 2px;
+    }
+    @media (max-width: 980px) { .dark-band { grid-template-columns: 1fr; padding: 36px 28px; gap: 28px; } }
+
+    .dark-band .tag {
+      font-family: var(--ff-mono);
+      font-size: 10px; font-weight: 500;
+      letter-spacing: 0.18em; text-transform: uppercase;
+      color: rgba(245, 241, 232, 0.5);
+    }
+    .dark-band .idx-row { display: flex; align-items: baseline; gap: 20px; margin-bottom: 14px; }
+    .dark-band .idx-row .idx {
+      font-size: 72px;
+      font-weight: 500;
+      line-height: 0.85;
+      letter-spacing: -0.025em;
+      color: #e85a2a;
+      font-variant-numeric: tabular-nums;
+    }
+    .dark-band h3 {
+      font-size: 28px; font-weight: 500; letter-spacing: -0.015em;
+      line-height: 1.1;
+      color: #f5f1e8;
+    }
+    .dark-band h3 .accent { color: #e85a2a; }
+    .dark-band .lede {
+      color: rgba(245, 241, 232, 0.7);
+      font-size: 14px;
+      line-height: 1.6;
+      margin-top: 18px;
+      max-width: 440px;
+    }
+    .dark-band .open-link {
+      margin-top: 24px;
+      display: inline-flex; align-items: center; gap: 8px;
+      color: #e85a2a;
+      font-family: var(--ff-mono);
+      font-size: 11px; font-weight: 500;
+      letter-spacing: 0.14em; text-transform: uppercase;
+      padding-bottom: 2px;
+      border-bottom: 1px solid #e85a2a;
+      text-decoration: none;
+    }
+    .dark-band .open-link:hover { color: #f5f1e8; border-bottom-color: #f5f1e8; }
+
+    .mini-list { display: flex; flex-direction: column; }
+    .mini-list a {
+      display: grid; grid-template-columns: 70px minmax(0, 1fr) auto;
+      gap: 16px;
+      padding: 18px 0;
+      border-top: 1px solid rgba(245, 241, 232, 0.12);
+      text-decoration: none; color: inherit;
+      align-items: center;
+      transition: padding 200ms ease;
+    }
+    .mini-list a:first-child { border-top: 0; }
+    .mini-list a:hover { padding-left: 8px; }
+    .mini-list .m-tag {
+      font-family: var(--ff-mono);
+      font-size: 10px; font-weight: 500;
+      letter-spacing: 0.18em; text-transform: uppercase;
+      color: rgba(245, 241, 232, 0.5);
+    }
+    .mini-list .m-name { font-size: 16px; font-weight: 500; color: #f5f1e8; letter-spacing: -0.005em; }
+    .mini-list .m-desc { color: rgba(245, 241, 232, 0.6); font-size: 12px; line-height: 1.5; margin-top: 4px; }
+    .mini-list i { color: #e85a2a; }
+    .mini-list a.is-new-row .m-tag { color: #e85a2a; }
+    body[data-show-new="off"] .mini-list a.is-new-row .m-tag { color: rgba(245, 241, 232, 0.5); }
+
+    /* ============================================================
+       Scale band — operations stats
+       ============================================================ */
+    .scale-band {
+      background: #14130f;
+      color: #f5f1e8;
+      padding: 48px 0;
+      position: relative;
+      overflow: hidden;
+    }
+    .scale-band::before {
+      content: ""; position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+      max-width: 1480px; width: calc(100% - 64px);
+      height: 3px; background: #c5400a;
+    }
+    .scale-band-wrap {
+      max-width: 1480px; margin: 0 auto;
+      padding: 0 32px;
+      display: grid; grid-template-columns: 220px minmax(0, 1fr);
+      gap: 56px; align-items: center;
+    }
+    @media (max-width: 1100px) { .scale-band-wrap { grid-template-columns: 1fr; gap: 28px; } }
+
+    .scale-band .sig {
+      display: flex; flex-direction: column; gap: 6px;
+    }
+    .scale-band .sig .num {
+      font-family: var(--ff-mono);
+      font-size: 11px; font-weight: 500;
+      letter-spacing: 0.18em; text-transform: uppercase;
+      color: #e85a2a;
+    }
+    .scale-band .sig .role {
+      font-family: var(--ff-mono);
+      font-size: 13px;
+      color: rgba(245, 241, 232, 0.65);
+      letter-spacing: 0.04em;
+    }
+
+    .scale-stats {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 24px;
+    }
+    @media (max-width: 720px) { .scale-stats { grid-template-columns: 1fr 1fr; } }
+    .scale-stat .v {
+      font-size: clamp(40px, 5vw, 56px);
+      font-weight: 500;
+      letter-spacing: -0.025em;
+      line-height: 0.95;
+      color: #f5f1e8;
+      font-variant-numeric: tabular-nums;
+    }
+    .scale-stat .v .u { font-size: 16px; color: rgba(245, 241, 232, 0.55); font-weight: 400; margin-left: 2px; }
+    .scale-stat .l {
+      font-family: var(--ff-mono);
+      font-size: 10px;
+      letter-spacing: 0.18em; text-transform: uppercase;
+      color: rgba(245, 241, 232, 0.55);
+      margin-top: 10px;
+    }
+    .scale-stat .d {
+      font-size: 12px;
+      color: rgba(245, 241, 232, 0.6);
+      margin-top: 4px;
+      line-height: 1.4;
+    }
+
+    /* ============================================================
+       Journey
+       ============================================================ */
+    .journey-wrap { max-width: 1480px; margin: 0 auto; padding: 0 32px; }
+    .phase {
+      border-top: 2px solid var(--ink);
+      padding: 36px 0 16px;
+      display: grid;
+      grid-template-columns: 260px minmax(0, 1fr);
+      gap: 56px;
+    }
+    .phase:last-child { border-bottom: 2px solid var(--ink); padding-bottom: 36px; }
+    @media (max-width: 1100px) { .phase { grid-template-columns: 1fr; gap: 24px; } }
+    .phase-head { position: sticky; top: 90px; align-self: start; }
+    @media (max-width: 1100px) { .phase-head { position: static; } }
+    .phase-head .ph-num {
+      font-family: var(--ff-mono);
+      font-size: 10px; font-weight: 500;
+      letter-spacing: 0.18em; text-transform: uppercase;
+      color: var(--ash);
+    }
+    .phase-head .ph-name {
+      font-size: 28px; font-weight: 500;
+      letter-spacing: -0.015em;
+      line-height: 1.1;
+      margin-top: 10px;
+      color: var(--ink);
+    }
+    .phase-head .ph-name .accent { color: #c5400a; }
+    .phase-head .ph-desc { color: var(--ash); font-size: 13px; line-height: 1.5; margin-top: 14px; max-width: 280px; }
+
+    .phase-bar {
+      margin-top: 18px;
+      display: grid; grid-template-columns: repeat(14, 1fr);
+      gap: 3px;
+    }
+    .phase-bar i { height: 6px; background: var(--rule); }
+    .phase-1 .phase-bar i:nth-child(-n+3) { background: var(--ink); }
+    .phase-2 .phase-bar i:nth-child(-n+5) { background: var(--ink); }
+    .phase-3 .phase-bar i:nth-child(-n+9) { background: var(--ink); }
+    .phase-4 .phase-bar i:nth-child(-n+12) { background: var(--ink); }
+    .phase-5 .phase-bar i { background: var(--ink); }
+
+    .phase-steps { display: flex; flex-direction: column; }
+    .step {
+      display: grid; grid-template-columns: 56px minmax(0, 1fr) auto;
+      gap: 20px;
+      padding: 18px 14px 18px 0;
+      border-top: 1px solid var(--rule-hair);
+      text-decoration: none; color: inherit;
+      align-items: baseline;
+      transition: padding 200ms ease, background 200ms ease;
+    }
+    .step:first-child { border-top: 0; }
+    .step:hover { padding-left: 12px; background: var(--paper-2); }
+    .step .s-num {
+      font-family: var(--ff-mono);
+      font-size: 11px; font-weight: 500;
+      letter-spacing: 0.14em;
+      color: var(--ash-2);
+    }
+    .step .s-title {
+      font-size: 17px; font-weight: 500;
+      letter-spacing: -0.005em;
+      color: var(--ink);
+      line-height: 1.2;
+    }
+    .step .s-title .accent { color: #c5400a; }
+    .step .s-desc {
+      color: var(--ash);
+      font-size: 13px;
+      line-height: 1.55;
+      margin-top: 6px;
+      max-width: 600px;
+    }
+    .step .s-right { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; padding-top: 4px; }
+    .step .s-tag {
+      font-family: var(--ff-mono);
+      font-size: 9px; font-weight: 500;
+      letter-spacing: 0.18em; text-transform: uppercase;
+      color: var(--ash-2);
+    }
+    .step .s-arrow { color: var(--ink); display: inline-flex; align-items: center; }
+    .step.is-new .s-num { color: #c5400a; }
+
+    /* ============================================================
+       Supplement list
+       ============================================================ */
+    .supp-wrap { max-width: 1480px; margin: 0 auto; padding: 0 32px; }
+    .supp-row {
+      display: grid; grid-template-columns: 80px minmax(0, 1fr) 240px;
+      gap: 36px;
+      padding: 28px 0;
+      border-top: 1px solid var(--rule);
+      align-items: start;
+    }
+    .supp-row:last-child { border-bottom: 1px solid var(--rule); }
+    @media (max-width: 900px) { .supp-row { grid-template-columns: 60px 1fr; gap: 20px; } .sp-chips { grid-column: 1 / -1; flex-direction: row; flex-wrap: wrap; align-items: flex-start !important; } }
+    .supp-row .sp-num {
+      font-size: 36px;
+      font-weight: 500;
+      letter-spacing: -0.02em;
+      color: var(--ink);
+      font-variant-numeric: tabular-nums;
+      line-height: 0.9;
+      transition: color 200ms ease;
+    }
+    .supp-row .sp-num .of {
+      display: block;
+      font-family: var(--ff-mono);
+      font-size: 10px; font-weight: 500;
+      letter-spacing: 0.16em; text-transform: uppercase;
+      color: var(--ash-2);
+      margin-top: 6px;
+    }
+    .supp-row:hover .sp-num { color: #c5400a; }
+    .supp-row .sp-ttl {
+      font-size: 20px; font-weight: 500;
+      letter-spacing: -0.005em;
+      line-height: 1.25;
+      color: var(--ink);
+      max-width: 640px;
+    }
+    .supp-row .sp-ttl .accent { color: #c5400a; }
+    .supp-row .sp-desc {
+      color: var(--ash);
+      font-size: 13.5px;
+      line-height: 1.6;
+      margin-top: 10px;
+      max-width: 640px;
+    }
+    .sp-chips { display: flex; flex-direction: column; gap: 6px; align-items: flex-end; }
+    .chip {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 6px 10px;
+      border: 1px solid var(--rule);
+      border-radius: 9999px;
+      font-size: 12px; font-weight: 500;
+      color: var(--ink);
+      text-decoration: none;
+      background: var(--canvas);
+      transition: all 140ms ease;
+    }
+    .chip:hover { border-color: var(--ink); background: var(--ink); color: var(--paper); }
+    .chip .dot { width: 5px; height: 5px; border-radius: 9999px; background: #c5400a; }
+
+    /* ============================================================
+       Closing CTA
+       ============================================================ */
+    .closing {
+      max-width: 1480px; margin: 0 auto;
+      padding: 88px 32px;
+      border-top: 2px solid var(--ink);
+      display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 56px; align-items: end;
+    }
+    @media (max-width: 1100px) { .closing { grid-template-columns: 1fr; gap: 32px; padding: 64px 24px; } }
+    .closing h2 { max-width: 600px; font-size: clamp(36px, 4vw, 52px); font-weight: 500; letter-spacing: -0.02em; line-height: 1.05; }
+    .closing h2 .accent { color: #c5400a; }
+    .closing .meta-line {
+      font-family: var(--ff-mono);
+      font-size: 10px; font-weight: 500;
+      letter-spacing: 0.18em; text-transform: uppercase;
+      color: var(--ash);
+      margin-bottom: 18px;
+    }
+    .closing-actions { display: flex; flex-direction: column; gap: 14px; align-items: flex-start; }
+
+    /* ============================================================
+       Footer
+       ============================================================ */
+    .footer {
+      background: #14130f;
+      color: #f5f1e8;
+      padding: 72px 32px 36px;
+    }
+    .footer-inner { max-width: 1480px; margin: 0 auto; }
+    .footer .f-top {
+      display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+      gap: 56px;
+      padding-bottom: 48px;
+      border-bottom: 1px solid rgba(245, 241, 232, 0.12);
+    }
+    @media (max-width: 1100px) { .footer .f-top { grid-template-columns: 1fr; gap: 28px; } }
+    .footer .f-top h3 {
+      font-size: clamp(28px, 3.5vw, 40px);
+      font-weight: 500;
+      line-height: 1.1;
+      letter-spacing: -0.02em;
+      max-width: 540px;
+      color: #f5f1e8;
+    }
+    .footer .f-top h3 .accent { color: #e85a2a; }
+    .footer .f-top .sub { color: rgba(245, 241, 232, 0.55); font-size: 14px; margin-top: 14px; max-width: 460px; line-height: 1.6; }
+
+    .email-field {
+      display: flex; align-items: center; gap: 10px;
+      padding: 14px 0;
+      border-bottom: 1px solid rgba(245, 241, 232, 0.3);
+      transition: border-bottom-color 200ms ease;
+    }
+    .email-field:focus-within { border-bottom-color: #c5400a; }
+    .email-field input {
+      flex: 1; background: transparent; border: 0; outline: none;
+      color: #f5f1e8;
+      font-family: var(--ff-sans);
+      font-size: 16px;
+    }
+    .email-field input::placeholder { color: rgba(245, 241, 232, 0.35); }
+    .email-field button {
+      background: transparent; border: 0; cursor: pointer;
+      color: #f5f1e8; padding: 6px;
+      display: inline-flex; align-items: center;
+    }
+    .email-field button:hover { color: #e85a2a; }
+
+    .footer-cols {
+      display: grid; grid-template-columns: minmax(0, 2fr) repeat(3, minmax(0, 1fr));
+      gap: 28px;
+      padding-top: 40px;
+    }
+    @media (max-width: 720px) { .footer-cols { grid-template-columns: 1fr 1fr; } }
+    .footer-cols h5 {
+      font-family: var(--ff-mono);
+      font-size: 10px; font-weight: 500;
+      letter-spacing: 0.18em; text-transform: uppercase;
+      color: rgba(245, 241, 232, 0.5);
+      margin-bottom: 14px;
+    }
+    .footer-cols a {
+      display: block;
+      color: rgba(245, 241, 232, 0.65);
+      font-size: 13px;
+      padding: 5px 0;
+      text-decoration: none;
+      transition: color 140ms ease;
+    }
+    .footer-cols a:hover { color: #e85a2a; }
+    .footer-cols .f-brand-line {
+      color: rgba(245, 241, 232, 0.55);
+      font-size: 13px; line-height: 1.6;
+      max-width: 320px;
+    }
+    .colophon {
+      margin-top: 40px; padding-top: 20px;
+      border-top: 1px solid rgba(245, 241, 232, 0.12);
+      display: flex; justify-content: space-between; align-items: center;
+      gap: 16px;
+      font-family: var(--ff-mono);
+      font-size: 10px; font-weight: 500;
+      letter-spacing: 0.16em; text-transform: uppercase;
+      color: rgba(245, 241, 232, 0.4);
+    }
+
+    @media (max-width: 720px) {
+      .top-strip { font-size: 9px; }
+      .top-strip-inner { padding: 0 16px; }
+      .top-nav-links { display: none; }
+      .top-nav-inner { grid-template-columns: auto auto; padding: 12px 16px; }
+      .hero { padding: 40px 16px 32px; }
+      .hero-meta { flex-direction: column; align-items: flex-start; gap: 8px; }
+      .section { padding: 56px 0 48px; }
+      .section-head { padding: 0 16px 32px; }
+      .arch-wrap, .scale-band-wrap, .journey-wrap, .supp-wrap { padding-left: 16px; padding-right: 16px; }
+      .arch-foundation { grid-template-columns: 1fr; gap: 16px; padding: 20px; }
+      .arch-foundation .mini-stat { text-align: left; flex-direction: row; gap: 16px; align-items: baseline; }
+      .core-card { padding: 22px; }
+      .core-card .ch-head { grid-template-columns: 1fr; gap: 8px; }
+      .core-card .idx { font-size: 44px; }
+      .step { grid-template-columns: 40px 1fr; gap: 14px; padding: 14px 0; }
+      .step .s-right { grid-column: 1 / -1; flex-direction: row; align-items: center; justify-content: space-between; }
+      .closing { padding: 56px 16px; }
+      .footer { padding: 48px 20px 28px; }
+      .pulse-panel { padding: 18px; }
+    }
+
+    /* ============================================================
+       Danh mục chức năng (bản đồ menu)
+       ============================================================ */
+    .modmap {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+      gap: 18px 22px;
+    }
+    .modgrp {
+      border: 1px solid var(--rule);
+      border-radius: var(--r-4, 10px);
+      background: var(--canvas);
+      padding: 16px 18px 12px;
+    }
+    .modgrp h5 {
+      font-family: var(--ff-mono);
+      font-size: 10px; font-weight: 600;
+      letter-spacing: 0.16em; text-transform: uppercase;
+      color: var(--ash);
+      padding-bottom: 8px; margin-bottom: 4px;
+      border-bottom: 1px solid var(--rule);
+    }
+    .modgrp a {
+      display: block;
+      padding: 7px 0;
+      font-size: 13.5px; font-weight: 500;
+      color: var(--ink);
+      text-decoration: none;
+      border-bottom: 1px solid var(--rule-hair, rgba(0,0,0,0.05));
+      transition: color 140ms ease, padding-left 140ms ease;
+    }
+    .modgrp a:last-child { border-bottom: 0; }
+    .modgrp a:hover { color: #c5400a; padding-left: 5px; }
+  </style>
+</head>
+<body data-show-new="on">
+
+  <!-- ===== Top strip ===== -->
+  <div class="top-strip">
+    <div class="top-strip-inner">
+      <div class="group">
+        <span class="pulse"></span>
+        <span>Phiên bản rà soát · 2026.05</span>
+        <span class="sep">/</span>
+        <span>Đặc thù ngành cửa nhôm hệ</span>
+      </div>
+      <div class="group">
+        <span>VN · TT 200/2014</span>
+        <span class="sep">/</span>
+        <span>Giá thành theo đơn hàng</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Nav ===== -->
+  <nav class="top-nav">
+    <div class="top-nav-inner">
+      <a href="index.html" class="nav-brand">
+        <span class="nav-brand-mark" aria-hidden="true">OW</span>
+        <span class="nav-brand-text">
+          <span class="nav-brand-name">ERP NHÔM OWIN</span>
+          <span class="nav-brand-sub">Nhôm hệ · Cửa thuỷ lực · Trượt quay · Uốn vòm</span>
+        </span>
+      </a>
+      <div class="top-nav-links">
+        <a href="#map">Kiến trúc</a>
+        <a href="#scale">Quy mô</a>
+        <a href="#modules">Chức năng</a>
+        <a href="#journey">Hành trình</a>
+        <a href="#supplement">Rà soát</a>
+      </div>
+      <div class="top-nav-right">
+        <button class="nav-toggle on" id="toggle-new" aria-pressed="true">
+          <span class="pill"></span>
+          <span>Hiện rà soát</span>
+        </button>
+        <a class="btn-hero" href="pages/01-dashboard.html">
+          Mở Dashboard
+          <i data-lucide="arrow-up-right" style="width:14px;height:14px"></i>
+        </a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ===== Hero ===== -->
+  <header class="hero">
+    <div class="hero-meta">
+      <div class="left">
+        <span>Tài liệu / 00</span>
+        <span>Bản đồ &amp; hành trình</span>
+        <span>6 phân hệ · 14 bước · 12 điểm rà soát</span>
+      </div>
+      <div id="heroDate">2026 · 05 · 20</div>
+    </div>
+
+    <div class="hero-main">
+
+      <div class="hero-copy">
+        <h1>
+          Một ERP. <br/>
+          Hiểu nhà máy <span class="mark">từ cây nhôm</span><br/>
+          <span class="dim">tới kế toán.</span>
+        </h1>
+        <p class="lead">
+          Bản đồ vận hành sáu phân hệ của <b>Công ty CP Thương mại OWIN</b> — hành trình một bộ cửa nhôm từ lúc chủ đầu tư hỏi giá
+          tới khi tiền về tài khoản, trên <b>một nền tảng web responsive</b>. Click bất kỳ phân hệ hoặc bước nào để mở giao diện vận hành tương ứng.
+        </p>
+        <div class="cta-row">
+          <a class="btn-hero" href="#map">
+            Khám phá kiến trúc
+            <i data-lucide="arrow-down-right" style="width:14px;height:14px"></i>
+          </a>
+          <a class="btn-hero btn-hero-ghost" href="pages/01-dashboard.html">Mở Dashboard điều hành →</a>
+        </div>
+      </div>
+
+      <!-- Live pulse panel -->
+      <div class="pulse-panel">
+        <div class="pp-head">
+          <div class="pp-title"><span class="live-dot"></span> Đang chạy lúc này</div>
+          <div class="pp-clock">CA 2 · <b id="liveClock">16:48</b></div>
+        </div>
+        <div class="pp-rows">
+          <div class="pp-row good">
+            <span class="ic"><i data-lucide="zap" style="width:14px;height:14px"></i></span>
+            <div>
+              <div class="pp-lbl">Máy đang chạy</div>
+              <div class="pp-sub">CAT-01 · CNC-03 · UON-02 · LAP-01</div>
+            </div>
+            <div style="text-align: right;">
+              <div class="pp-val">4<span class="unit"> / 6</span></div>
+              <div class="pp-machines" style="margin-top: 4px;">
+                <span class="m on"></span>
+                <span class="m on"></span>
+                <span class="m on"></span>
+                <span class="m on"></span>
+                <span class="m idle"></span>
+                <span class="m down"></span>
+              </div>
+            </div>
+          </div>
+          <div class="pp-row">
+            <span class="ic"><i data-lucide="clipboard-list" style="width:14px;height:14px"></i></span>
+            <div>
+              <div class="pp-lbl">LSX đang sản xuất</div>
+              <div class="pp-sub">142 đơn / tháng · ổn định</div>
+            </div>
+            <span class="pp-val">12<span class="unit"> LSX</span></span>
+          </div>
+          <div class="pp-row warn">
+            <span class="ic"><i data-lucide="alert-triangle" style="width:14px;height:14px"></i></span>
+            <div>
+              <div class="pp-lbl">Đơn quá hạn cần xử lý</div>
+              <div class="pp-sub">Cao nhất quá 2 ngày</div>
+            </div>
+            <span class="pp-val">3<span class="unit"> đơn</span></span>
+          </div>
+          <div class="pp-row">
+            <span class="ic"><i data-lucide="banknote" style="width:14px;height:14px"></i></span>
+            <div>
+              <div class="pp-lbl">Doanh số T5 · vs target</div>
+              <div class="progress-mini"><div style="width: 100%"></div></div>
+            </div>
+            <div style="text-align: right;">
+              <div class="pp-val">2.85<span class="unit"> M</span></div>
+              <div class="pp-sub" style="text-align: right;">114% target</div>
+            </div>
+          </div>
+          <div class="pp-row good">
+            <span class="ic"><i data-lucide="shield-check" style="width:14px;height:14px"></i></span>
+            <div>
+              <div class="pp-lbl">Tỷ lệ đạt KCS hôm nay</div>
+              <div class="pp-sub">Sai lệch kích thước TB 0,8mm</div>
+            </div>
+            <span class="pp-val">96.2<span class="unit"> %</span></span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </header>
+
+  <!-- ===== Section 01 — Architecture ===== -->
+  <section id="map" class="section">
+    <div class="section-head">
+      <div class="section-sig">
+        <span class="num">§ 01</span>
+        <span class="role">Bản đồ kiến trúc</span>
+      </div>
+      <div>
+        <h2>Sáu phân hệ. <span class="accent">Một nền tảng web.</span> Vận hành theo lớp — nền tảng, vận hành, tài chính.</h2>
+        <p class="lead">Phân lớp từ trên xuống. Lớp nền tảng giữ người dùng, phân quyền và quy trình duyệt. Bốn phân hệ vận hành cốt lõi chia sẻ dữ liệu master qua kho nhôm – kính và xưởng sản xuất. Lớp tài chính tổng hợp toàn bộ giờ máy, định mức BOM và nhập xuất kho để lên giá thành từng bộ cửa.</p>
+      </div>
+    </div>
+
+    <div class="arch-wrap">
+
+      <a class="arch-foundation" href="pages/09-quan-tri-he-thong.html">
+        <span class="idx">01</span>
+        <div class="body">
+          <div class="tag">Lớp nền tảng</div>
+          <div class="name">Quản trị hệ thống</div>
+          <div class="desc">Người dùng &amp; phân quyền theo chức danh nhà máy — Quản đốc, Tổ trưởng cắt CNC, KCS nhôm kính, Thủ kho nhôm – kính · Quy trình duyệt đa cấp · Tham số hệ thống · Backup tự động.</div>
+        </div>
+        <div class="mini-stat">
+          <span class="v">42</span>
+          <span class="l">User active</span>
+        </div>
+        <span class="open">Mở chi tiết <i data-lucide="arrow-up-right" style="width:12px;height:12px"></i></span>
+      </a>
+
+      <div class="flow-marker">
+        <span class="line"></span>
+        <span class="label">Người dùng · phân quyền · duyệt đa cấp chảy xuống toàn hệ thống</span>
+        <span class="line"></span>
+      </div>
+
+      <div class="core-grid">
+
+        <a class="core-card acc-rust" href="pages/02-bao-gia.html">
+          <div class="ch-head">
+            <span class="idx">02</span>
+            <div class="ch-text">
+              <div class="tag">Lớp vận hành</div>
+              <div class="nm">Kinh doanh cửa nhôm</div>
+            </div>
+            <div class="live-stat">
+              <span class="v">8</span>
+              <span class="l">BG chờ duyệt</span>
+            </div>
+          </div>
+          <p class="lede">Báo giá cửa nhôm hệ thuỷ lực, trượt quay, cửa sổ Luxanode — bóc tách theo m² và mét dài. Đơn hàng bán, hệ thống đại lý uỷ quyền, công nợ, kế hoạch bán hàng.</p>
+          <ul>
+            <li class="is-new-row">
+              <span class="li-num">01</span>
+              <span>Báo giá — hệ nhôm, số cánh, loại kính, phụ kiện, tự tính giá thành theo m²</span>
+              <span class="new-tag">Mới</span>
+            </li>
+            <li><span class="li-num">02</span><span>Quản lý đơn hàng bán &amp; hợp đồng</span><span></span></li>
+            <li><span class="li-num">03</span><span>Hồ sơ đại lý uỷ quyền · chủ đầu tư · nhà thầu</span><span></span></li>
+            <li><span class="li-num">04</span><span>Hạng đại lý Kim cương / Vàng / Bạc &amp; doanh số luỹ kế</span><span></span></li>
+            <li><span class="li-num">05</span><span>Báo cáo doanh thu theo hệ nhôm &amp; hiệu quả đại lý</span><span></span></li>
+          </ul>
+          <span class="open">Mở phân hệ <i data-lucide="arrow-right" style="width:12px;height:12px"></i></span>
+        </a>
+
+        <a class="core-card acc-moss" href="pages/05-kho.html">
+          <div class="ch-head">
+            <span class="idx">03</span>
+            <div class="ch-text">
+              <div class="tag">Lớp vận hành</div>
+              <div class="nm">Kho nhôm – kính</div>
+            </div>
+            <div class="live-stat">
+              <span class="v">5</span>
+              <span class="l">VT thấp tồn</span>
+            </div>
+          </div>
+          <p class="lede">Nhôm thanh 6063-T5, nhôm Luxanode Anodized-ED, kính hộp, bản lề thuỷ lực, gioăng EPDM — nhập xuất tồn theo lô và theo giá để nhôm (rack). Cảnh báo tồn tối thiểu và truy vấn lịch sử vật tư.</p>
+          <ul>
+            <li><span class="li-num">01</span><span>Nhập · xuất · điều chuyển nhôm thanh &amp; kính</span><span></span></li>
+            <li class="is-new-row">
+              <span class="li-num">02</span>
+              <span>Quản lý theo lô đùn ép &amp; CO/CQ nhôm 6063-T5</span>
+              <span class="new-tag">Mới</span>
+            </li>
+            <li class="is-new-row">
+              <span class="li-num">03</span>
+              <span>Khuôn ép góc · dao phay quản lý riêng như tài sản</span>
+              <span class="new-tag">Mới</span>
+            </li>
+            <li><span class="li-num">04</span><span>Cảnh báo tồn tối thiểu &amp; đề xuất mua</span><span></span></li>
+            <li><span class="li-num">05</span><span>Báo cáo nhập xuất tồn &amp; vòng quay kho</span><span></span></li>
+          </ul>
+          <span class="open">Mở phân hệ <i data-lucide="arrow-right" style="width:12px;height:12px"></i></span>
+        </a>
+
+        <a class="core-card acc-steel" href="pages/04-san-xuat-kanban.html">
+          <div class="ch-head">
+            <span class="idx">04</span>
+            <div class="ch-text">
+              <div class="tag">Lớp vận hành</div>
+              <div class="nm">Sản xuất cửa nhôm</div>
+            </div>
+            <div class="live-stat">
+              <span class="v">12</span>
+              <span class="l">LSX đang chạy</span>
+            </div>
+          </div>
+          <p class="lede">Cắt &amp; phay đố CNC, uốn vòm, ép góc, lắp kính, đóng kiện — kanban theo công đoạn. Kế hoạch xếp lên đúng máy, gộp lệnh cùng hệ nhôm để tiết kiệm thời gian cài đặt máy.</p>
+          <ul>
+            <li><span class="li-num">01</span><span>Định mức BOM theo công đoạn</span><span></span></li>
+            <li class="is-new-row">
+              <span class="li-num">02</span>
+              <span>Kế hoạch sản xuất theo máy &amp; ca</span>
+              <span class="new-tag">Mới</span>
+            </li>
+            <li class="is-new-row">
+              <span class="li-num">03</span>
+              <span>Cắt CNC · Uốn vòm · Ép góc · Lắp kính chia rõ công đoạn</span>
+              <span class="new-tag">Mới</span>
+            </li>
+            <li class="is-new-row">
+              <span class="li-num">04</span>
+              <span>Gộp lệnh — đề xuất gộp đơn cùng hệ nhôm, cùng màu sơn</span>
+              <span class="new-tag">Mới</span>
+            </li>
+            <li class="is-new-row">
+              <span class="li-num">05</span>
+              <span>KCS: sai lệch kích thước · vuông góc · độ dày lớp anod</span>
+              <span class="new-tag">Mới</span>
+            </li>
+          </ul>
+          <span class="open">Mở phân hệ <i data-lucide="arrow-right" style="width:12px;height:12px"></i></span>
+        </a>
+
+        <a class="core-card acc-amber" href="pages/14-tbmm-bao-tri.html">
+          <div class="ch-head">
+            <span class="idx">05</span>
+            <div class="ch-text">
+              <div class="tag">Lớp vận hành</div>
+              <div class="nm">Thiết bị &amp; bảo trì</div>
+            </div>
+            <div class="live-stat">
+              <span class="v">2</span>
+              <span class="l">Máy cần BT</span>
+            </div>
+          </div>
+          <p class="lede">Máy cắt hai đầu WEIKE, máy phay khoá CNC, máy uốn vòm 3 trục, bàn lắp kính — quản lý như tài sản. Bảo trì theo lịch thời gian hoặc theo giờ máy chạy thực tế.</p>
+          <ul>
+            <li><span class="li-num">01</span><span>Khai báo máy &amp; hạng mục bảo trì</span><span></span></li>
+            <li class="is-new-row">
+              <span class="li-num">02</span>
+              <span>Khuôn ép góc &amp; dao phay quản lý như tài sản</span>
+              <span class="new-tag">Mới</span>
+            </li>
+            <li><span class="li-num">03</span><span>Lịch bảo trì &amp; nhắc hạn tự động</span><span></span></li>
+            <li><span class="li-num">04</span><span>Bảo trì theo giờ máy chạy thực tế</span><span></span></li>
+            <li><span class="li-num">05</span><span>Lịch sử vật tư bảo trì &amp; chi phí</span><span></span></li>
+          </ul>
+          <span class="open">Mở phân hệ <i data-lucide="arrow-right" style="width:12px;height:12px"></i></span>
+        </a>
+
+      </div>
+
+      <div class="flow-marker">
+        <span class="line"></span>
+        <span class="label">Giờ máy · định mức BOM · nhập xuất kho · KCS chảy về kế toán giá thành</span>
+        <span class="line"></span>
+      </div>
+
+      <div class="dark-band">
+        <div>
+          <div class="tag">Lớp tài chính &amp; hỗ trợ</div>
+          <div class="idx-row">
+            <span class="idx">06</span>
+          </div>
+          <h3>Kế toán tổng hợp dữ liệu từ <span class="accent">cả nhà máy.</span> Lương khoán theo sản lượng thực.</h3>
+          <p class="lede">Giá thành theo từng đơn hàng — so sánh giá thành thực tế với báo giá ban đầu cho từng bộ cửa. Báo cáo tài chính theo Thông tư 200/2014. Tích hợp MISA chia hai giai đoạn để giảm rủi ro triển khai.</p>
+          <a class="open-link" href="pages/15-ke-toan.html">Mở phân hệ kế toán <i data-lucide="arrow-up-right" style="width:13px;height:13px"></i></a>
+        </div>
+        <div class="mini-list">
+          <a href="pages/15-ke-toan.html">
+            <span class="m-tag">06.A</span>
+            <div>
+              <div class="m-name">Kế toán &amp; giá thành</div>
+              <div class="m-desc">Thu chi · công nợ đại lý · TSCĐ · giá thành theo đơn · BCTC theo TT 200.</div>
+            </div>
+            <i data-lucide="arrow-up-right"></i>
+          </a>
+          <a href="pages/16-cham-cong-luong-khoan.html" class="is-new-row">
+            <span class="m-tag">06.B · Mới</span>
+            <div>
+              <div class="m-name">Chấm công hai ca</div>
+              <div class="m-desc">Vân tay · Face · RFID cho thợ cắt, thợ ép góc, thợ uốn vòm. Web mobile có Geolocation cho thợ lắp đặt công trình.</div>
+            </div>
+            <i data-lucide="arrow-up-right"></i>
+          </a>
+          <a href="pages/16-cham-cong-luong-khoan.html" class="is-new-row">
+            <span class="m-tag">06.C · Mới</span>
+            <div>
+              <div class="m-name">Lương khoán</div>
+              <div class="m-desc">Đơn giá theo công đoạn — cắt, uốn, ép góc, lắp kính. Sản lượng lấy tự động từ phân hệ sản xuất. Trừ phế phẩm theo KCS.</div>
+            </div>
+            <i data-lucide="arrow-up-right"></i>
+          </a>
+          <a href="pages/31-bao-cao-thiet-hai.html" class="is-new-row">
+            <span class="m-tag">06.D · Mới</span>
+            <div>
+              <div class="m-name">Báo cáo thiệt hại</div>
+              <div class="m-desc">Nhôm hỏng khi uốn vòm, kính vỡ khi lắp, giờ máy chết — quy ra tiền, bấm vào truy nguyên tới lệnh sản xuất gốc.</div>
+            </div>
+            <i data-lucide="arrow-up-right"></i>
+          </a>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ===== Scale band ===== -->
+  <section id="scale" class="scale-band">
+    <div class="scale-band-wrap">
+      <div class="sig">
+        <span class="num">§ 02</span>
+        <span class="role">Quy mô vận hành / 06.2026</span>
+      </div>
+      <div class="scale-stats">
+        <div class="scale-stat">
+          <div class="v">247<span class="u"> KH</span></div>
+          <div class="l">Đại lý &amp; khách hàng</div>
+          <div class="d">38 đại lý uỷ quyền · 12 KH mới trong tháng</div>
+        </div>
+        <div class="scale-stat">
+          <div class="v">142<span class="u"> đơn</span></div>
+          <div class="l">Đơn hàng tháng 5</div>
+          <div class="d">+18% so với T4 · 2.85 tỷ ₫</div>
+        </div>
+        <div class="scale-stat">
+          <div class="v">6<span class="u"> máy</span></div>
+          <div class="l">Thiết bị SX &amp; hoàn thiện</div>
+          <div class="d">CAT-01 · CAT-02 · CNC-03 · UON-01 · UON-02 · EP-02</div>
+        </div>
+        <div class="scale-stat">
+          <div class="v">96.2<span class="u"> %</span></div>
+          <div class="l">Tỷ lệ đạt KCS</div>
+          <div class="d">Sai lệch kích thước TB 0,8mm · trong dung sai ≤2mm</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== Section — Danh mục chức năng (khớp menu hệ thống) ===== -->
+  <section id="modules" class="section">
+    <div class="section-head">
+      <div class="section-sig">
+        <span class="num">§ 03</span>
+        <span class="role">Danh mục chức năng</span>
+      </div>
+      <div>
+        <h2>Toàn bộ màn hình chức năng, <span class="accent">đúng như menu</span> bên trong hệ thống.</h2>
+        <p class="lead">Mỗi dòng dưới đây là một màn hình vận hành thật trong bản demo. Click để mở trực tiếp.</p>
+      </div>
+    </div>
+
+    <div class="modmap">
+      <div class="modgrp">
+        <h5>Tổng quan</h5>
+        <a href="pages/01-dashboard.html">Dashboard điều hành</a>
+      </div>
+      <div class="modgrp">
+        <h5>Kinh doanh</h5>
+        <a href="pages/20-san-pham.html">Sản phẩm</a>
+        <a href="pages/17-tinh-gia.html">Tính giá thành</a>
+        <a href="pages/02-bao-gia.html">Báo giá</a>
+        <a href="pages/18-hop-dong.html">Hợp đồng</a>
+        <a href="pages/03-don-hang.html">Đơn hàng bán</a>
+        <a href="pages/07-crm.html">Khách hàng &amp; đại lý</a>
+      </div>
+      <div class="modgrp">
+        <h5>Sản xuất</h5>
+        <a href="pages/04-san-xuat-kanban.html">Lệnh dạng Kanban</a>
+        <a href="pages/04-san-xuat-gantt.html">Lệnh dạng Gantt</a>
+        <a href="pages/19-lsx-san-xuat.html">Lệnh dạng danh sách</a>
+        <a href="pages/bom-dinh-muc.html">Định mức BOM</a>
+        <a href="pages/11-ke-hoach-san-xuat.html">Kế hoạch sản xuất</a>
+      </div>
+      <div class="modgrp">
+        <h5>Kho</h5>
+        <a href="pages/05-kho.html">Kho vật tư nhôm – kính</a>
+        <a href="pages/kho-ban-thanh-pham.html">Kho bán thành phẩm</a>
+        <a href="pages/22-kho-thanh-pham.html">Kho thành phẩm</a>
+        <a href="pages/kho-vat-lieu-tieu-hao.html">Kho vật liệu tiêu hao</a>
+        <a href="pages/kho-cong-cu-dung-cu.html">Kho công cụ dụng cụ</a>
+        <a href="pages/lich-su-xnk-kho.html">Lịch sử xuất nhập kho</a>
+      </div>
+      <div class="modgrp">
+        <h5>Mua hàng</h5>
+        <a href="pages/13-de-xuat-mua.html">Đề xuất mua</a>
+        <a href="pages/13-mua-hang.html">PO mua hàng</a>
+        <a href="pages/21-nha-cung-cap.html">Nhà cung cấp</a>
+        <a href="pages/21-cong-no-ncc.html">Công nợ NCC</a>
+      </div>
+      <div class="modgrp">
+        <h5>Kỹ thuật máy</h5>
+        <a href="pages/14-tbmm-bao-tri.html">Tổng quan thiết bị</a>
+        <a href="pages/17-may-moc.html">Quản lý máy móc</a>
+        <a href="pages/18-phieu-bao-tri.html">Phiếu bảo trì</a>
+        <a href="pages/19-sua-chua.html">Sửa chữa</a>
+        <a href="pages/20-vat-tu-may.html">Vật tư – linh kiện</a>
+      </div>
+      <div class="modgrp">
+        <h5>Tài chính</h5>
+        <a href="pages/15-ke-toan.html">Kế toán · thu chi · sổ quỹ</a>
+      </div>
+      <div class="modgrp">
+        <h5>Nhân sự</h5>
+        <a href="pages/22-nhan-su-ho-so.html">Hồ sơ nhân sự</a>
+        <a href="pages/23-tuyen-dung.html">Tuyển dụng &amp; định biên</a>
+        <a href="pages/24-thu-viec-danh-gia.html">Thử việc &amp; đánh giá</a>
+        <a href="pages/25-dao-tao-tai-lieu.html">Tài liệu &amp; quy chế</a>
+        <a href="pages/26-hop-dong-quyet-dinh.html">HĐ lao động &amp; QĐ</a>
+        <a href="pages/27-bac-luong-kpi.html">Bậc lương &amp; KPI</a>
+        <a href="pages/16-cham-cong-luong-khoan.html">Chấm công &amp; lương khoán</a>
+        <a href="pages/28-phieu-loi-bien-ban.html">Phiếu lỗi &amp; biên bản</a>
+      </div>
+      <div class="modgrp">
+        <h5>Báo cáo &amp; hệ thống</h5>
+        <a href="pages/08-bao-cao.html">Báo cáo</a>
+        <a href="pages/31-bao-cao-thiet-hai.html">Báo cáo thiệt hại</a>
+        <a href="pages/09-quan-tri-he-thong.html">Quản trị hệ thống</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== Section — Journey ===== -->
+  <section id="journey" class="section section-paper">
+
+    <div class="section-head">
+      <div class="section-sig">
+        <span class="num">§ 04</span>
+        <span class="role">Hành trình một đơn hàng</span>
+      </div>
+      <div>
+        <h2>Theo dấu một bộ cửa nhôm. <span class="accent">Mười bốn bước</span>, sáu phân hệ phối hợp.</h2>
+        <p class="lead">Năm pha vận hành — từ pre-sales tới bàn giao &amp; tài chính. Mỗi bước trong hành trình kết nối tới đúng giao diện phụ trách. Các bước có dấu "Mới" là điểm rà soát bổ sung so với bản đặc tả gốc.</p>
+      </div>
+    </div>
+
+    <div class="journey-wrap">
+
+      <div class="phase phase-1">
+        <div class="phase-head">
+          <div class="ph-num">Pha 01 / 05</div>
+          <div class="ph-name"><span class="accent">Pre-sales</span></div>
+          <div class="ph-desc">Tiếp nhận yêu cầu của chủ đầu tư hoặc đại lý, dựng báo giá theo bản vẽ và thông số kỹ thuật, duyệt nội bộ.</div>
+          <div class="phase-bar"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        </div>
+        <div class="phase-steps">
+          <a class="step" href="pages/07-crm.html">
+            <span class="s-num">01</span>
+            <div>
+              <div class="s-title">Khách hỏi giá</div>
+              <div class="s-desc">Ghi nhận yêu cầu, hạng đại lý, doanh số luỹ kế, công nợ và mức uy tín thanh toán của khách hàng.</div>
+            </div>
+            <div class="s-right">
+              <span class="s-tag">Khách hàng</span>
+              <span class="s-arrow"><i data-lucide="arrow-up-right" style="width:16px;height:16px"></i></span>
+            </div>
+          </a>
+          <a class="step is-new" href="pages/02-bao-gia.html">
+            <span class="s-num">02</span>
+            <div>
+              <div class="s-title"><span class="accent">Báo giá cửa nhôm</span></div>
+              <div class="s-desc">Nhập hệ nhôm, kích thước phủ bì, số cánh, loại kính, bộ phụ kiện — hệ thống tự tính giá thành dự kiến theo m² và đề xuất giá bán theo hạng đại lý.</div>
+            </div>
+            <div class="s-right">
+              <span class="s-tag">Kinh doanh</span>
+              <span class="new-tag">Mới</span>
+              <span class="s-arrow"><i data-lucide="arrow-up-right" style="width:16px;height:16px"></i></span>
+            </div>
+          </a>
+          <a class="step" href="pages/09-quan-tri-he-thong.html">
+            <span class="s-num">03</span>
+            <div>
+              <div class="s-title">Duyệt báo giá</div>
+              <div class="s-desc">Workflow đa cấp theo giá trị đơn hàng — Trưởng phòng Kinh doanh dự án, Giám đốc. Lưu lịch sử và hạn hiệu lực.</div>
+            </div>
+            <div class="s-right">
+              <span class="s-tag">Hệ thống</span>
+              <span class="s-arrow"><i data-lucide="arrow-up-right" style="width:16px;height:16px"></i></span>
+            </div>
+          </a>
+        </div>
+      </div>
+
+      <div class="phase phase-2">
+        <div class="phase-head">
+          <div class="ph-num">Pha 02 / 05</div>
+          <div class="ph-name">Đặt hàng &amp; <span class="accent">định mức</span></div>
+          <div class="ph-desc">Chuyển báo giá thành hợp đồng rồi thành đơn hàng. Định mức nhôm, kính, phụ kiện theo BOM từng bộ cửa.</div>
+          <div class="phase-bar"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        </div>
+        <div class="phase-steps">
+          <a class="step" href="pages/03-don-hang.html">
+            <span class="s-num">04</span>
+            <div>
+              <div class="s-title">Đơn hàng bán</div>
+              <div class="s-desc">Hạn giao, xe chở hàng, ghi chú lắp đặt tại công trình. Trạng thái đổi màu theo hạn — vàng, xanh, đỏ.</div>
+            </div>
+            <div class="s-right">
+              <span class="s-tag">Kinh doanh</span>
+              <span class="s-arrow"><i data-lucide="arrow-up-right" style="width:16px;height:16px"></i></span>
+            </div>
+          </a>
+          <a class="step is-new" href="pages/bom-dinh-muc.html">
+            <span class="s-num">05</span>
+            <div>
+              <div class="s-title"><span class="accent">Định mức BOM theo bộ cửa</span></div>
+              <div class="s-desc">Bao nhiêu kg nhôm hệ, bao nhiêu m² kính hộp, bao nhiêu mét gioăng cho một bộ cửa — kèm tỷ lệ hao cắt đầu mẩu và hao uốn vòm.</div>
+            </div>
+            <div class="s-right">
+              <span class="s-tag">Sản xuất</span>
+              <span class="new-tag">Mới</span>
+              <span class="s-arrow"><i data-lucide="arrow-up-right" style="width:16px;height:16px"></i></span>
+            </div>
+          </a>
+        </div>
+      </div>
+
+      <div class="phase phase-3">
+        <div class="phase-head">
+          <div class="ph-num">Pha 03 / 05</div>
+          <div class="ph-name"><span class="accent">Sản xuất</span></div>
+          <div class="ph-desc">Lập lệnh, cắt phay CNC, uốn vòm, ép góc — quét QR theo công đoạn để ghi nhận giờ máy thực tế.</div>
+          <div class="phase-bar"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        </div>
+        <div class="phase-steps">
+          <a class="step is-new" href="pages/11-ke-hoach-san-xuat.html">
+            <span class="s-num">06</span>
+            <div>
+              <div class="s-title"><span class="accent">Kế hoạch theo máy &amp; ca</span></div>
+              <div class="s-desc">Xếp lệnh sản xuất lên đúng máy cắt, máy phay, máy uốn. Hệ thống đề xuất gộp các đơn nhỏ cùng hệ nhôm, cùng màu sơn thành một mẻ để tiết kiệm thời gian cài đặt máy.</div>
+            </div>
+            <div class="s-right">
+              <span class="s-tag">Sản xuất</span>
+              <span class="new-tag">Mới</span>
+              <span class="s-arrow"><i data-lucide="arrow-up-right" style="width:16px;height:16px"></i></span>
+            </div>
+          </a>
+          <a class="step" href="pages/19-lsx-san-xuat.html">
+            <span class="s-num">07</span>
+            <div>
+              <div class="s-title">Lập lệnh sản xuất</div>
+              <div class="s-desc">Phiếu công nghệ A4 đi theo công đoạn, kèm QR. Mỗi LSX gắn với một máy cụ thể. Xem theo Kanban, Gantt hoặc danh sách.</div>
+            </div>
+            <div class="s-right">
+              <span class="s-tag">Sản xuất</span>
+              <span class="s-arrow"><i data-lucide="arrow-up-right" style="width:16px;height:16px"></i></span>
+            </div>
+          </a>
+          <a class="step is-new" href="pages/04-san-xuat-kanban.html">
+            <span class="s-num">08</span>
+            <div>
+              <div class="s-title"><span class="accent">Cắt &amp; phay đố (CNC)</span></div>
+              <div class="s-desc">Cắt cây nhôm 5,8m theo bảng cắt tối ưu, phay lỗ khoá và đố bằng máy CNC WEIKE. Tra cứu bảng cắt cũ — tái sử dụng nếu khách đặt lại bộ cửa cùng kích thước.</div>
+            </div>
+            <div class="s-right">
+              <span class="s-tag">Sản xuất</span>
+              <span class="new-tag">Mới</span>
+              <span class="s-arrow"><i data-lucide="arrow-up-right" style="width:16px;height:16px"></i></span>
+            </div>
+          </a>
+          <a class="step" href="pages/04-san-xuat-kanban.html">
+            <span class="s-num">09</span>
+            <div>
+              <div class="s-title">Uốn vòm · ép góc</div>
+              <div class="s-desc">Uốn vòm nhôm trên máy 3 trục rồi ép góc khung cánh. Thợ quét QR khi bắt đầu và kết thúc — ghi nhận giờ máy và lý do dừng.</div>
+            </div>
+            <div class="s-right">
+              <span class="s-tag">Sản xuất</span>
+              <span class="s-arrow"><i data-lucide="arrow-up-right" style="width:16px;height:16px"></i></span>
+            </div>
+          </a>
+        </div>
+      </div>
+
+      <div class="phase phase-4">
+        <div class="phase-head">
+          <div class="ph-num">Pha 04 / 05</div>
+          <div class="ph-name">Hoàn thiện &amp; <span class="accent">KCS</span></div>
+          <div class="ph-desc">Lắp kính, lắp phụ kiện, bọc màng bảo vệ, kiểm tra theo tiêu chí nhôm kính, nhập kho thành phẩm.</div>
+          <div class="phase-bar"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        </div>
+        <div class="phase-steps">
+          <a class="step is-new" href="pages/04-san-xuat-kanban.html">
+            <span class="s-num">10</span>
+            <div>
+              <div class="s-title"><span class="accent">Lắp kính &amp; phụ kiện</span></div>
+              <div class="s-desc">Lắp kính hộp, bơm keo silicon, gắn gioăng EPDM, lắp bản lề thuỷ lực sàn và bộ khoá tay nắm, căn chỉnh lực đóng.</div>
+            </div>
+            <div class="s-right">
+              <span class="s-tag">Sản xuất</span>
+              <span class="new-tag">Mới</span>
+              <span class="s-arrow"><i data-lucide="arrow-up-right" style="width:16px;height:16px"></i></span>
+            </div>
+          </a>
+          <a class="step is-new" href="pages/28-phieu-loi-bien-ban.html">
+            <span class="s-num">11</span>
+            <div>
+              <div class="s-title"><span class="accent">KCS nhôm kính</span></div>
+              <div class="s-desc">Kiểm sai lệch kích thước ≤2mm, vuông góc 90°±0.5°, lớp anod ≥15µm, độ phẳng cánh, độ kín khít gioăng, lực đóng bản lề thuỷ lực. Ghi mã lỗi và nguyên nhân 4M1E.</div>
+            </div>
+            <div class="s-right">
+              <span class="s-tag">KCS</span>
+              <span class="new-tag">Mới</span>
+              <span class="s-arrow"><i data-lucide="arrow-up-right" style="width:16px;height:16px"></i></span>
+            </div>
+          </a>
+          <a class="step" href="pages/22-kho-thanh-pham.html">
+            <span class="s-num">12</span>
+            <div>
+              <div class="s-title">Bọc màng, đóng kiện &amp; nhập kho</div>
+              <div class="s-desc">Bọc màng bảo vệ bề mặt nhôm, đóng xốp + kiện gỗ, dán tem QR rồi nhập kho thành phẩm theo lệnh sản xuất — chọn kho lưu hoặc kho bán hàng.</div>
+            </div>
+            <div class="s-right">
+              <span class="s-tag">Kho</span>
+              <span class="s-arrow"><i data-lucide="arrow-up-right" style="width:16px;height:16px"></i></span>
+            </div>
+          </a>
+        </div>
+      </div>
+
+      <div class="phase phase-5">
+        <div class="phase-head">
+          <div class="ph-num">Pha 05 / 05</div>
+          <div class="ph-name">Bàn giao &amp; <span class="accent">tài chính</span></div>
+          <div class="ph-desc">Giao hàng &amp; lắp đặt tại công trình, thu tiền, đối chiếu công nợ và đồng bộ chứng từ sang phần mềm kế toán MISA.</div>
+          <div class="phase-bar"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        </div>
+        <div class="phase-steps">
+          <a class="step" href="pages/03-don-hang.html">
+            <span class="s-num">13</span>
+            <div>
+              <div class="s-title">Giao hàng &amp; lắp đặt</div>
+              <div class="s-desc">Xe chở hàng, tổ lắp đặt công trình, theo dõi tình trạng giao. Cập nhật trạng thái đơn theo từng mốc nghiệm thu.</div>
+            </div>
+            <div class="s-right">
+              <span class="s-tag">Kinh doanh</span>
+              <span class="s-arrow"><i data-lucide="arrow-up-right" style="width:16px;height:16px"></i></span>
+            </div>
+          </a>
+          <a class="step is-new" href="pages/15-ke-toan.html">
+            <span class="s-num">14</span>
+            <div>
+              <div class="s-title"><span class="accent">Thu tiền · đồng bộ MISA</span></div>
+              <div class="s-desc">Phiếu thu mẫu 01-TT, phiếu chi mẫu 02-TT, đối chiếu công nợ đại lý theo hoá đơn. Export chứng từ sang MISA — giai đoạn 1 qua Excel chuẩn.</div>
+            </div>
+            <div class="s-right">
+              <span class="s-tag">Kế toán</span>
+              <span class="new-tag">Mới</span>
+              <span class="s-arrow"><i data-lucide="arrow-up-right" style="width:16px;height:16px"></i></span>
+            </div>
+          </a>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ===== Section — Supplement ===== -->
+  <section id="supplement" class="section">
+    <div class="section-head">
+      <div class="section-sig">
+        <span class="num">§ 05</span>
+        <span class="role">Mười hai điểm rà soát</span>
+      </div>
+      <div>
+        <h2>Bản gốc liệt kê chức năng <span class="accent">chung chung.</span> Bản này làm rõ đặc thù ngành cửa nhôm &amp; scope triển khai.</h2>
+        <p class="lead">Mỗi điểm rà soát được mở rộng kèm lý do và phân hệ phụ trách. Bật / tắt highlight ở thanh điều hướng để so sánh với bản đặc tả gốc.</p>
+      </div>
+    </div>
+
+    <div class="supp-wrap">
+
+      <div class="supp-row">
+        <div class="sp-num">01<span class="of">trên 12</span></div>
+        <div>
+          <div class="sp-ttl">Báo giá cửa nhôm chi tiết theo <span class="accent">bản vẽ &amp; hệ nhôm</span></div>
+          <div class="sp-desc">Bản gốc có quyền "duyệt báo giá" nhưng không có chức năng báo giá tương ứng. Form mới nhập hệ nhôm (120 thuỷ lực, 93 trượt quay, 121 Luxanode), kích thước phủ bì, số cánh, loại kính, bộ phụ kiện — hệ thống tự tính tổng giá thành dự kiến theo m² và đề xuất giá bán theo hạng đại lý.</div>
+        </div>
+        <div class="sp-chips">
+          <a class="chip" href="pages/02-bao-gia.html"><span class="dot"></span>02 · Kinh doanh</a>
+        </div>
+      </div>
+
+      <div class="supp-row">
+        <div class="sp-num">02<span class="of">trên 12</span></div>
+        <div>
+          <div class="sp-ttl">Lương khoán theo công đoạn — <span class="accent">đặc thù bắt buộc</span></div>
+          <div class="sp-desc">Trả lương song song: lương cơ bản theo hợp đồng (khối văn phòng, quản lý) và lương khoán theo sản phẩm / công đoạn (thợ xưởng). Đơn giá khoán khai báo theo công đoạn — cắt CNC, uốn vòm, ép góc, lắp kính, đóng kiện. Sản lượng lấy tự động từ phân hệ sản xuất, trừ phế phẩm theo KCS.</div>
+        </div>
+        <div class="sp-chips">
+          <a class="chip" href="pages/16-cham-cong-luong-khoan.html"><span class="dot"></span>06 · Lương khoán</a>
+        </div>
+      </div>
+
+      <div class="supp-row">
+        <div class="sp-num">03<span class="of">trên 12</span></div>
+        <div>
+          <div class="sp-ttl">Chấm công <span class="accent">xưởng &amp; công trình</span></div>
+          <div class="sp-desc">Phương thức kép — vân tay, Face ID, RFID cho thợ tại xưởng Thường Tín; web mobile có HTML5 Geolocation cho thợ lắp đặt công trình và nhân viên phát triển đại lý đi tỉnh. Quản lý hai ca mỗi ngày, ca 8h.</div>
+        </div>
+        <div class="sp-chips">
+          <a class="chip" href="pages/16-cham-cong-luong-khoan.html"><span class="dot"></span>06 · Chấm công</a>
+        </div>
+      </div>
+
+      <div class="supp-row">
+        <div class="sp-num">04<span class="of">trên 12</span></div>
+        <div>
+          <div class="sp-ttl">KCS nhôm kính &amp; phân biệt <span class="accent">lỗi nguyên liệu vs lỗi nhà máy</span></div>
+          <div class="sp-desc">Tiêu chí kiểm — sai lệch kích thước &gt;2mm (CAT-SAI-KT), lệch góc cắt (CAT-LECH-GOC), nứt thanh khi uốn vòm (UON-NUT), mối ép góc hở (EP-HO-MOI), lớp anod mỏng &lt;15µm (ANOD-MONG), nứt vỡ kính khi lắp (KINH-NUT), bản lề thuỷ lực không tự hồi (BANLE-KHONG-HOI). Phân biệt rõ nguyên nhân lỗi là cơ sở xử lý đền bù với khách hàng và với nhà cung cấp nhôm.</div>
+        </div>
+        <div class="sp-chips">
+          <a class="chip" href="pages/28-phieu-loi-bien-ban.html"><span class="dot"></span>04 · Phiếu lỗi</a>
+        </div>
+      </div>
+
+      <div class="supp-row">
+        <div class="sp-num">05<span class="of">trên 12</span></div>
+        <div>
+          <div class="sp-ttl">Gộp lệnh — <span class="accent">gộp đơn nhỏ</span> cùng hệ nhôm &amp; cùng màu</div>
+          <div class="sp-desc">Hệ thống đề xuất gộp các đơn nhỏ cùng hệ nhôm và cùng màu sơn/vân gỗ lên một mẻ sản xuất để tiết kiệm thời gian cài đặt máy và giảm hao đầu mẩu khi cắt. Đây là nghiệp vụ tối ưu rất quen với xưởng nhôm nhưng hiếm ERP chung hỗ trợ.</div>
+        </div>
+        <div class="sp-chips">
+          <a class="chip" href="pages/11-ke-hoach-san-xuat.html"><span class="dot"></span>04 · Kế hoạch SX</a>
+        </div>
+      </div>
+
+      <div class="supp-row">
+        <div class="sp-num">06<span class="of">trên 12</span></div>
+        <div>
+          <div class="sp-ttl">Lệnh sản xuất chia rõ <span class="accent">Cắt CNC · Uốn vòm · Ép góc · Lắp kính</span></div>
+          <div class="sp-desc">Bản gốc đặt tên "sản xuất" nhưng không có công đoạn ngành nhôm. Bản này chia rõ sáu bước — Tiếp nhận &amp; kiểm nhôm thanh, Cắt &amp; phay đố CNC, Uốn vòm / định hình, Ép góc &amp; lắp khung cánh, Lắp kính &amp; phụ kiện, Bọc màng – QC – đóng kiện. Mỗi bước có bán thành phẩm ra rõ ràng.</div>
+        </div>
+        <div class="sp-chips">
+          <a class="chip" href="pages/19-lsx-san-xuat.html"><span class="dot"></span>04 · Lệnh SX</a>
+        </div>
+      </div>
+
+      <div class="supp-row">
+        <div class="sp-num">07<span class="of">trên 12</span></div>
+        <div>
+          <div class="sp-ttl">Khuôn ép góc &amp; dao phay quản lý như <span class="accent">tài sản</span></div>
+          <div class="sp-desc">Vật tư đặc thù xưởng nhôm. Khi khách đặt lại bộ cửa cũ, tra cứu xem bộ dao phay và cữ ép góc cũ còn dùng được không để khỏi gia công cữ mới. Lưỡi cắt 500 WEIKE cũng vậy — theo dõi số mét cắt để thay đúng hạn, tránh cắt lệch góc.</div>
+        </div>
+        <div class="sp-chips">
+          <a class="chip" href="pages/14-tbmm-bao-tri.html"><span class="dot"></span>05 · Thiết bị</a>
+          <a class="chip" href="pages/kho-cong-cu-dung-cu.html"><span class="dot"></span>03 · Kho CCDC</a>
+        </div>
+      </div>
+
+      <div class="supp-row">
+        <div class="sp-num">08<span class="of">trên 12</span></div>
+        <div>
+          <div class="sp-ttl">Kế hoạch sản xuất theo <span class="accent">máy &amp; ca</span></div>
+          <div class="sp-desc">Mỗi máy có năng lực khác nhau — máy cắt hai đầu, máy phay khoá CNC 3 giây/lỗ, máy uốn vòm 3 trục chỉ uốn được bán kính tối thiểu nhất định. Lệnh sản xuất phải gắn với máy cụ thể, kế hoạch xếp theo ca chứ không chỉ theo ngày như ERP thông thường.</div>
+        </div>
+        <div class="sp-chips">
+          <a class="chip" href="pages/11-ke-hoach-san-xuat.html"><span class="dot"></span>04 · Kế hoạch SX</a>
+        </div>
+      </div>
+
+      <div class="supp-row">
+        <div class="sp-num">09<span class="of">trên 12</span></div>
+        <div>
+          <div class="sp-ttl">Quản lý theo <span class="accent">lô đùn ép &amp; CO/CQ</span></div>
+          <div class="sp-desc">Cần thiết với nhôm thanh 6063-T5 và kính cường lực — độ dày lớp anod, độ bám sơn tĩnh điện và chất lượng hợp kim phụ thuộc trực tiếp vào lô đùn ép. Quản lý theo lô kèm CO/CQ và phiếu kiểm định lớp phủ anod là yêu cầu cơ bản nhưng bản gốc không đề cập.</div>
+        </div>
+        <div class="sp-chips">
+          <a class="chip" href="pages/05-kho.html"><span class="dot"></span>03 · Kho</a>
+        </div>
+      </div>
+
+      <div class="supp-row">
+        <div class="sp-num">10<span class="of">trên 12</span></div>
+        <div>
+          <div class="sp-ttl">Scope tích hợp <span class="accent">MISA</span> chia hai giai đoạn</div>
+          <div class="sp-desc">Bản gốc viết "kế toán theo MISA" không rõ ý. Giai đoạn 1 — export chứng từ ra file Excel chuẩn, bộ phận kế toán import vào MISA (ít rủi ro, dễ ước lượng). Giai đoạn 2 — tích hợp hai chiều qua API nếu phiên bản MISA hỗ trợ.</div>
+        </div>
+        <div class="sp-chips">
+          <a class="chip" href="pages/15-ke-toan.html"><span class="dot"></span>06 · Kế toán</a>
+        </div>
+      </div>
+
+      <div class="supp-row">
+        <div class="sp-num">11<span class="of">trên 12</span></div>
+        <div>
+          <div class="sp-ttl">Hệ thống <span class="accent">đại lý uỷ quyền</span> &amp; chuyển giao dàn máy</div>
+          <div class="sp-desc">Owin không chỉ bán cửa thành phẩm mà còn bán buôn nhôm thanh và chuyển giao công nghệ kèm dàn máy làm cửa nhôm WEIKE cho đại lý. Hồ sơ khách phải có: khu vực, hạng đại lý (Kim cương / Vàng / Bạc), doanh số luỹ kế, công nợ và cờ đánh dấu đã mua dàn máy chuyển giao hay chưa.</div>
+        </div>
+        <div class="sp-chips">
+          <a class="chip" href="pages/07-crm.html"><span class="dot"></span>02 · Khách hàng</a>
+        </div>
+      </div>
+
+      <div class="supp-row">
+        <div class="sp-num">12<span class="of">trên 12</span></div>
+        <div>
+          <div class="sp-ttl">Giá thành theo đơn &amp; <span class="accent">báo cáo thiệt hại</span></div>
+          <div class="sp-desc">Bản gốc chỉ có một dòng. Bản này mở rộng — giá thành mỗi bộ cửa bằng NVL trực tiếp (nhôm thanh + kính + gioăng + phụ kiện + vật tư đóng kiện) cộng nhân công khoán theo công đoạn cộng chi phí sản xuất chung phân bổ theo giờ máy. Kèm báo cáo thiệt hại riêng: nhôm hỏng khi uốn vòm, kính vỡ khi lắp, giờ máy chết, công làm lại — quy ra tiền theo đơn giá giờ máy 185.000 ₫/h, giờ công 62.000 ₫/h, nhôm 78.500 ₫/kg.</div>
+        </div>
+        <div class="sp-chips">
+          <a class="chip" href="pages/15-ke-toan.html"><span class="dot"></span>06 · Kế toán</a>
+          <a class="chip" href="pages/31-bao-cao-thiet-hai.html"><span class="dot"></span>06 · Thiệt hại</a>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ===== Closing ===== -->
+  <section class="closing">
+    <div>
+      <div class="meta-line">§ kết — bắt đầu khám phá</div>
+      <h2>Sẵn sàng đi sâu vào <span class="accent">từng phân hệ</span>?</h2>
+      <p style="margin-top: 22px; max-width: 540px; font-size: 16px; color: var(--ash); line-height: 1.55;">
+        Mỗi phân hệ trong sơ đồ trên dẫn tới một giao diện riêng. Bắt đầu từ Dashboard điều hành để có cái nhìn tổng quan, hoặc đi thẳng vào nghiệp vụ quan tâm nhất.
+      </p>
+    </div>
+    <div class="closing-actions">
+      <a class="btn-hero" href="pages/01-dashboard.html">
+        Mở Dashboard điều hành
+        <i data-lucide="arrow-up-right" style="width:14px;height:14px"></i>
+      </a>
+      <a class="btn-hero btn-hero-ghost" href="pages/02-bao-gia.html">
+        Thử Báo giá cửa nhôm →
+      </a>
+      <a class="btn-hero btn-hero-ghost" href="pages/04-san-xuat-kanban.html">
+        Xem Kanban nhà máy →
+      </a>
+    </div>
+  </section>
+
+  <!-- ===== Footer ===== -->
+  <footer class="footer">
+    <div class="footer-inner">
+      <div class="f-top">
+        <div>
+          <h3>Còn điểm nào trong sơ đồ cần làm rõ thêm <span class="accent">trước khi triển khai</span>?</h3>
+          <p class="sub">Ghi câu hỏi và gửi cho bộ phận triển khai. Hoặc click bất kỳ chip phân hệ ở trên để xem giao diện tương ứng.</p>
+        </div>
+        <div>
+          <form class="email-field" onsubmit="event.preventDefault();">
+            <input type="email" placeholder="owingroup@gmail.com" aria-label="Email" />
+            <button type="submit" aria-label="Gửi">
+              <i data-lucide="arrow-up-right" style="width:20px;height:20px"></i>
+            </button>
+          </form>
+          <div style="color: rgba(245,241,232,0.4); font-size: 11px; margin-top: 10px; font-family: var(--ff-mono); letter-spacing: 0.16em; text-transform: uppercase;">
+            Hotline 056.386.9999 · owin.com.vn
+          </div>
+        </div>
+      </div>
+
+      <div class="footer-cols">
+        <div>
+          <h5>ERP NHÔM OWIN</h5>
+          <p class="f-brand-line">Phần mềm vận hành nhà máy cửa nhôm Owin. Một nền tảng — sáu phân hệ. Triển khai web responsive trên trình duyệt máy tính, máy tính bảng và điện thoại.</p>
+        </div>
+        <div>
+          <h5>Phân hệ</h5>
+          <a href="pages/09-quan-tri-he-thong.html">01 · Hệ thống</a>
+          <a href="pages/02-bao-gia.html">02 · Kinh doanh</a>
+          <a href="pages/05-kho.html">03 · Kho nhôm – kính</a>
+          <a href="pages/04-san-xuat-kanban.html">04 · Sản xuất</a>
+          <a href="pages/14-tbmm-bao-tri.html">05 · Thiết bị</a>
+          <a href="pages/15-ke-toan.html">06 · Tài chính</a>
+        </div>
+        <div>
+          <h5>Giao diện</h5>
+          <a href="pages/01-dashboard.html">Dashboard điều hành</a>
+          <a href="pages/02-bao-gia.html">Báo giá cửa nhôm</a>
+          <a href="pages/04-san-xuat-kanban.html">Kanban sản xuất</a>
+          <a href="pages/31-bao-cao-thiet-hai.html">Báo cáo thiệt hại</a>
+          <a href="pages/16-cham-cong-luong-khoan.html">Chấm công &amp; Lương</a>
+        </div>
+        <div>
+          <h5>Tài liệu</h5>
+          <a href="#modules">Danh mục chức năng</a>
+          <a href="#supplement">Mười hai điểm rà soát</a>
+          <a href="#journey">Hành trình đơn hàng</a>
+          <a href="#map">Kiến trúc phân hệ</a>
+        </div>
+      </div>
+
+      <div class="colophon">
+        <span>© 2026 · CÔNG TY CỔ PHẦN THƯƠNG MẠI OWIN · MST 0109541582 · Tài liệu nội bộ</span>
+        <span>359 Phúc Diễn – Xuân Phương – Hà Nội · NM: Số 8 Giá Ngự – Xâm Xuyên – Thường Tín – Hà Nội</span>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    if (window.lucide) lucide.createIcons();
+
+    // Live clock
+    function updateClock() {
+      const now = new Date();
+      const hh = String(now.getHours()).padStart(2, '0');
+      const mm = String(now.getMinutes()).padStart(2, '0');
+      const el = document.getElementById('liveClock');
+      if (el) el.textContent = `${hh}:${mm}`;
+    }
+    updateClock();
+    setInterval(updateClock, 30000);
+
+    // Toggle "Hiện rà soát"
+    const toggle = document.getElementById('toggle-new');
+    const body = document.body;
+    const KEY = 'erp.so-do.show-new';
+    function setToggle(on) {
+      body.dataset.showNew = on ? 'on' : 'off';
+      toggle.classList.toggle('on', on);
+      toggle.setAttribute('aria-pressed', on ? 'true' : 'false');
+    }
+    const saved = localStorage.getItem(KEY);
+    setToggle(saved === null ? true : saved === 'on');
+    toggle.addEventListener('click', () => {
+      const next = body.dataset.showNew !== 'on';
+      setToggle(next);
+      localStorage.setItem(KEY, next ? 'on' : 'off');
+    });
+
+    // Smooth scroll
+    document.querySelectorAll('a[href^="#"]').forEach(a => {
+      a.addEventListener('click', (e) => {
+        const href = a.getAttribute('href');
+        if (href.length > 1) {
+          const el = document.querySelector(href);
+          if (el) {
+            e.preventDefault();
+            el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+        }
+      });
+    });
+
+    // Active section in nav
+    const navLinks = document.querySelectorAll('.top-nav-links a[href^="#"]');
+    const sections = Array.from(navLinks).map(a => {
+      const id = a.getAttribute('href').slice(1);
+      return { link: a, el: document.getElementById(id) };
+    }).filter(x => x.el);
+    const obs = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          sections.forEach(s => s.link.classList.remove('active'));
+          const match = sections.find(s => s.el === entry.target);
+          if (match) match.link.classList.add('active');
+        }
+      });
+    }, { rootMargin: '-30% 0px -60% 0px' });
+    sections.forEach(s => obs.observe(s.el));
+  </script>
+</body>
+</html>

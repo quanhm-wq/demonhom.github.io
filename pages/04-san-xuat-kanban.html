@@ -1,0 +1,1136 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lệnh dạng Kanban — ERP NHÔM OWIN</title>
+  <link rel="stylesheet" href="../assets/css/style.css" />
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+  <style>
+    /* ============================================================
+       Kanban evolved · drill-down drawer
+       ============================================================ */
+
+    /* ===== Realtime header strip (dark) ===== */
+    .rt-strip {
+      background: #14130f;
+      color: #f5f1e8;
+      border-radius: var(--r-5);
+      padding: 14px 20px;
+      margin-bottom: 12px;
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr) repeat(4, auto);
+      gap: 24px;
+      align-items: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .rt-strip::before { content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 3px; background: #c5400a; }
+    .rt-strip .shift {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-family: var(--ff-mono);
+      font-size: 10px; font-weight: 500;
+      letter-spacing: 0.18em; text-transform: uppercase;
+    }
+    .rt-strip .shift .pulse {
+      width: 7px; height: 7px;
+      background: #e85a2a;
+      border-radius: 9999px;
+      animation: rt-pulse 2.4s ease-in-out infinite;
+    }
+    @keyframes rt-pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(1.5); }
+    }
+    .rt-strip .clock {
+      font-family: var(--ff-mono);
+      font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase;
+      color: rgba(245, 241, 232, 0.6);
+    }
+    .rt-strip .clock b {
+      display: block;
+      font-size: 20px; font-weight: 500;
+      letter-spacing: -0.02em;
+      color: #f5f1e8;
+      text-transform: none;
+      font-variant-numeric: tabular-nums;
+      line-height: 1;
+      margin-top: 4px;
+    }
+    .rt-strip .km {
+      display: flex; flex-direction: column; gap: 2px;
+      border-left: 1px solid rgba(245, 241, 232, 0.18);
+      padding-left: 18px;
+    }
+    .rt-strip .km .l {
+      font-family: var(--ff-mono);
+      font-size: 9px; font-weight: 500;
+      letter-spacing: 0.16em; text-transform: uppercase;
+      color: rgba(245, 241, 232, 0.55);
+    }
+    .rt-strip .km .v {
+      font-size: 18px; font-weight: 500;
+      color: #f5f1e8;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: -0.015em;
+      line-height: 1.1;
+    }
+    .rt-strip .km .v .u { font-size: 11px; color: rgba(245, 241, 232, 0.55); font-weight: 400; margin-left: 2px; }
+    .rt-strip .km .d { font-size: 10px; color: rgba(245, 241, 232, 0.55); }
+    .rt-strip .km .d.up { color: #8db58f; }
+    .rt-strip .km .d.alert { color: #e88a5e; }
+
+    @media (max-width: 1100px) {
+      .rt-strip { grid-template-columns: auto 1fr 1fr; gap: 16px; }
+      .rt-strip .km { padding-left: 12px; }
+      .rt-strip .km:nth-child(n+5) { display: none; }
+    }
+
+    /* ===== View switcher ===== */
+    .view-switch {
+      display: inline-flex;
+      gap: 2px;
+      padding: 3px;
+      background: var(--paper-2);
+      border-radius: var(--r-3);
+      width: fit-content;
+    }
+    .view-switch button {
+      padding: 6px 12px;
+      font-size: 12px; font-weight: 500;
+      background: transparent;
+      border: 0;
+      color: var(--ash);
+      border-radius: var(--r-2);
+      cursor: pointer;
+      display: inline-flex; align-items: center; gap: 6px;
+      transition: all 140ms ease;
+    }
+    .view-switch button:hover { color: var(--ink); }
+    .view-switch button.active {
+      background: var(--canvas);
+      color: var(--ink);
+      box-shadow: 0 1px 0 var(--rule);
+    }
+
+    /* ===== Filter strip ===== */
+    .filter-strip {
+      background: var(--canvas);
+      border: 1px solid var(--rule-soft);
+      border-radius: var(--r-5);
+      padding: 10px 14px;
+      margin-bottom: 12px;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .filter-strip .search-wrap {
+      flex: 1; min-width: 220px;
+      display: flex; align-items: center;
+      background: var(--paper-2);
+      border-radius: var(--r-3);
+      padding: 0 12px;
+      height: 30px;
+    }
+    .filter-strip .search-wrap i { color: var(--ash-2); margin-right: 6px; }
+    .filter-strip .search-wrap input {
+      flex: 1; background: transparent; border: 0; outline: none;
+      font-size: 12px; color: var(--ink);
+    }
+    .filter-strip .filter-pill { padding: 4px 10px; font-size: 12px; height: 30px; }
+    .filter-strip .legend {
+      display: inline-flex; align-items: center; gap: 12px;
+      font-family: var(--ff-mono);
+      font-size: 10px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--ash);
+      margin-left: auto;
+    }
+    .filter-strip .legend .dot { width: 7px; height: 7px; border-radius: 9999px; display: inline-block; margin-right: 4px; vertical-align: middle; }
+
+    /* ===== Kanban ===== */
+    .kb-wrap {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(260px, 1fr));
+      gap: 10px;
+      overflow-x: auto;
+      padding-bottom: 8px;
+    }
+    @media (max-width: 1400px) { .kb-wrap { grid-template-columns: repeat(6, 260px); } }
+
+    .kb-col {
+      background: var(--paper-2);
+      border-radius: var(--r-5);
+      padding: 10px;
+      display: flex; flex-direction: column;
+      gap: 8px;
+      min-width: 0;
+    }
+    .kb-col-head {
+      background: var(--canvas);
+      border-radius: var(--r-3);
+      padding: 12px 14px;
+      display: flex; flex-direction: column; gap: 6px;
+      border: 1px solid var(--rule-soft);
+      position: sticky; top: 0;
+      z-index: 2;
+    }
+    .kb-col-head .top {
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .kb-col-head .name {
+      font-family: var(--ff-mono);
+      font-size: 10px; font-weight: 600;
+      letter-spacing: 0.16em; text-transform: uppercase;
+      color: var(--ink);
+      display: inline-flex; align-items: center; gap: 6px;
+    }
+    .kb-col-head .name .num {
+      font-family: var(--ff-mono);
+      font-size: 10px;
+      padding: 2px 7px;
+      background: var(--ink);
+      color: var(--paper);
+      border-radius: 2px;
+      letter-spacing: 0.08em;
+    }
+    .kb-col-head .add {
+      width: 22px; height: 22px;
+      background: transparent;
+      border: 1px solid var(--rule);
+      border-radius: var(--r-2);
+      cursor: pointer;
+      color: var(--ash);
+      display: inline-flex; align-items: center; justify-content: center;
+      transition: all 140ms ease;
+    }
+    .kb-col-head .add:hover { border-color: var(--ink); color: var(--ink); }
+    .kb-col-head .stats {
+      display: flex; justify-content: space-between; align-items: center;
+      font-size: 11px;
+      color: var(--ash);
+      gap: 6px;
+    }
+    .kb-col-head .stats .ms {
+      font-family: var(--ff-mono);
+      font-size: 9px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+    .kb-col-head .stats .ms b { color: var(--ink); font-weight: 500; font-variant-numeric: tabular-nums; }
+
+    /* Card */
+    .kb-card {
+      background: var(--canvas);
+      border: 1px solid var(--rule-soft);
+      border-radius: var(--r-3);
+      padding: 12px;
+      cursor: pointer;
+      transition: border-color 140ms ease, transform 140ms ease;
+      display: flex; flex-direction: column;
+      gap: 8px;
+      position: relative;
+      border-left: 3px solid var(--rule);
+    }
+    .kb-card:hover { border-color: var(--ink); border-left-color: var(--ink); transform: translateX(2px); }
+    .kb-card { cursor: grab; }
+    .kb-card:active { cursor: grabbing; }
+    .kb-card.dragging {
+      opacity: 0.45;
+      border-style: dashed;
+      transform: none;
+      box-shadow: 0 8px 24px rgba(20, 19, 15, 0.16);
+    }
+    .kb-col.drag-over {
+      background: var(--rust-soft);
+      outline: 2px dashed var(--rust);
+      outline-offset: -2px;
+    }
+    .kb-card.u-overdue { border-left-color: var(--signal); }
+    .kb-card.u-warning { border-left-color: var(--amber); }
+    .kb-card.u-due     { border-left-color: var(--steel); }
+    .kb-card.u-safe    { border-left-color: var(--moss); }
+
+    .kb-card .head {
+      display: flex; justify-content: space-between; align-items: center;
+      gap: 6px;
+    }
+    .kb-card .head .code {
+      font-family: var(--ff-mono);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: -0.005em;
+      color: var(--ink);
+    }
+    .kb-card .head .badges { display: inline-flex; gap: 4px; align-items: center; }
+    .kb-card .badge-vip {
+      font-family: var(--ff-mono);
+      font-size: 9px; font-weight: 600;
+      letter-spacing: 0.14em;
+      padding: 1px 5px;
+      background: var(--rust);
+      color: var(--paper);
+      border-radius: 2px;
+    }
+    .kb-card .badge-overdue {
+      font-family: var(--ff-mono);
+      font-size: 9px; font-weight: 600;
+      letter-spacing: 0.14em;
+      padding: 1px 5px;
+      background: var(--signal-soft);
+      color: var(--signal);
+      border-radius: 2px;
+    }
+    .kb-card .head .status-dot {
+      width: 8px; height: 8px;
+      border-radius: 9999px;
+    }
+    .kb-card .status-dot.running { background: var(--moss); animation: rt-pulse 2.4s ease-in-out infinite; }
+    .kb-card .status-dot.paused  { background: var(--amber); }
+    .kb-card .status-dot.warn    { background: var(--signal); }
+    .kb-card .status-dot.done    { background: var(--ash-2); }
+
+    .kb-card .title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--ink);
+      letter-spacing: -0.005em;
+      line-height: 1.25;
+    }
+    .kb-card .sub {
+      font-size: 11px;
+      color: var(--ash);
+      line-height: 1.4;
+    }
+    .kb-card .sub b { color: var(--ink); font-weight: 500; }
+
+    .kb-card .prog-row {
+      display: grid; grid-template-columns: 1fr auto;
+      gap: 8px; align-items: center;
+      margin-top: 2px;
+    }
+    .kb-card .prog {
+      height: 4px;
+      background: var(--paper-2);
+      border-radius: 9999px;
+      overflow: hidden;
+    }
+    .kb-card .prog > div { height: 100%; background: var(--ink); transition: width 320ms ease; }
+    .kb-card.u-overdue .prog > div { background: var(--signal); }
+    .kb-card.u-warning .prog > div { background: var(--amber); }
+    .kb-card.u-due .prog > div     { background: var(--steel); }
+    .kb-card.u-safe .prog > div    { background: var(--moss); }
+    .kb-card .prog-val {
+      font-family: var(--ff-mono);
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--ink);
+      font-variant-numeric: tabular-nums;
+      letter-spacing: -0.005em;
+    }
+
+    .kb-card .foot {
+      display: flex; justify-content: space-between; align-items: center;
+      gap: 6px;
+      padding-top: 6px;
+      border-top: 1px solid var(--rule-hair);
+      font-size: 11px;
+    }
+    .kb-card .foot .machine {
+      display: inline-flex; align-items: center; gap: 5px;
+      color: var(--ash);
+    }
+    .kb-card .foot .machine i { color: var(--ash-2); }
+    .kb-card .foot .machine b { color: var(--ink); font-weight: 500; font-family: var(--ff-mono); font-size: 10px; letter-spacing: 0.04em; }
+    .kb-card .foot .eta {
+      font-family: var(--ff-mono);
+      font-size: 10px;
+      letter-spacing: 0.08em;
+      color: var(--rust);
+      font-weight: 500;
+    }
+    .kb-card .foot .eta.urgent { color: var(--signal); }
+
+    .kb-card .alert-banner {
+      display: flex; align-items: center; gap: 6px;
+      padding: 6px 8px;
+      background: var(--amber-soft);
+      color: var(--amber);
+      border-radius: var(--r-2);
+      font-size: 11px;
+      font-weight: 500;
+      margin-top: -2px;
+    }
+    .kb-card .alert-banner.crit { background: var(--signal-soft); color: var(--signal); }
+
+    /* Bottom summary strip */
+    .bottom-summary {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 16px;
+    }
+    .bs-card {
+      background: var(--canvas);
+      border: 1px solid var(--rule-soft);
+      border-radius: var(--r-5);
+      padding: 14px 16px;
+      position: relative;
+    }
+    .bs-card::before {
+      content: ""; position: absolute; top: -1px; left: 16px;
+      width: 28px; height: 3px;
+      background: var(--ink);
+      border-radius: 0 0 2px 2px;
+    }
+    .bs-card.acc-rust::before { background: var(--rust); }
+    .bs-card.acc-moss::before { background: var(--moss); }
+    .bs-card.acc-amber::before { background: var(--amber); }
+    .bs-card.acc-steel::before { background: var(--steel); }
+    .bs-card .l {
+      font-family: var(--ff-mono);
+      font-size: 9px; font-weight: 500;
+      letter-spacing: 0.16em; text-transform: uppercase;
+      color: var(--ash);
+    }
+    .bs-card .v {
+      font-size: 26px;
+      font-weight: 500;
+      letter-spacing: -0.02em;
+      color: var(--ink);
+      font-variant-numeric: tabular-nums;
+      line-height: 1.05;
+      margin-top: 4px;
+    }
+    .bs-card .v .u { font-size: 13px; color: var(--ash); font-weight: 400; }
+    .bs-card .d { font-size: 11px; color: var(--ash); margin-top: 4px; }
+    .bs-card .d.up { color: var(--moss); }
+    .bs-card .d.warn { color: var(--amber); }
+    .bs-card .d.alert { color: var(--signal); }
+
+    @media (max-width: 980px) {
+      .bottom-summary { grid-template-columns: 1fr 1fr; }
+    }
+
+    /* ============================================================
+       DRAWER — LSX detail
+       ============================================================ */
+    .lsx-drawer {
+      position: fixed; inset: 0;
+      z-index: 100;
+      pointer-events: none;
+    }
+    .drawer-overlay {
+      position: absolute; inset: 0;
+      background: rgba(20, 19, 15, 0.42);
+      opacity: 0;
+      transition: opacity 240ms ease;
+    }
+    .drawer-panel {
+      position: absolute; right: 0; top: 0; bottom: 0;
+      width: 100%; max-width: 560px;
+      background: var(--paper);
+      border-left: 1px solid var(--rule);
+      transform: translateX(100%);
+      transition: transform 280ms cubic-bezier(.2,.8,.2,1);
+      overflow-y: auto;
+      display: flex; flex-direction: column;
+      box-shadow: -16px 0 48px rgba(20, 19, 15, 0.15);
+    }
+    .lsx-drawer.is-open { pointer-events: auto; }
+    .lsx-drawer.is-open .drawer-overlay { opacity: 1; }
+    .lsx-drawer.is-open .drawer-panel { transform: translateX(0); }
+
+    /* Drawer hero */
+    .dr-head {
+      padding: 18px 22px 20px;
+      background-color: #14130f;
+      color: #f5f1e8;
+      flex-shrink: 0;
+      position: relative;
+    }
+    .dr-head::before { content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 3px; background: #c5400a; }
+    .dr-head .top-bar {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 12px;
+    }
+    .dr-head .code-row { display: inline-flex; align-items: baseline; gap: 10px; }
+    .dr-head .code {
+      font-family: var(--ff-mono);
+      font-size: 17px; font-weight: 600;
+      letter-spacing: -0.005em;
+      color: #f5f1e8;
+    }
+    .dr-head .stage-chip {
+      font-family: var(--ff-mono);
+      font-size: 9px; font-weight: 600;
+      letter-spacing: 0.18em; text-transform: uppercase;
+      padding: 3px 8px;
+      background: rgba(245, 241, 232, 0.1);
+      color: #e85a2a;
+      border-radius: 2px;
+      border: 1px solid rgba(232, 90, 42, 0.3);
+    }
+    .dr-head .close-btn {
+      background: rgba(245, 241, 232, 0.1);
+      border: 0;
+      color: #f5f1e8;
+      width: 30px; height: 30px;
+      border-radius: var(--r-2);
+      display: inline-flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      transition: background 140ms ease;
+    }
+    .dr-head .close-btn:hover { background: rgba(245, 241, 232, 0.18); }
+
+    .dr-head .title {
+      font-size: 22px; font-weight: 500;
+      letter-spacing: -0.015em;
+      color: #f5f1e8;
+      line-height: 1.1;
+      margin-top: 6px;
+    }
+    .dr-head .meta {
+      font-size: 12px;
+      color: rgba(245, 241, 232, 0.6);
+      margin-top: 6px;
+      display: flex; flex-wrap: wrap; gap: 6px;
+    }
+    .dr-head .meta b { color: #f5f1e8; font-weight: 500; }
+    .dr-head .meta .sep { opacity: 0.4; }
+
+    .dr-head .progress-block {
+      margin-top: 14px;
+      padding: 12px 14px;
+      background: rgba(245, 241, 232, 0.06);
+      border-radius: var(--r-3);
+      border: 1px solid rgba(245, 241, 232, 0.12);
+    }
+    .dr-head .progress-block .top {
+      display: flex; justify-content: space-between; align-items: baseline;
+      margin-bottom: 8px;
+    }
+    .dr-head .progress-block .top .l {
+      font-family: var(--ff-mono);
+      font-size: 10px;
+      letter-spacing: 0.16em; text-transform: uppercase;
+      color: rgba(245, 241, 232, 0.55);
+    }
+    .dr-head .progress-block .top .v {
+      font-family: var(--ff-mono);
+      font-size: 14px; font-weight: 600;
+      color: #f5f1e8;
+      font-variant-numeric: tabular-nums;
+    }
+    .dr-head .progress-block .bar {
+      height: 6px;
+      background: rgba(245, 241, 232, 0.15);
+      border-radius: 9999px;
+      overflow: hidden;
+    }
+    .dr-head .progress-block .bar > div {
+      height: 100%;
+      background: #c5400a;
+      transition: width 320ms ease;
+    }
+    .dr-head .progress-block .meta {
+      display: flex; justify-content: space-between;
+      margin-top: 6px;
+      font-family: var(--ff-mono);
+      font-size: 10px;
+      letter-spacing: 0.08em;
+      color: rgba(245, 241, 232, 0.65);
+    }
+    .dr-head .progress-block .meta b { color: #f5f1e8; font-weight: 600; }
+
+    .dr-head .quick-actions {
+      display: grid; grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+      margin-top: 14px;
+    }
+    .dr-head .quick-actions button {
+      padding: 8px 6px;
+      background: rgba(245, 241, 232, 0.08);
+      border: 1px solid rgba(245, 241, 232, 0.14);
+      border-radius: var(--r-2);
+      color: #f5f1e8;
+      font-size: 11px;
+      cursor: pointer;
+      display: flex; flex-direction: column; align-items: center; gap: 4px;
+      transition: background 140ms ease;
+    }
+    .dr-head .quick-actions button:hover { background: rgba(245, 241, 232, 0.16); }
+    .dr-head .quick-actions button i { color: #e85a2a; }
+    .dr-head .quick-actions button.danger i { color: #d77878; }
+
+    /* Drawer body */
+    .dr-body { padding: 16px 22px; display: flex; flex-direction: column; gap: 16px; }
+
+    .sec { display: flex; flex-direction: column; gap: 10px; }
+    .sec-h {
+      font-family: var(--ff-mono);
+      font-size: 10px; font-weight: 500;
+      letter-spacing: 0.16em; text-transform: uppercase;
+      color: var(--ash);
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .sec-h .h-extra { color: var(--ash-2); font-size: 10px; }
+
+    /* Routing timeline (6 stages vertical) */
+    /* Routing dạng thẻ công đoạn — đồng bộ trang 19 (lệnh sản xuất) */
+    .routing { display: flex; flex-wrap: wrap; gap: 7px; }
+    .routing .rt-step {
+      position: relative;
+      flex: 1 1 calc(50% - 4px); min-width: 0;
+      padding: 11px 12px;
+      background: var(--paper);
+      border: 1px solid var(--rule-soft);
+      border-radius: var(--r-3);
+      display: flex; flex-direction: column; gap: 5px;
+    }
+    .routing .rt-step.done { background: var(--moss-soft); border-color: rgba(47, 93, 58, 0.28); }
+    .routing .rt-step.active { background: var(--rust-soft); border-color: var(--rust); box-shadow: 0 0 0 3px rgba(197, 64, 10, 0.14); }
+    .routing .rt-step .top {
+      display: inline-flex; align-items: center; gap: 5px;
+      font-family: var(--ff-mono); font-size: 9px; font-weight: 700; letter-spacing: 0.09em; color: var(--ash);
+    }
+    .routing .rt-step.done .top { color: var(--moss-deep); }
+    .routing .rt-step.active .top { color: var(--rust); }
+    .routing .rt-step .num {
+      width: 16px; height: 16px; border-radius: 3px;
+      background: var(--canvas); border: 1px solid var(--rule);
+      display: inline-flex; align-items: center; justify-content: center;
+      font-size: 9px; color: var(--ash-2); flex: none;
+    }
+    .routing .rt-step.done .num { background: var(--moss); border-color: var(--moss); color: var(--paper); font-size: 0; }
+    .routing .rt-step.done .num::after { content: "✓"; font-size: 10px; }
+    .routing .rt-step.active .num { background: var(--rust); border-color: var(--rust); color: var(--paper); }
+    .routing .rt-step .name { font-size: 13px; font-weight: 600; color: var(--ink); line-height: 1.25; }
+    .routing .rt-step.pending .name { color: var(--ash-2); }
+    .routing .rt-step .sub { font-size: 11px; color: var(--ash); line-height: 1.3; }
+    .routing .rt-step .time {
+      font-family: var(--ff-mono); font-size: 9.5px; letter-spacing: 0.06em; color: var(--ash-2);
+    }
+    .routing .rt-step.done .time { color: var(--moss); }
+    .routing .rt-step.active .time { color: var(--rust); font-weight: 700; }
+    .routing .rt-step .prog { height: 3px; border-radius: 9999px; background: rgba(197, 64, 10, 0.22); overflow: hidden; }
+    .routing .rt-step .prog > i { display: block; height: 100%; width: 60%; background: var(--rust); border-radius: 9999px; }
+
+    /* Info grid */
+    .info-grid {
+      background: var(--canvas);
+      border: 1px solid var(--rule-soft);
+      border-radius: var(--r-3);
+      padding: 14px 16px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px 20px;
+    }
+    .info-grid .pair { display: flex; flex-direction: column; gap: 2px; }
+    .info-grid .k {
+      font-family: var(--ff-mono);
+      font-size: 9px;
+      letter-spacing: 0.16em; text-transform: uppercase;
+      color: var(--ash);
+    }
+    .info-grid .v { color: var(--ink); font-weight: 500; font-size: 13px; }
+
+    /* Materials list */
+    .mat-list {
+      background: var(--canvas);
+      border: 1px solid var(--rule-soft);
+      border-radius: var(--r-3);
+      padding: 4px 16px;
+    }
+    .mat-row {
+      display: grid;
+      grid-template-columns: 28px minmax(0, 1fr) auto;
+      gap: 12px;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--rule-hair);
+      align-items: center;
+    }
+    .mat-row:last-child { border-bottom: 0; }
+    .mat-row .ic {
+      width: 28px; height: 28px;
+      background: var(--paper-2);
+      border-radius: var(--r-2);
+      display: inline-flex; align-items: center; justify-content: center;
+      color: var(--ash);
+    }
+    .mat-row.ok .ic { color: var(--moss); }
+    .mat-row.warn .ic { color: var(--amber); background: var(--amber-soft); }
+    .mat-row .name { font-size: 13px; color: var(--ink); font-weight: 500; }
+    .mat-row .sub { font-size: 11px; color: var(--ash); margin-top: 2px; }
+    .mat-row .status {
+      font-family: var(--ff-mono);
+      font-size: 9px; font-weight: 600;
+      letter-spacing: 0.14em; text-transform: uppercase;
+      padding: 3px 7px;
+      border-radius: 2px;
+    }
+    .mat-row .status.ok { background: var(--moss-soft); color: var(--moss-deep); }
+    .mat-row .status.warn { background: var(--amber-soft); color: var(--amber); }
+    .mat-row .status.late { background: var(--signal-soft); color: var(--signal); }
+
+    /* QR scan log */
+    .qr-log {
+      background: var(--canvas);
+      border: 1px solid var(--rule-soft);
+      border-radius: var(--r-3);
+      padding: 4px 16px;
+    }
+    .qr-item {
+      display: grid;
+      grid-template-columns: 70px minmax(0, 1fr);
+      gap: 12px;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--rule-hair);
+      align-items: start;
+      font-size: 12px;
+    }
+    .qr-item:last-child { border-bottom: 0; }
+    .qr-item .time {
+      font-family: var(--ff-mono);
+      font-size: 10px;
+      color: var(--ash);
+      letter-spacing: 0.06em;
+    }
+    .qr-item .body .act { color: var(--ink); font-weight: 500; line-height: 1.35; }
+    .qr-item .body .by { color: var(--ash); font-size: 11px; margin-top: 2px; }
+
+    /* QC section if any */
+    .kcs-box {
+      background: var(--canvas);
+      border: 1px solid var(--rule-soft);
+      border-radius: var(--r-3);
+      padding: 14px 16px;
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 12px;
+    }
+    .kcs-box .kcs-stat { text-align: center; }
+    .kcs-box .kcs-stat .v {
+      font-size: 22px; font-weight: 500;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: -0.015em;
+      color: var(--ink);
+      line-height: 1.05;
+    }
+    .kcs-box .kcs-stat.good .v { color: var(--moss); }
+    .kcs-box .kcs-stat.bad .v { color: var(--signal); }
+    .kcs-box .kcs-stat .l {
+      font-family: var(--ff-mono);
+      font-size: 9px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--ash);
+      margin-top: 3px;
+    }
+
+    /* Responsive */
+    @media (max-width: 720px) {
+      .rt-strip { grid-template-columns: 1fr; gap: 12px; padding: 14px 16px; }
+      .rt-strip .km { padding-left: 0; border-left: 0; border-top: 1px solid rgba(245, 241, 232, 0.18); padding-top: 10px; }
+      .drawer-panel { max-width: 100%; }
+      .info-grid { grid-template-columns: 1fr; }
+      .dr-head .quick-actions { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    /* ===== Chip cảnh báo nhỏ trên thẻ lệnh ===== */
+    .kb-chip { display:inline-flex; align-items:center; padding:1px 7px; border-radius:9999px; font-family:var(--ff-mono); font-size:9px; font-weight:700; letter-spacing:.04em; white-space:nowrap; }
+    .kb-chip.bad { background:#f6e3e3; color:#8a1f1f; }
+    .kb-chip.good { background:#e2efe6; color:#1f6b3a; }
+    .filter-strip select.filter-pill { padding:4px 10px; font-size:12px; height:30px; border-radius:var(--r-pill); color:var(--ink); cursor:pointer; }
+  </style>
+</head>
+<body>
+
+<div id="app-shell" data-active="sx-kanban" data-title="Lệnh dạng Kanban" data-crumb="<b>Sản xuất</b> · Lệnh dạng Kanban">
+
+  <div class="page-header">
+    <div>
+      <h1>Lệnh dạng Kanban</h1>
+      <p>Lệnh sản xuất cửa nhôm theo 6 công đoạn · cập nhật khi thợ quét QR tại xưởng</p>
+    </div>
+    <div class="actions">
+      <a class="btn btn-secondary" href="04-san-xuat-gantt.html" data-no-interact="true">
+        <i data-lucide="calendar-days" style="width:14px;height:14px"></i> Xem dạng Gantt
+      </a>
+      <button class="btn btn-primary" data-no-interact="true" id="btnNewLsx">
+        <i data-lucide="plus" style="width:14px;height:14px"></i> Lệnh SX mới
+      </button>
+    </div>
+  </div>
+
+  <!-- ===== 4 ô số nhỏ ===== -->
+  <div class="bottom-summary" style="margin-bottom:12px">
+    <div class="bs-card acc-moss">
+      <span class="l">Lệnh đang chạy</span>
+      <div class="v"><span id="kpiRunning">0</span><span class="u"> lệnh</span></div>
+      <div class="d up" id="kpiRunningDetail">—</div>
+    </div>
+    <div class="bs-card acc-steel">
+      <span class="l">Chờ phát hành</span>
+      <div class="v"><span id="kpiPending">0</span><span class="u"> dự thảo</span></div>
+      <div class="d" id="kpiPendingDetail">—</div>
+    </div>
+    <div class="bs-card acc-rust">
+      <span class="l">Trễ hạn giao</span>
+      <div class="v"><span id="kpiAlert">0</span><span class="u"> lệnh</span></div>
+      <div class="d alert" id="kpiAlertDetail">—</div>
+    </div>
+    <div class="bs-card acc-amber">
+      <span class="l">Sắp đến hạn (3 ngày)</span>
+      <div class="v"><span id="kpiDueSoon">0</span><span class="u"> lệnh</span></div>
+      <div class="d warn" id="kpiDueSoonDetail">—</div>
+    </div>
+  </div>
+
+  <!-- ===== View switcher + Filter ===== -->
+  <div class="filter-strip">
+    <div class="view-switch">
+      <button class="active" data-view="kanban" data-no-interact="true">
+        <i data-lucide="kanban-square" style="width:13px;height:13px"></i> Kanban
+      </button>
+      <a href="04-san-xuat-gantt.html" data-no-interact="true" style="text-decoration:none">
+        <button data-view="gantt" data-no-interact="true">
+          <i data-lucide="calendar-days" style="width:13px;height:13px"></i> Gantt
+        </button>
+      </a>
+      <a href="19-lsx-san-xuat.html" data-no-interact="true" style="text-decoration:none">
+        <button data-view="list" data-no-interact="true">
+          <i data-lucide="list" style="width:13px;height:13px"></i> Danh sách
+        </button>
+      </a>
+    </div>
+
+    <div class="search-wrap">
+      <i data-lucide="search" style="width:13px;height:13px"></i>
+      <input id="searchInput" placeholder="Tìm mã LSX, khách hàng, hệ cửa..." />
+    </div>
+    <select class="filter-pill" id="fManager" style="border:1px solid var(--rule);background:var(--canvas)"></select>
+    <select class="filter-pill" id="fAlert" style="border:1px solid var(--rule);background:var(--canvas)">
+      <option value="">Mọi tiến độ</option>
+      <option value="late">Chỉ lệnh trễ hạn</option>
+      <option value="early">Chỉ lệnh xong sớm</option>
+    </select>
+
+    <div class="legend">
+      <span><span class="dot" style="background: var(--moss);"></span>Đang chạy</span>
+      <span><span class="dot" style="background: var(--amber);"></span>Tạm dừng</span>
+      <span><span class="dot" style="background: var(--signal);"></span>Trễ hạn</span>
+    </div>
+  </div>
+
+  <!-- ===== KANBAN ===== -->
+  <div class="kb-wrap" id="kbWrap">
+    <!-- rendered by JS -->
+  </div>
+
+</div>
+
+<script src="../assets/js/layout.js"></script>
+<script src="../assets/js/loss-data.js"></script>
+<script src="../assets/js/loss-ui.js"></script>
+<script src="../assets/js/pricing-engine.js"></script>
+<script src="../assets/js/quote-data.js"></script>
+<script>
+  // ============================================================
+  // Kanban lệnh sản xuất cửa nhôm — 6 công đoạn (1 nguồn: QuoteStore)
+  // ============================================================
+
+  // Nhãn 6 công đoạn sản xuất cửa nhôm (GIỮ NGUYÊN id cột của store)
+  const STEP_LABEL = {
+    ctp:   { name: 'Tiếp nhận & kiểm nhôm thanh', icon: 'package-check',  machine: 'Bàn kiểm · Giá rack nhôm' },
+    print: { name: 'Cắt & phay đố (CNC)',         icon: 'scissors',       machine: 'CAT-01,02 · CNC-03,21,22' },
+    lam:   { name: 'Uốn vòm / định hình',          icon: 'spline',         machine: 'UON-01 · UON-02' },
+    die:   { name: 'Ép góc & lắp khung cánh',      icon: 'frame',          machine: 'EP-02 · DOT-01' },
+    glue:  { name: 'Lắp kính & phụ kiện',          icon: 'layers',         machine: 'LAP-01 · Tổ ép góc – lắp ráp' },
+    kcs:   { name: 'Bọc màng, QC & đóng kiện',     icon: 'shield-check',   machine: 'Tổ hoàn thiện · KCS nhôm kính' }
+  };
+  const STEP_ORDER = ['ctp', 'print', 'lam', 'die', 'glue', 'kcs'];
+
+  const BASE_COLUMNS = (window.QuoteStore && window.QuoteStore.KANBAN_COLUMNS) || STEP_ORDER.map(id => ({ id: id }));
+  const STAGES = BASE_COLUMNS.map(c => Object.assign({}, c, STEP_LABEL[c.id] || {}));
+
+  const ALL_LSX = (window.QuoteStore && window.QuoteStore.lsxKanbanView) ? window.QuoteStore.lsxKanbanView() : [];
+  const KB_HIDE = ['du-thao', 'da-dong', 'da-huy', 'scrap'];
+  const LSX = ALL_LSX.filter(x => KB_HIDE.indexOf(x.lifecycle) < 0);
+  const DRAFTS = ALL_LSX.filter(x => x.lifecycle === 'du-thao');
+
+  const $ = (s) => document.querySelector(s);
+  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+  // hash ổn định theo mã lệnh → chọn lọc dòng có cảnh báo (~30%)
+  function hash(s) {
+    let h = 0; s = String(s || '');
+    for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+    return h;
+  }
+
+  // Chip cảnh báo: đỏ khi trễ, xanh khi xong sớm, còn lại không có chip
+  function chipOf(l) {
+    if (l.delay || l.urgency === 'overdue') {
+      const n = Math.max(1, Math.abs(Number(l.daysLeft) || 2));
+      return '<span class="kb-chip bad">Trễ ' + n + ' ngày</span>';
+    }
+    const h = hash(l.id);
+    if (h % 10 < 2) return '<span class="kb-chip good">Sớm ' + (h % 2 + 1) + ' ngày</span>';
+    return '';
+  }
+  function chipKind(l) {
+    if (l.delay || l.urgency === 'overdue') return 'late';
+    return (hash(l.id) % 10 < 2) ? 'early' : '';
+  }
+  function managerOf(l) { return l.worker && l.worker !== '—' ? l.worker : (l.salesRep || 'Quản đốc xưởng'); }
+
+  // ============================================================
+  // Render kanban
+  // ============================================================
+  function renderKanban() {
+    const wrap = $('#kbWrap');
+    let html = '';
+
+    STAGES.forEach(stage => {
+      const items = LSX.filter(x => x.stage === stage.id);
+      const workers = new Set(items.filter(x => x.worker !== '—').map(x => x.worker)).size;
+
+      html += `
+        <div class="kb-col" data-stage="${stage.id}">
+          <div class="kb-col-head">
+            <div class="top">
+              <span class="name">
+                <i data-lucide="${stage.icon || 'circle'}" style="width:13px;height:13px"></i>
+                ${esc(stage.name)}
+                <span class="num">${items.length}</span>
+              </span>
+              <button class="add" data-no-interact="true" data-action="add-${stage.id}" title="Thêm lệnh"><i data-lucide="plus" style="width:12px;height:12px"></i></button>
+            </div>
+            <div class="stats">
+              <span class="ms"><b>${workers}</b> thợ</span>
+              <span class="ms">${esc(stage.machine || '')}</span>
+            </div>
+          </div>
+      `;
+
+      items.forEach(lsx => {
+        const isVip = lsx.vip ? '<span class="badge-vip">Ưu tiên</span>' : '';
+        html += `
+          <div class="kb-card u-${lsx.urgency}" data-id="${esc(lsx.id)}" data-alert="${chipKind(lsx)}" data-manager="${esc(managerOf(lsx))}">
+            <div class="head">
+              <span class="code">${esc(lsx.id)}</span>
+              <span class="badges">
+                ${isVip}
+                ${chipOf(lsx)}
+                <span class="status-dot ${lsx.status}"></span>
+              </span>
+            </div>
+            <div class="title">${esc(lsx.product)}</div>
+            <div class="sub">${esc(lsx.customer)} · <b>${(lsx.qty || 0).toLocaleString('vi-VN')}</b> ${esc(lsx.qtyUnit || 'bộ')} · Hạn giao <b>${esc(lsx.dueDate)}</b></div>
+            <div class="prog-row">
+              <div class="prog"><div style="width: ${lsx.progress}%"></div></div>
+              <span class="prog-val">${lsx.progress}%</span>
+            </div>
+            <div class="foot">
+              <span class="machine">
+                <i data-lucide="hard-hat" style="width:11px;height:11px"></i>
+                Quản đốc <b>${esc(managerOf(lsx))}</b>
+              </span>
+              <span class="eta ${lsx.delay ? 'urgent' : ''}">${esc(lsx.machine || '—')}</span>
+            </div>
+          </div>
+        `;
+      });
+
+      html += `</div>`;
+    });
+
+    wrap.innerHTML = html;
+    if (window.lucide) lucide.createIcons();
+
+    // Bấm thẻ → mở CẢ TRANG phiếu công nghệ của lệnh (không drawer)
+    wrap.querySelectorAll('.kb-card').forEach(card => {
+      card.addEventListener('click', () => {
+        if (card.dataset.justDragged === '1') return;
+        window.location.href = '06-lsx-phieu-cong-nghe.html?id=' + encodeURIComponent(card.dataset.id);
+      });
+    });
+
+    setupDragAndDrop();
+
+    wrap.querySelectorAll('.add').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const stageId = btn.dataset.action.replace('add-', '');
+        const stage = STAGES.find(s => s.id === stageId);
+        ERPInteract.showToast(`Thêm lệnh sản xuất vào <b>${stage ? stage.name : stageId}</b>`, 'info');
+      });
+    });
+    applyFilters();
+  }
+
+  // ============================================================
+  // Kéo - thả thẻ lệnh giữa các công đoạn (giữ nguyên)
+  // ============================================================
+  function getDragAfterElement(col, y) {
+    const cards = [...col.querySelectorAll('.kb-card:not(.dragging)')];
+    return cards.reduce((closest, child) => {
+      const box = child.getBoundingClientRect();
+      const offset = y - box.top - box.height / 2;
+      if (offset < 0 && offset > closest.offset) return { offset, element: child };
+      return closest;
+    }, { offset: Number.NEGATIVE_INFINITY }).element || null;
+  }
+
+  function updateColumnCounts() {
+    document.querySelectorAll('#kbWrap .kb-col').forEach(col => {
+      const n = col.querySelectorAll('.kb-card').length;
+      const numEl = col.querySelector('.kb-col-head .num');
+      if (numEl) numEl.textContent = n;
+    });
+  }
+
+  function setupDragAndDrop() {
+    const wrap = $('#kbWrap');
+    let dragEl = null;
+
+    wrap.querySelectorAll('.kb-card').forEach(card => {
+      card.setAttribute('draggable', 'true');
+
+      card.addEventListener('dragstart', (e) => {
+        dragEl = card;
+        card.dataset.justDragged = '0';
+        requestAnimationFrame(() => card.classList.add('dragging'));
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', card.dataset.id);
+      });
+
+      card.addEventListener('dragend', () => {
+        card.classList.remove('dragging');
+        wrap.querySelectorAll('.kb-col').forEach(c => c.classList.remove('drag-over'));
+        dragEl = null;
+        card.dataset.justDragged = '1';
+        setTimeout(() => { card.dataset.justDragged = '0'; }, 50);
+      });
+    });
+
+    wrap.querySelectorAll('.kb-col').forEach(col => {
+      col.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        col.classList.add('drag-over');
+        if (!dragEl) return;
+        const after = getDragAfterElement(col, e.clientY);
+        if (after == null) col.appendChild(dragEl);
+        else col.insertBefore(dragEl, after);
+      });
+
+      col.addEventListener('dragleave', (e) => {
+        if (!col.contains(e.relatedTarget)) col.classList.remove('drag-over');
+      });
+
+      col.addEventListener('drop', (e) => {
+        e.preventDefault();
+        col.classList.remove('drag-over');
+        if (!dragEl) return;
+        const id = dragEl.dataset.id;
+        const newStage = col.dataset.stage;
+        const lsx = LSX.find(x => x.id === id);
+        if (lsx && lsx.stage !== newStage) {
+          lsx.stage = newStage;
+          const stage = STAGES.find(s => s.id === newStage);
+          ERPInteract.showToast(`<b>${id}</b> đã chuyển sang <b>${stage ? stage.name : newStage}</b>`, 'success');
+        }
+        updateColumnCounts();
+      });
+    });
+  }
+
+  // ============================================================
+  // 4 ô số nhỏ — suy từ dữ liệu store
+  // ============================================================
+  function renderHeaderKPIs() {
+    const set = (id, v) => { const e = document.getElementById(id); if (e != null) e.textContent = v; };
+    const running = LSX.filter(x => x.status === 'running').length;
+    const overdue = LSX.filter(x => x.delay);
+    const dueSoon = LSX.filter(x => x.status !== 'done' && !x.delay && x.daysLeft >= 0 && x.daysLeft <= 3);
+    set('kpiRunning', running);
+    set('kpiRunningDetail', LSX.length + ' lệnh trong xưởng');
+    set('kpiPending', DRAFTS.length);
+    set('kpiPendingDetail', DRAFTS.length ? 'Đang ở Kế hoạch SX' : 'Không còn dự thảo');
+    set('kpiAlert', overdue.length);
+    set('kpiAlertDetail', overdue.length ? ('Quá hạn · ' + overdue.map(x => x.id).slice(0, 3).join(', ')) : 'Không có lệnh trễ');
+    set('kpiDueSoon', dueSoon.length);
+    set('kpiDueSoonDetail', dueSoon.length ? ('Cần đẩy tiến độ · ' + dueSoon.map(x => x.id).slice(0, 3).join(', ')) : 'Không có lệnh sắp đến hạn');
+  }
+
+  // ============================================================
+  // Bộ lọc
+  // ============================================================
+  function applyFilters() {
+    const q = ($('#searchInput').value || '').toLowerCase().trim();
+    const mg = $('#fManager').value || '';
+    const al = $('#fAlert').value || '';
+    document.querySelectorAll('.kb-card').forEach(card => {
+      const text = card.textContent.toLowerCase();
+      const okQ = !q || text.includes(q);
+      const okM = !mg || card.dataset.manager === mg;
+      const okA = !al || card.dataset.alert === al;
+      card.style.display = (okQ && okM && okA) ? '' : 'none';
+    });
+    updateColumnCounts();
+  }
+
+  function fillManagers() {
+    const names = [...new Set(LSX.map(managerOf))].sort();
+    $('#fManager').innerHTML = '<option value="">Mọi quản đốc</option>' +
+      names.map(n => `<option value="${esc(n)}">${esc(n)}</option>`).join('');
+  }
+
+  // ============================================================
+  // Init
+  // ============================================================
+  document.addEventListener('erp:ready', () => {
+    fillManagers();
+    renderKanban();
+    renderHeaderKPIs();
+
+    $('#searchInput').addEventListener('input', applyFilters);
+    $('#fManager').addEventListener('change', applyFilters);
+    $('#fAlert').addEventListener('change', applyFilters);
+
+    $('#btnNewLsx').addEventListener('click', () => {
+      ERPInteract.showModal({
+        title: 'Tạo lệnh sản xuất mới',
+        body: `<p>Bắt đầu từ đâu?</p>
+          <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 14px;">
+            <button class="btn btn-secondary" style="justify-content: flex-start; gap: 12px; padding: 14px; height: auto;"><i data-lucide="shopping-cart" style="width:18px;height:18px"></i>
+              <div style="text-align: left;">
+                <div style="font-weight: 600;">Từ đơn hàng cửa nhôm</div>
+                <div style="font-size: 11px; color: var(--ash); font-weight: 400; margin-top: 2px;">Chọn 1 đơn đã chốt và phát lệnh sản xuất</div>
+              </div>
+            </button>
+            <button class="btn btn-secondary" style="justify-content: flex-start; gap: 12px; padding: 14px; height: auto;"><i data-lucide="copy" style="width:18px;height:18px"></i>
+              <div style="text-align: left;">
+                <div style="font-weight: 600;">Nhân bản lệnh cũ</div>
+                <div style="font-size: 11px; color: var(--ash); font-weight: 400; margin-top: 2px;">Sản xuất lại bộ cửa cũ — dùng lại chương trình CNC</div>
+              </div>
+            </button>
+            <button class="btn btn-secondary" style="justify-content: flex-start; gap: 12px; padding: 14px; height: auto;"><i data-lucide="plus-square" style="width:18px;height:18px"></i>
+              <div style="text-align: left;">
+                <div style="font-weight: 600;">Tạo từ đầu (nội bộ)</div>
+                <div style="font-size: 11px; color: var(--ash); font-weight: 400; margin-top: 2px;">Hàng mẫu showroom hoặc gia công uốn vòm lẻ</div>
+              </div>
+            </button>
+          </div>`,
+        primaryText: 'Đóng',
+      });
+      setTimeout(() => { if (window.lucide) lucide.createIcons(); }, 30);
+    });
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tổng quan thiết bị — ERP NHÔM OWIN</title>
+  <link rel="stylesheet" href="../assets/css/style.css" />
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+  <style>
+    .lnk { color: var(--rust); border-bottom: 1px solid rgba(197,64,10,.35); font-family: var(--ff-mono); font-size: 11.5px; cursor: pointer; }
+    .lnk:hover { color: var(--rust-deep); border-bottom-color: var(--rust-deep); text-decoration: none; }
+
+    .stat-strip { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 10px; margin-bottom: 12px; }
+    @media (max-width: 860px) { .stat-strip { grid-template-columns: repeat(2, minmax(0,1fr)); } }
+    .stat-strip .s { background: var(--canvas); border: 1px solid var(--rule-soft); border-radius: var(--r-4); padding: 10px 14px; min-height: 64px; display: flex; flex-direction: column; justify-content: center; }
+    .stat-strip .s .l { font-family: var(--ff-mono); font-size: 9px; letter-spacing: .14em; text-transform: uppercase; color: var(--ash); }
+    .stat-strip .s .v { font-size: 22px; font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; line-height: 1.1; margin-top: 3px; }
+    .stat-strip .s .v small { font-size: 11px; color: var(--ash); font-weight: 400; }
+    .stat-strip .s .v.good { color: var(--moss); }
+    .stat-strip .s .v.bad { color: var(--signal); }
+
+    .km-toolbar { background: var(--canvas); border: 1px solid var(--rule-soft); border-radius: var(--r-5); padding: 10px 12px; margin-bottom: 10px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    .km-toolbar .search-wrap { flex: 1; min-width: 220px; display: flex; align-items: center; background: var(--paper-2); border-radius: var(--r-3); padding: 0 12px; height: 36px; }
+    .km-toolbar .search-wrap i { color: var(--ash-2); flex-shrink: 0; margin-right: 6px; }
+    .km-toolbar .search-wrap input { flex: 1; background: transparent; border: 0; outline: none; font-size: 13px; color: var(--ink); }
+
+    .blk-title { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: var(--ink); margin: 18px 0 8px; }
+    .blk-title i { color: var(--rust); }
+    .blk-title .x { font-family: var(--ff-mono); font-size: 9.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--ash); padding: 2px 7px; background: var(--paper-2); border-radius: 2px; }
+
+    #tbTbl tbody td, #schTbl tbody td { font-size: 13px; white-space: nowrap; }
+    #tbTbl tbody tr, #schTbl tbody tr { height: 44px; }
+    #tbTbl tbody td.nm { white-space: normal; min-width: 190px; }
+    .cell-main { font-weight: 600; color: var(--ink); }
+    .cell-mini { font-size: 11px; color: var(--ash); margin-top: 2px; white-space: normal; }
+    .warn-bad { color: #8a1f1f; font-weight: 600; font-size: 12px; }
+    .warn-good { color: #1f6b3a; font-weight: 600; font-size: 12px; }
+    .warn-none { color: var(--ash-3); }
+    .oee-n { font-variant-numeric: tabular-nums; font-weight: 600; }
+  </style>
+</head>
+<body>
+
+<div id="app-shell" data-active="tbmm" data-title="Tổng quan thiết bị" data-crumb="<b>Kỹ thuật máy</b> · Tổng quan thiết bị">
+
+  <div class="page-header">
+    <div>
+      <h1>Tổng quan thiết bị</h1>
+      <p>Bảng tổng hợp máy móc nhà máy cửa nhôm Owin và lịch bảo trì sắp tới. Thao tác chi tiết ở các trang Quản lý máy móc · Phiếu bảo trì · Sửa chữa.</p>
+    </div>
+    <div class="actions">
+      <a class="btn btn-secondary" href="17-may-moc.html"><i data-lucide="cog" style="width:14px;height:14px"></i> Quản lý máy móc</a>
+      <a class="btn btn-secondary" href="18-phieu-bao-tri.html"><i data-lucide="clipboard-check" style="width:14px;height:14px"></i> Phiếu bảo trì</a>
+      <a class="btn btn-secondary" href="19-sua-chua.html"><i data-lucide="hammer" style="width:14px;height:14px"></i> Sửa chữa</a>
+    </div>
+  </div>
+
+  <div class="stat-strip">
+    <div class="s"><span class="l">Tổng máy</span><span class="v" id="stTotal">0</span></div>
+    <div class="s"><span class="l">Đang chạy</span><span class="v good" id="stRun">0</span></div>
+    <div class="s"><span class="l">Đang hỏng / bảo trì</span><span class="v bad" id="stDown">0</span></div>
+    <div class="s"><span class="l">OEE trung bình</span><span class="v" id="stOee">0<small>%</small></span></div>
+  </div>
+
+  <div class="km-toolbar">
+    <div class="search-wrap"><i data-lucide="search" style="width:14px;height:14px"></i><input id="searchInput" placeholder="Tìm theo mã máy, tên máy, tổ..." /></div>
+    <button class="filter-pill"><i data-lucide="building" style="width:12px;height:12px"></i> Nhà máy Thường Tín <i data-lucide="chevron-down" style="width:11px;height:11px"></i></button>
+  </div>
+
+  <div class="blk-title"><i data-lucide="list" style="width:15px;height:15px"></i> Bảng tổng hợp máy <span class="x">Tháng 5/2026</span></div>
+  <div class="table-wrap">
+    <table class="tbl" id="tbTbl">
+      <thead>
+        <tr>
+          <th>Mã máy</th><th>Tên máy</th><th>Tổ / vị trí</th><th class="center">Tình trạng</th>
+          <th class="num">Giờ chạy tháng</th><th class="num">OEE %</th><th>BT gần nhất</th><th>BT kế tiếp</th><th>Cảnh báo</th>
+        </tr>
+      </thead>
+      <tbody id="tbBody"></tbody>
+    </table>
+  </div>
+
+  <div class="blk-title"><i data-lucide="calendar-clock" style="width:15px;height:15px"></i> Lịch bảo trì sắp tới <span class="x">30 ngày tới</span></div>
+  <div class="table-wrap">
+    <table class="tbl" id="schTbl">
+      <thead>
+        <tr><th>Ngày</th><th>Máy</th><th>Nội dung bảo trì</th><th>Người thực hiện</th><th>Phiếu</th><th>Cảnh báo</th></tr>
+      </thead>
+      <tbody id="schBody"></tbody>
+    </table>
+  </div>
+
+</div>
+
+<script src="../assets/js/layout.js"></script>
+<script src="../assets/js/pricing-engine.js"></script>
+<script src="../assets/js/quote-data.js"></script>
+<script src="../assets/js/loss-data.js"></script>
+<script src="../assets/js/loss-ui.js"></script>
+<script>
+  const $ = (s) => document.querySelector(s);
+  const fmt = (n) => Math.round(Number(n) || 0).toLocaleString('vi-VN');
+  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+  const TBM = (function () {
+    const KEY = 'erp_tbm_nhomowin_v1';
+    function read() { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { return {}; } }
+    function list(col) { return read()[col] || []; }
+    return { list };
+  })();
+
+  /* Tóm tắt máy — đồng bộ với 17-may-moc.html (trang đó là nguồn dữ liệu gốc) */
+  const BASE = [
+    { id: 'CAT-01', name: 'Máy cắt nhôm 2 đầu lưỡi Ø500 WEIKE', team: 'Tổ cắt CNC', loc: 'Xưởng A · Khu cắt', statusLabel: 'Đang chạy', status: 'run', runH: 402, oee: 80, lastMaint: '18/02/2026', nextMaint: '08/05/2026', overdueDays: 12, warn: { t: 'bad', text: 'Quá hạn bảo trì 12 ngày' } },
+    { id: 'CAT-02', name: 'Máy cắt nhôm 2 đầu lưỡi Ø500 WEIKE', team: 'Tổ cắt CNC', loc: 'Xưởng A · Khu cắt', statusLabel: 'Đang chạy', status: 'run', runH: 388, oee: 92, lastMaint: '02/04/2026', nextMaint: '02/07/2026', overdueDays: 0, warn: { t: 'good', text: 'Bảo trì đúng lịch · OEE 92%' } },
+    { id: 'CNC-03', name: 'Máy phay khoá CNC WEIKE', team: 'Tổ cắt CNC', loc: 'Xưởng A · Khu phay', statusLabel: 'Đang chạy', status: 'run', runH: 355, oee: 85, lastMaint: '15/03/2026', nextMaint: '15/06/2026', overdueDays: 0, warn: null },
+    { id: 'CNC-21', name: 'Máy phay đố kẹp bàn WEIKE', team: 'Tổ cắt CNC', loc: 'Xưởng A · Khu phay', statusLabel: 'Đang chạy', status: 'run', runH: 331, oee: 83, lastMaint: '28/03/2026', nextMaint: '28/06/2026', overdueDays: 0, warn: null },
+    { id: 'CNC-22', name: 'Máy phay đố kẹp bàn WEIKE', team: 'Tổ cắt CNC', loc: 'Xưởng A · Khu phay', statusLabel: 'Đang bảo trì', status: 'maint', runH: 208, oee: 71, lastMaint: '20/01/2026', nextMaint: '18/05/2026', overdueDays: 2, warn: { t: 'bad', text: 'Dừng bảo trì 24h · 4,4 tr' } },
+    { id: 'EP-02', name: 'Máy ép góc cơ WEIKE', team: 'Tổ ép góc – lắp ráp', loc: 'Xưởng B · Khu lắp ráp', statusLabel: 'Đang chạy', status: 'run', runH: 376, oee: 88, lastMaint: '10/04/2026', nextMaint: '10/07/2026', overdueDays: 0, warn: null },
+    { id: 'UON-01', name: 'Máy uốn vòm nhôm CNC 3 trục', team: 'Tổ ép góc – lắp ráp', loc: 'Xưởng B · Khu uốn vòm', statusLabel: 'Đang chạy', status: 'run', runH: 274, oee: 74, lastMaint: '25/03/2026', nextMaint: '25/05/2026', overdueDays: 0, warn: { t: 'bad', text: 'Phế do máy 4,8% · vượt ngưỡng 2%' } },
+    { id: 'UON-02', name: 'Máy uốn vòm nhôm thuỷ lực', team: 'Tổ ép góc – lắp ráp', loc: 'Xưởng B · Khu uốn vòm', statusLabel: 'Đang hỏng', status: 'broken', runH: 96, oee: 41, lastMaint: '12/02/2026', nextMaint: '12/04/2026', overdueDays: 38, warn: { t: 'bad', text: 'Hỏng bơm thuỷ lực · dừng 62h · 11,5 tr' } },
+    { id: 'LAP-01', name: 'Bàn lắp kính & bơm keo tự động', team: 'Tổ ép góc – lắp ráp', loc: 'Xưởng B · Khu lắp kính', statusLabel: 'Đang chạy', status: 'run', runH: 362, oee: 90, lastMaint: '06/03/2026', nextMaint: '06/09/2026', overdueDays: 0, warn: { t: 'good', text: 'Bảo trì đúng lịch · OEE 90%' } },
+    { id: 'DOT-01', name: 'Máy đột dập hơi 34 dao', team: 'Tổ hoàn thiện – đóng kiện', loc: 'Xưởng B · Khu hoàn thiện', statusLabel: 'Đang chạy', status: 'run', runH: 244, oee: 79, lastMaint: '20/02/2026', nextMaint: '20/06/2026', overdueDays: 0, warn: null },
+    { id: 'KC-01', name: 'Máy cắt kính bán tự động', team: 'Tổ hoàn thiện – đóng kiện', loc: 'Xưởng B · Khu kính', statusLabel: 'Đang chạy', status: 'run', runH: 286, oee: 81, lastMaint: '12/03/2026', nextMaint: '12/07/2026', overdueDays: 0, warn: null },
+    { id: 'KHI-01', name: 'Máy nén khí trục vít', team: 'Phụ trợ', loc: 'Xưởng A · Phòng máy nén', statusLabel: 'Đang chạy', status: 'run', runH: 498, oee: 94, lastMaint: '08/04/2026', nextMaint: '08/10/2026', overdueDays: 0, warn: { t: 'good', text: 'Chạy ổn định · 0 giờ dừng' } },
+    { id: 'XN-01', name: 'Xe nâng điện 2 tấn', team: 'Phụ trợ', loc: 'Kho nhôm – rack A', statusLabel: 'Đang chạy', status: 'run', runH: 128, oee: 86, lastMaint: '18/03/2026', nextMaint: '18/09/2026', overdueDays: 0, warn: null }
+  ];
+
+  /* Ưu tiên dữ liệu đã lưu ở trang Quản lý máy móc (nếu người dùng đã sửa) */
+  function machines() {
+    const saved = TBM.list('may');
+    if (!saved.length) return BASE;
+    const byId = {}; saved.forEach(m => { byId[m.id] = m; });
+    const out = BASE.map(b => {
+      const s = byId[b.id]; if (!s) return b;
+      delete byId[b.id];
+      const oee = (s.oeeA && s.oeeP && s.oeeQ) ? Math.round(s.oeeA * s.oeeP * s.oeeQ * 100) : b.oee;
+      return Object.assign({}, b, {
+        name: s.name || b.name, team: s.team || b.team, loc: s.loc || b.loc,
+        statusLabel: s.statusLabel || b.statusLabel, status: s.status || b.status,
+        runH: s.runH != null ? s.runH : b.runH, oee: oee,
+        lastMaint: s.lastMaint || b.lastMaint, nextMaint: s.nextMaint || b.nextMaint,
+        overdueDays: s.overdueDays != null ? s.overdueDays : b.overdueDays, warn: s.warn !== undefined ? s.warn : b.warn
+      });
+    });
+    Object.keys(byId).forEach(k => {
+      const s = byId[k];
+      out.push({ id: s.id, name: s.name, team: s.team, loc: s.loc, statusLabel: s.statusLabel, status: s.status,
+        runH: s.runH || 0, oee: (s.oeeA && s.oeeP && s.oeeQ) ? Math.round(s.oeeA * s.oeeP * s.oeeQ * 100) : 0,
+        lastMaint: s.lastMaint || '—', nextMaint: s.nextMaint || '—', overdueDays: s.overdueDays || 0, warn: s.warn || null });
+    });
+    return out;
+  }
+
+  const ST = { run: 'badge-moss', maint: 'badge-orange', broken: 'status-overdue', idle: 'badge-steel' };
+
+  /* Lịch bảo trì sắp tới — gắn với phiếu bảo trì thật khi đã có */
+  const SCHED = [
+    { d: '18/05/2026', may: 'CNC-22', work: 'Bảo trì định kỳ theo giờ chạy — thay dao phay, vòng bi trục chính', by: 'KT Phạm Quốc Hùng', bt: 'BT-0122', warn: { t: 'bad', text: 'Đang dừng máy · 24h' } },
+    { d: '20/05/2026', may: 'CAT-01', work: 'Bảo trì định kỳ theo tháng — thay lưỡi Ø500 84T, căn góc cắt', by: 'KT Nguyễn Văn Khánh', bt: 'BT-0121', warn: { t: 'bad', text: 'Quá hạn 12 ngày' } },
+    { d: '25/05/2026', may: 'UON-01', work: 'Bảo trì chu kỳ 2 tháng — kiểm tra con lăn uốn, dầu thuỷ lực', by: 'Đỗ Văn Thành', bt: '', warn: null },
+    { d: '28/05/2026', may: 'KC-01', work: 'Thay đá mài Ø150, kiểm tra dao cắt kính', by: 'KT Phạm Quốc Hùng', bt: '', warn: null },
+    { d: '10/06/2026', may: 'CNC-03', work: 'Bảo trì định kỳ 1.000 giờ chạy — dao phay, ray dẫn hướng', by: 'KT Nguyễn Văn Khánh', bt: '', warn: null },
+    { d: '15/06/2026', may: 'DOT-01', work: 'Bảo trì định kỳ 4 tháng — lọc khí nén, mài dao đột', by: 'KT Phạm Quốc Hùng', bt: '', warn: null },
+    { d: '20/06/2026', may: 'EP-02', work: 'Kiểm tra lực ép 8 tấn, thay dưỡng ép góc', by: 'Trần Văn Đức', bt: '', warn: { t: 'good', text: 'Gộp vào ca đêm · 0 giờ dừng' } }
+  ];
+
+  function warnCell(w) {
+    if (!w || !w.text) return '<span class="warn-none">—</span>';
+    return `<span class="${w.t === 'bad' ? 'warn-bad' : 'warn-good'}">${esc(w.text)}</span>`;
+  }
+
+  function render() {
+    const MS = machines();
+    const q = ($('#searchInput').value || '').toLowerCase().trim();
+    const rows = MS.filter(m => !q || (m.id + ' ' + m.name + ' ' + m.team).toLowerCase().includes(q));
+
+    $('#stTotal').textContent = MS.length;
+    $('#stRun').textContent = MS.filter(m => m.status === 'run').length;
+    $('#stDown').textContent = MS.filter(m => m.status === 'broken' || m.status === 'maint').length;
+    const avg = MS.length ? Math.round(MS.reduce((s, m) => s + (Number(m.oee) || 0), 0) / MS.length * 10) / 10 : 0;
+    $('#stOee').innerHTML = String(avg).replace('.', ',') + '<small>%</small>';
+
+    $('#tbBody').innerHTML = rows.map(m => `
+      <tr>
+        <td><a href="17-may-moc.html?may=${encodeURIComponent(m.id)}" class="lnk">${esc(m.id)}</a></td>
+        <td class="nm"><div class="cell-main" style="font-weight:500">${esc(m.name)}</div></td>
+        <td><div style="font-size:12.5px">${esc(m.team)}</div><div class="cell-mini">${esc(m.loc)}</div></td>
+        <td class="center"><span class="badge ${ST[m.status] || 'badge'}">${esc(m.statusLabel)}</span></td>
+        <td class="num">${fmt(m.runH)} h</td>
+        <td class="num"><span class="oee-n" style="color:${m.oee >= 85 ? '#1f6b3a' : m.oee < 65 ? '#8a1f1f' : 'var(--ink)'}">${m.oee}%</span></td>
+        <td><span style="font-family:var(--ff-mono);font-size:11.5px">${esc(m.lastMaint)}</span></td>
+        <td><span style="font-family:var(--ff-mono);font-size:11.5px;color:${(Number(m.overdueDays) || 0) > 0 ? '#8a1f1f' : 'var(--ink)'}">${esc(m.nextMaint)}</span></td>
+        <td>${warnCell(m.warn)}</td>
+      </tr>`).join('');
+    if (!rows.length) $('#tbBody').innerHTML = `<tr><td colspan="9" style="text-align:center;color:var(--ash);padding:32px">Không có máy phù hợp.</td></tr>`;
+
+    $('#schBody').innerHTML = SCHED.map(s => `
+      <tr>
+        <td><span style="font-family:var(--ff-mono);font-size:11.5px">${esc(s.d)}</span></td>
+        <td><a href="17-may-moc.html?may=${encodeURIComponent(s.may)}" class="lnk">${esc(s.may)}</a></td>
+        <td style="white-space:normal;min-width:260px">${esc(s.work)}</td>
+        <td>${esc(s.by)}</td>
+        <td>${s.bt ? `<a href="18-phieu-bao-tri.html?bt=${encodeURIComponent(s.bt)}" class="lnk">${esc(s.bt)}</a>` : '<span class="warn-none">Chưa lập phiếu</span>'}</td>
+        <td>${warnCell(s.warn)}</td>
+      </tr>`).join('');
+
+    if (window.lucide) lucide.createIcons();
+  }
+
+  document.addEventListener('erp:ready', () => {
+    render();
+    $('#searchInput').addEventListener('input', render);
+  });
+</script>
+</body>
+</html>

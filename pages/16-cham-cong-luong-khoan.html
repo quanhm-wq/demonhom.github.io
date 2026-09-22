@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chấm công & Lương — ERP NHÔM OWIN</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/css/style.css" />
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+  <style>
+    .calendar { display: grid; grid-template-columns: repeat(7,1fr); gap: 4px; font-size: 12px; }
+    .cal-day { background: var(--surface); border-radius: 6px; padding: 6px 8px; min-height: 56px; }
+    .cal-day .d-num { font-weight: 600; color: var(--ink); }
+    .cal-day.work { background: var(--teal-light); color: var(--moss-dark); }
+    .cal-day.overtime { background: var(--surface-yellow); color: var(--yellow-dark); }
+    .cal-day.absent { background: var(--coral-light); color: var(--coral-dark); }
+    .cal-day.off { background: var(--canvas); color: var(--muted); border: 1px solid var(--hairline-soft); }
+    .cal-head { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--steel); text-align: center; padding: 4px 0; }
+
+    /* Geofence map mockup (CSS only, no real map) */
+    .geo-map { position: relative; height: 150px; border-radius: 10px; overflow: hidden;
+      background:
+        repeating-linear-gradient(0deg, var(--rule-hair) 0 1px, transparent 1px 26px),
+        repeating-linear-gradient(90deg, var(--rule-hair) 0 1px, transparent 1px 26px),
+        var(--canvas);
+      border: 1px solid var(--rule-soft); }
+    .geo-fence { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
+      width: 118px; height: 118px; border-radius: 50%;
+      background: rgba(47,93,58,0.10); border: 2px dashed var(--moss); }
+    .geo-pin { position: absolute; width: 12px; height: 12px; border-radius: 50%;
+      border: 2px solid #fff; box-shadow: 0 0 0 3px rgba(0,0,0,0.06); }
+    .geo-pin.in { background: var(--moss); }
+    .geo-pin.out { background: var(--amber); }
+    .geo-pin.factory { background: var(--ink); width: 14px; height: 14px; }
+    .geo-legend { font-size: 11px; color: var(--ash); }
+    .gps-log { display: grid; grid-template-columns: 1fr auto auto; gap: 6px 10px; align-items: center;
+      font-size: 12px; padding: 8px 0; border-bottom: 1px solid var(--rule-hair); }
+    .gps-log:last-child { border-bottom: 0; }
+
+    /* Tab active state (data-tab system) */
+    .tab.active { background: var(--canvas); color: var(--ink); box-shadow: 0 1px 0 var(--rule); }
+    .tbl tbody tr[data-emp] { cursor: pointer; }
+
+    /* Payroll detail drawer — trượt từ phải, cuộn dọc */
+    .pf-head { display:flex; gap:14px; align-items:center; }
+    .pf-avatar { width:52px; height:52px; border-radius:12px; background:var(--ink); color:var(--paper); display:inline-flex; align-items:center; justify-content:center; font-size:18px; font-weight:600; flex-shrink:0; letter-spacing:.02em; }
+    .pf-info-row { display:flex; justify-content:space-between; padding:9px 0; border-bottom:1px solid var(--rule-hair); font-size:13px; }
+    .pf-info-row:last-child{ border-bottom:0; }
+    .pf-info-row .k { color:var(--ash); }
+    .pf-info-row .v { font-weight:500; text-align:right; }
+    .pay-row { display:flex; justify-content:space-between; align-items:baseline; padding:10px 0; border-bottom:1px solid var(--rule-hair); font-size:13px; }
+    .pay-row .lbl { color:var(--ink); }
+    .pay-row .lbl .sub { display:block; color:var(--ash); font-size:11px; font-weight:400; margin-top:2px; }
+    .pay-row .amt { font-weight:600; font-variant-numeric:tabular-nums; white-space:nowrap; }
+    .pay-row.total { border-bottom:0; border-top:2px solid var(--ink); margin-top:4px; padding-top:12px; }
+    .pay-row.total .amt { font-size:18px; }
+
+    .drawer-overlay { position:fixed; inset:0; background:rgba(20,19,15,.42); backdrop-filter:blur(2px); z-index:80; opacity:0; pointer-events:none; transition:opacity .2s ease; }
+    .drawer-overlay.open { opacity:1; pointer-events:auto; }
+    .drawer { position:fixed; top:0; right:0; height:100vh; width:452px; max-width:94vw; background:var(--canvas); border-left:1px solid var(--rule); box-shadow:-12px 0 32px rgba(20,19,15,.16); z-index:81; transform:translateX(100%); transition:transform .26s cubic-bezier(.2,.8,.2,1); overflow-y:auto; padding:20px 22px 36px; }
+    .drawer.open { transform:translateX(0); }
+    .drawer.drawer-wide { width:600px; }
+    .att-input { padding:8px 10px; border:1px solid var(--rule); border-radius:8px; font-size:13px; font-family:inherit; background:var(--canvas); color:var(--ink); }
+    .cong-scroll thead th { position:sticky; top:0; background:var(--paper-2); z-index:1; }
+    /* Bảng lương: hạn chế xuống dòng — Mã NV & Họ tên luôn 1 dòng, Bộ phận tối đa 2 dòng */
+    [data-tab-pane="tab-luong"] .tbl { min-width:960px; }
+    [data-tab-pane="tab-luong"] .tbl td:nth-child(1),
+    [data-tab-pane="tab-luong"] .tbl td:nth-child(2) { white-space:nowrap; }
+    [data-tab-pane="tab-luong"] .tbl td:nth-child(3) { min-width:160px; }
+
+    /* Nguồn dữ liệu (clickable) trong drawer phiếu lương */
+    .src-row { display:flex; align-items:center; gap:10px; padding:9px 10px; border:1px solid var(--rule-soft); border-radius:8px; margin-bottom:6px; font-size:12.5px; text-decoration:none; color:var(--ink); width:100%; text-align:left; background:transparent; cursor:pointer; font-family:inherit; transition:border-color .14s ease, background .14s ease; }
+    .src-row:hover { border-color:var(--rust); background:var(--rust-soft); }
+    .src-ic { width:30px; height:30px; border-radius:7px; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0; }
+    .src-ic.prod{ background:var(--moss-soft); color:var(--moss-deep); }
+    .src-ic.qa{ background:var(--steel-soft); color:var(--steel); }
+    .src-ic.time{ background:var(--amber-soft); color:var(--amber); }
+    .src-ic.disc{ background:var(--signal-soft); color:var(--signal); }
+    .src-row .src-t{ color:var(--ash); font-size:11px; }
+    .src-row .src-v{ font-weight:600; margin-top:1px; }
+    .src-row .src-from{ margin-left:auto; text-align:right; font-size:10.5px; color:var(--ash-2); white-space:nowrap; flex-shrink:0; }
+    .drawer::-webkit-scrollbar { width:8px; }
+    .drawer::-webkit-scrollbar-thumb { background:var(--rule); border-radius:9999px; }
+    .drawer-close { position:absolute; top:14px; right:14px; z-index:2; }
+  </style>
+</head>
+<body>
+
+<div id="app-shell" data-active="luong" data-title="Chấm công & Lương" data-crumb="<b>Nhân sự</b> · Chấm công & Lương · Tháng 6/2026">
+
+  <div class="page-header">
+    <div>
+      <h1>Chấm công & Lương · T6/2026</h1>
+      <p>Nhà máy cửa nhôm Owin — Số 8 Giá Ngự, Xâm Xuyên, Thường Tín, Hà Nội · 42 NV · Lương bậc + khoán sản lượng + KPI − khấu trừ · Chốt công ngày 25 · Trả lương ngày 10</p>
+    </div>
+    <div class="actions">
+      <button class="btn btn-secondary"><i data-lucide="download" style="width:14px;height:14px"></i> Xuất bảng lương</button>
+      <button class="btn btn-secondary"><i data-lucide="map-pin" style="width:14px;height:14px"></i> Đối soát chấm công GPS</button>
+      <button class="btn btn-primary"><i data-lucide="banknote" style="width:14px;height:14px"></i> Tạo phiếu lương</button>
+    </div>
+  </div>
+
+  <!-- KPI -->
+  <div class="grid grid-4 mb-6">
+    <div class="card-feature-yellow">
+      <div class="t-micro-u" style="color:var(--yellow-dark)">QUỸ LƯƠNG T6</div>
+      <div class="t-h2 mt-1">430M</div>
+      <div class="t-caption" style="color:var(--yellow-dark)">42 NV · thực lĩnh</div>
+    </div>
+    <div class="card-feature-teal">
+      <div class="t-micro-u" style="color:var(--moss-dark)">QUỸ THƯỞNG KPI</div>
+      <div class="t-h2 mt-1">42M</div>
+      <div class="t-caption" style="color:var(--moss-dark)">Chi theo điểm KPI T6</div>
+    </div>
+    <div class="card-feature-coral">
+      <div class="t-micro-u" style="color:var(--coral-dark)">KHẤU TRỪ KỲ NÀY</div>
+      <div class="t-h2 mt-1">9.1M</div>
+      <div class="t-caption" style="color:var(--coral-dark)">BHXH + biên bản phạt</div>
+    </div>
+    <div class="card-feature-blue">
+      <div class="t-micro-u" style="color:var(--brand-blue)">NGÀY CÔNG TB</div>
+      <div class="t-h2 mt-1">24.6</div>
+      <div class="t-caption" style="color:var(--brand-blue)">/26 ngày kế hoạch</div>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div data-tab-group>
+  <div class="card mb-4" style="padding:14px">
+    <div class="tabs">
+      <button class="tab active" data-tab="tab-luong"><i data-lucide="banknote" style="width:14px;height:14px"></i> Bảng lương</button>
+      <button class="tab" data-tab="tab-khoan"><i data-lucide="ruler" style="width:14px;height:14px"></i> Lương khoán</button>
+      <button class="tab" data-tab="tab-cong"><i data-lucide="calendar-days" style="width:14px;height:14px"></i> Bảng công</button>
+      <button class="tab" data-tab="tab-gps"><i data-lucide="map-pin" style="width:14px;height:14px"></i> Chấm công GPS</button>
+      <button class="tab" data-tab="tab-baocao"><i data-lucide="bar-chart-3" style="width:14px;height:14px"></i> Báo cáo</button>
+    </div>
+  </div>
+
+  <!-- ===================== PANE: BẢNG LƯƠNG ===================== -->
+  <div data-tab-pane="tab-luong">
+
+  <!-- Bảng lương -->
+  <div class="card mb-4">
+    <div class="flex-between mb-3">
+      <div>
+        <div class="t-h5"><i data-lucide="banknote" style="width:16px;height:16px"></i> Bảng lương tháng 6/2026 · Lương theo bậc + KPI</div>
+        <div class="t-caption mt-1"><i data-lucide="mouse-pointer-click" style="width:12px;height:12px;vertical-align:-1px"></i> Nhấp vào một dòng để xem phiếu lương chi tiết</div>
+      </div>
+      <button class="btn-link">Xem cả 42 NV →</button>
+    </div>
+
+    <!-- Lọc theo bộ phận + tìm kiếm -->
+    <div class="flex mb-3" style="gap:8px;flex-wrap:wrap">
+      <div style="position:relative;flex:1;min-width:220px">
+        <i data-lucide="search" style="width:14px;height:14px;position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--ash)"></i>
+        <input id="luongSearch" class="att-input" type="text" placeholder="Tìm theo tên hoặc mã NV…" style="width:100%;padding-left:30px">
+      </div>
+      <select id="luongDept" class="att-input"></select>
+    </div>
+
+    <div class="table-wrap" style="border:none">
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th>Mã NV</th>
+            <th>Họ tên</th>
+            <th>Bộ phận</th>
+            <th class="num">Công</th>
+            <th class="num">Lương cơ bản <span class="t-caption" style="font-weight:400">(bậc)</span></th>
+            <th class="num">Phụ cấp</th>
+            <th class="num">Thưởng KPI</th>
+            <th class="num">Khấu trừ <span class="t-caption" style="font-weight:400">(BHXH + phạt BB)</span></th>
+            <th class="num">Thực lĩnh</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr data-emp="NV-018" style="background:var(--surface-yellow)">
+            <td><a href="22-nhan-su-ho-so.html?nv=NV-018" class="lnk"><b>NV-018</b></a></td>
+            <td>Trần Văn Tú</td>
+            <td>Cắt CNC · Thợ cắt CNC chính</td>
+            <td class="num">25</td>
+            <td class="num">8.800.000</td>
+            <td class="num">1.150.000</td>
+            <td class="num text-success"><b>1.700.000</b></td>
+            <td class="num text-danger">−1.150.000<div class="t-caption" style="color:var(--rust-deep)">BHXH 10,5% · không phạt</div></td>
+            <td class="num"><b>10.500.000₫</b></td>
+          </tr>
+          <tr data-emp="NV-022"><td><a href="22-nhan-su-ho-so.html?nv=NV-022" class="lnk"><b>NV-022</b></a></td><td>Đỗ Văn Minh</td><td>Cắt CNC · Tổ trưởng cắt CNC</td><td class="num">26</td><td class="num">8.000.000</td><td class="num">1.500.000</td><td class="num text-success"><b>1.250.000</b></td><td class="num text-danger">−1.000.000</td><td class="num"><b>9.750.000₫</b></td></tr>
+          <tr data-emp="CN-020"><td><a href="22-nhan-su-ho-so.html?nv=CN-020" class="lnk"><b>CN-020</b></a></td><td>Phạm Văn Nam</td><td>Hoàn thiện · Tổ trưởng đóng kiện</td><td class="num">26</td><td class="num">8.000.000</td><td class="num">1.100.000</td><td class="num text-success"><b>1.400.000</b></td><td class="num text-danger">−840.000</td><td class="num"><b>9.660.000₫</b></td></tr>
+          <tr data-emp="CN-019"><td><a href="22-nhan-su-ho-so.html?nv=CN-019" class="lnk"><b>CN-019</b></a></td><td>Lê Văn Bình</td><td>Uốn vòm · Thợ uốn vòm</td><td class="num">25</td><td class="num">7.200.000</td><td class="num">560.000</td><td class="num text-success"><b>700.000</b></td><td class="num text-danger">−756.000</td><td class="num"><b>7.704.000₫</b></td></tr>
+          <tr data-emp="CN-021"><td><a href="22-nhan-su-ho-so.html?nv=CN-021" class="lnk"><b>CN-021</b></a></td><td>Nguyễn Văn Hải</td><td>Hoàn thiện · Thợ đóng kiện</td><td class="num">24</td><td class="num">7.200.000</td><td class="num">520.000</td><td class="num text-success"><b>420.000</b></td><td class="num text-danger">−756.000<div class="t-caption" style="color:var(--rust-deep)">gồm BB-2026-021: −300.000</div></td><td class="num"><b>7.384.000₫</b></td></tr>
+          <tr data-emp="NV-035"><td><a href="22-nhan-su-ho-so.html?nv=NV-035" class="lnk"><b>NV-035</b></a></td><td>Hoàng Văn Sơn</td><td>Uốn vòm · Thợ uốn vòm</td><td class="num">26</td><td class="num">6.600.000</td><td class="num">560.000</td><td class="num text-success"><b>650.000</b></td><td class="num text-danger">−693.000</td><td class="num"><b>7.117.000₫</b></td></tr>
+          <tr data-emp="NV-009"><td><a href="22-nhan-su-ho-so.html?nv=NV-009" class="lnk"><b>NV-009</b></a></td><td>Bùi Thị Lan</td><td>Kinh doanh dự án · NV phát triển đại lý</td><td class="num">25</td><td class="num">8.000.000</td><td class="num">10.000.000</td><td class="num text-success"><b>1.000.000</b></td><td class="num text-danger">−840.000</td><td class="num"><b>18.160.000₫</b></td></tr>
+          <tr data-emp="NV-027"><td><a href="22-nhan-su-ho-so.html?nv=NV-027" class="lnk"><b>NV-027</b></a></td><td>Lê Thị Ngọc</td><td>Văn phòng · Kế toán trưởng</td><td class="num">26</td><td class="num">9.800.000</td><td class="num">1.680.000</td><td class="num text-success"><b>1.300.000</b></td><td class="num text-danger">−1.029.000</td><td class="num"><b>11.751.000₫</b></td></tr>
+        </tbody>
+        <tfoot>
+          <tr style="background:var(--ink);color:white">
+            <td colspan="4"><b style="color:white">Tổng quỹ lương T6/2026 · 42 NV (hiển thị 8)</b></td>
+            <td class="num" style="color:white"><b>63.600.000</b></td>
+            <td class="num" style="color:white">17.070.000</td>
+            <td class="num" style="color:var(--brand-yellow)"><b>8.420.000</b></td>
+            <td class="num" style="color:white">−7.064.000</td>
+            <td class="num" style="color:var(--brand-yellow)"><b>82.026.000₫</b></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+    <div class="t-caption mt-2" id="luongCount"></div>
+  </div>
+
+  </div><!-- /tab-luong -->
+
+
+  <!-- ===================== PANE: LƯƠNG KHOÁN ===================== -->
+  <div data-tab-pane="tab-khoan" style="display:none">
+
+    <div class="card mb-4">
+      <div class="flex-between mb-3">
+        <div>
+          <div class="t-h5"><i data-lucide="ruler" style="width:16px;height:16px"></i> Đơn giá khoán sản lượng · áp dụng từ 01/06/2026</div>
+          <div class="t-caption mt-1">Khoán theo <b>bộ cửa</b> · theo <b>m²</b> · theo <b>mét dài uốn vòm</b> · theo <b>cây nhôm cắt</b> · theo <b>bộ lắp đặt tại công trình</b></div>
+        </div>
+        <button class="btn btn-secondary" data-no-interact="true"><i data-lucide="pencil" style="width:14px;height:14px"></i> Sửa đơn giá</button>
+      </div>
+      <div class="table-wrap" style="border:none">
+        <table class="tbl">
+          <thead><tr><th>Mã khoán</th><th>Loại khoán</th><th>ĐVT</th><th class="num">Đơn giá</th><th>Áp dụng cho tổ</th><th>Ghi chú định mức</th></tr></thead>
+          <tbody>
+            <tr><td><b>KH-CAYNHOM</b></td><td>Khoán theo cây nhôm cắt</td><td>cây 5,8m</td><td class="num"><b>4.500₫</b></td><td>Tổ Cắt CNC</td><td class="t-caption">Hao đầu mẩu ≤ 6% · sai kích thước ≤ 2mm</td></tr>
+            <tr><td><b>KH-MDVOM</b></td><td>Khoán theo mét dài uốn vòm</td><td>md</td><td class="num"><b>26.000₫</b></td><td>Tổ Uốn vòm</td><td class="t-caption">Phế uốn (UON-NUT/UON-MEO) ≤ 3%</td></tr>
+            <tr><td><b>KH-M2</b></td><td>Khoán theo m² cửa lắp kính</td><td>m²</td><td class="num"><b>38.000₫</b></td><td>Tổ Ép góc – lắp ráp</td><td class="t-caption">Vuông góc 90°±0,5° · mối ép kín</td></tr>
+            <tr><td><b>KH-BOCUA</b></td><td>Khoán theo bộ cửa hoàn thiện</td><td>bộ</td><td class="num"><b>120.000₫</b></td><td>Tổ Hoàn thiện – đóng kiện</td><td class="t-caption">Bọc màng đủ · kiện gỗ đúng quy cách</td></tr>
+            <tr><td><b>KH-LAPDAT</b></td><td>Khoán lắp đặt tại công trình</td><td>bộ</td><td class="num"><b>180.000₫</b></td><td>Tổ Lắp đặt công trình</td><td class="t-caption">Nghiệm thu kín nước · không xước sơn</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card mb-6">
+      <div class="flex-between mb-3" style="gap:8px;flex-wrap:wrap">
+        <div>
+          <div class="t-h5"><i data-lucide="hard-hat" style="width:16px;height:16px"></i> Sản lượng khoán T6/2026 · theo thợ</div>
+          <div class="t-caption mt-1">Số liệu lấy từ phiếu công đoạn của Lệnh sản xuất · đối chiếu biên bản lỗi trước khi chốt</div>
+        </div>
+        <select id="khoanDept" class="att-input" style="padding:6px 9px;font-size:12px"></select>
+      </div>
+      <div class="table-wrap" style="border:none">
+        <table class="tbl">
+          <thead><tr><th>Mã NV</th><th>Họ tên</th><th>Bộ phận</th><th>Loại khoán</th><th class="num">Sản lượng</th><th class="num">Đơn giá</th><th class="num">Lương khoán</th><th>Hao hụt / Lỗi</th></tr></thead>
+          <tbody id="khoanTbody">
+            <tr data-kdept="Cắt CNC"><td><a href="22-nhan-su-ho-so.html?nv=NV-018" class="lnk"><b>NV-018</b></a></td><td>Trần Văn Tú</td><td>Cắt CNC</td><td>KH-CAYNHOM</td><td class="num">1.420 cây</td><td class="num">4.500₫</td><td class="num"><b>6.390.000₫</b></td><td><span style="color:#1f6b3a;font-weight:700">Hao đầu mẩu 4,2% · dưới định mức</span></td></tr>
+            <tr data-kdept="Cắt CNC"><td><a href="22-nhan-su-ho-so.html?nv=NV-022" class="lnk"><b>NV-022</b></a></td><td>Đỗ Văn Minh</td><td>Cắt CNC</td><td>KH-CAYNHOM</td><td class="num">1.280 cây</td><td class="num">4.500₫</td><td class="num"><b>5.760.000₫</b></td><td><span style="color:#8a1f1f;font-weight:700">Hao đầu mẩu 7,8% · vượt định mức 6%</span></td></tr>
+            <tr data-kdept="Uốn vòm"><td><a href="22-nhan-su-ho-so.html?nv=NV-035" class="lnk"><b>NV-035</b></a></td><td>Hoàng Văn Sơn</td><td>Uốn vòm</td><td>KH-MDVOM</td><td class="num">224 md</td><td class="num">26.000₫</td><td class="num"><b>5.824.000₫</b></td><td><span style="color:#1f6b3a;font-weight:700">Không phát sinh phế uốn</span></td></tr>
+            <tr data-kdept="Uốn vòm"><td><a href="22-nhan-su-ho-so.html?nv=CN-019" class="lnk"><b>CN-019</b></a></td><td>Lê Văn Bình</td><td>Uốn vòm</td><td>KH-MDVOM</td><td class="num">186 md</td><td class="num">26.000₫</td><td class="num"><b>4.836.000₫</b></td><td><span style="color:#8a1f1f;font-weight:700">UON-NUT 6 cây · trừ 480.000₫</span></td></tr>
+            <tr data-kdept="Ép góc"><td><a href="22-nhan-su-ho-so.html?nv=CN-024" class="lnk"><b>CN-024</b></a></td><td>Trần Văn Diễn</td><td>Ép góc</td><td>KH-M2</td><td class="num">154 m²</td><td class="num">38.000₫</td><td class="num"><b>5.852.000₫</b></td><td><span style="color:var(--rule)">—</span></td></tr>
+            <tr data-kdept="Ép góc"><td><a href="22-nhan-su-ho-so.html?nv=CN-028" class="lnk"><b>CN-028</b></a></td><td>Đỗ Minh Quân</td><td>Ép góc</td><td>KH-M2</td><td class="num">132 m²</td><td class="num">38.000₫</td><td class="num"><b>5.016.000₫</b></td><td><span style="color:#8a1f1f;font-weight:700">KINH-NUT 2 tấm khi lắp · trừ 770.000₫</span></td></tr>
+            <tr data-kdept="Hoàn thiện"><td><a href="22-nhan-su-ho-so.html?nv=CN-020" class="lnk"><b>CN-020</b></a></td><td>Phạm Văn Nam</td><td>Hoàn thiện</td><td>KH-BOCUA</td><td class="num">62 bộ</td><td class="num">120.000₫</td><td class="num"><b>7.440.000₫</b></td><td><span style="color:var(--rule)">—</span></td></tr>
+            <tr data-kdept="Hoàn thiện"><td><a href="22-nhan-su-ho-so.html?nv=CN-021" class="lnk"><b>CN-021</b></a></td><td>Nguyễn Văn Hải</td><td>Hoàn thiện</td><td>KH-BOCUA</td><td class="num">48 bộ</td><td class="num">120.000₫</td><td class="num"><b>5.760.000₫</b></td><td><span style="color:var(--rule)">—</span></td></tr>
+            <tr data-kdept="Lắp đặt công trình"><td><a href="22-nhan-su-ho-so.html?nv=CN-031" class="lnk"><b>CN-031</b></a></td><td>Vũ Văn Hiển</td><td>Lắp đặt công trình</td><td>KH-LAPDAT</td><td class="num">34 bộ</td><td class="num">180.000₫</td><td class="num"><b>6.120.000₫</b></td><td><span style="color:var(--rule)">—</span></td></tr>
+          </tbody>
+          <tfoot>
+            <tr style="background:var(--ink);color:white">
+              <td colspan="6"><b style="color:white">Tổng quỹ lương khoán T6/2026 · 9 thợ tiêu biểu (thực tế 26 thợ khoán)</b></td>
+              <td class="num" style="color:var(--brand-yellow)"><b>52.998.000₫</b></td>
+              <td style="color:white">Trừ lỗi: −1.250.000₫</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+      <div class="t-caption mt-2" id="khoanCount"></div>
+    </div>
+
+  </div><!-- /PANE Lương khoán -->
+
+  <!-- ===================== PANE: BẢNG CÔNG ===================== -->
+  <div data-tab-pane="tab-cong" style="display:none">
+
+    <!-- Danh sách chấm công: tìm kiếm + lọc + cuộn trong khung -->
+    <div class="card mb-6">
+      <div class="flex-between mb-3">
+        <div>
+          <div class="t-h5"><i data-lucide="calendar-days" style="width:16px;height:16px"></i> Bảng công tháng 6/2026 · 42 NV</div>
+          <div class="t-caption mt-1"><i data-lucide="mouse-pointer-click" style="width:12px;height:12px;vertical-align:-1px"></i> Nhấp một nhân viên để mở bảng công chi tiết (trượt ra bên phải, không cần cuộn)</div>
+        </div>
+        <span class="badge badge-steel">26 ngày công kế hoạch · trừ Chủ nhật</span>
+      </div>
+
+      <!-- Toolbar tìm kiếm / lọc -->
+      <div class="flex mb-3" style="gap:8px;flex-wrap:wrap">
+        <div style="position:relative;flex:1;min-width:220px">
+          <i data-lucide="search" style="width:14px;height:14px;position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--ash)"></i>
+          <input id="congSearch" class="att-input" type="text" placeholder="Tìm theo tên hoặc mã NV…" style="width:100%;padding-left:30px">
+        </div>
+        <select id="congDept" class="att-input"></select>
+      </div>
+
+      <div class="table-wrap cong-scroll" style="border:none;max-height:460px;overflow:auto">
+        <table class="tbl">
+          <thead>
+            <tr>
+              <th>Mã NV</th><th>Họ tên</th><th>Bộ phận</th>
+              <th class="num">Công</th><th class="num">Tăng ca</th><th class="num">Nghỉ phép</th><th class="num">Đi muộn</th>
+              <th>GPS hôm nay</th>
+            </tr>
+          </thead>
+          <tbody id="congTbody"></tbody>
+        </table>
+      </div>
+      <div class="t-caption mt-2" id="congCount"></div>
+    </div>
+
+  </div><!-- /tab-cong -->
+
+  <!-- ===================== PANE: CHẤM CÔNG GPS ===================== -->
+  <div data-tab-pane="tab-gps" style="display:none">
+    <div class="grid grid-12 mb-6">
+
+      <!-- Chấm công GPS hôm nay (toàn xưởng) -->
+      <div class="card">
+        <div class="flex-between mb-1">
+          <div class="t-h5"><i data-lucide="map-pin" style="width:16px;height:16px"></i> Chấm công GPS hôm nay</div>
+          <span class="badge badge-moss"><i data-lucide="user-check" style="width:12px;height:12px"></i> Đang có mặt 36/42</span>
+        </div>
+        <div class="t-caption mb-3">Định vị GPS trên điện thoại · nguồn chấm công duy nhất · bán kính 150m quanh nhà máy</div>
+
+        <div class="geo-map">
+          <div class="geo-fence"></div>
+          <div class="geo-pin factory" style="top:50%;left:50%;transform:translate(-50%,-50%)" title="Nhà máy"></div>
+          <div class="geo-pin in" style="top:40%;left:44%" title="Trong vùng"></div>
+          <div class="geo-pin in" style="top:58%;left:56%" title="Trong vùng"></div>
+          <div class="geo-pin in" style="top:46%;left:60%" title="Trong vùng"></div>
+          <div class="geo-pin out" style="top:22%;left:80%" title="Ngoài vùng cho phép"></div>
+        </div>
+        <div class="flex" style="gap:14px;margin-top:8px">
+          <span class="geo-legend"><span class="badge-dot" style="background:var(--ink);margin-right:4px"></span>Nhà máy</span>
+          <span class="geo-legend"><span class="badge-dot" style="background:var(--moss);margin-right:4px"></span>Trong vùng 150m</span>
+          <span class="geo-legend"><span class="badge-dot" style="background:var(--amber);margin-right:4px"></span>Ngoài vùng</span>
+        </div>
+
+        <hr class="hr-soft" style="margin:14px 0">
+        <div class="flex-between mb-2" style="gap:8px;flex-wrap:wrap">
+          <div class="t-micro-u">Log chấm công GPS hôm nay</div>
+          <select id="gpsDept" class="att-input" style="padding:5px 8px;font-size:12px"></select>
+        </div>
+        <div id="gpsLog">
+          <div class="gps-log" data-dept="Cắt CNC">
+            <div><b>Trần Văn Tú</b> · NV-018<div class="t-caption">Nhà máy Giá Ngự – Thường Tín · 20,861, 105,868</div></div>
+            <div class="t-caption">07:48 → 17:02</div>
+            <span class="badge badge-moss">Trong vùng</span>
+          </div>
+          <div class="gps-log" data-dept="Cắt CNC">
+            <div><b>Đỗ Văn Minh</b> · NV-022<div class="t-caption">Nhà máy Giá Ngự – Thường Tín · 20,861, 105,868</div></div>
+            <div class="t-caption">07:55 → đang làm</div>
+            <span class="badge badge-moss">Trong vùng</span>
+          </div>
+          <div class="gps-log" data-dept="Hoàn thiện">
+            <div><b>Phạm Văn Nam</b> · CN-020<div class="t-caption">Nhà máy Giá Ngự – Thường Tín · 20,861, 105,868</div></div>
+            <div class="t-caption">08:02 → đang làm</div>
+            <span class="badge badge-moss">Trong vùng</span>
+          </div>
+          <div class="gps-log" data-dept="Lắp đặt công trình">
+            <div><b>Vũ Văn Hiển</b> · CN-031<div class="t-caption">Công trình Ecopark – Văn Giang · 20,932, 105,943</div></div>
+            <div class="t-caption">07:30 → đang lắp</div>
+            <span class="badge badge-steel">Vùng công trình</span>
+          </div>
+          <div class="gps-log" data-dept="Uốn vòm">
+            <div><b>Lê Văn Bình</b> · CN-019<div class="t-caption">Cách nhà máy ~320m · 20,864, 105,871</div></div>
+            <div class="t-caption">08:11 → —</div>
+            <span class="badge status-warning">Ngoài vùng cho phép</span>
+          </div>
+        </div>
+        <div class="t-caption mt-2" id="gpsCount"></div>
+      </div>
+
+      <!-- Thông tin geofence + nguyên tắc -->
+      <div class="card" style="align-self:start">
+        <div class="t-h5 mb-1"><i data-lucide="navigation" style="width:16px;height:16px"></i> Vùng chấm công (Geofence)</div>
+        <div class="t-caption mb-3">Cấu hình tâm vùng & bán kính cho phép check-in / check-out.</div>
+        <div class="pf-info-row"><span class="k">Tâm nhà máy</span><span class="v">10,7563 · 106,6021</span></div>
+        <div class="pf-info-row"><span class="k">Bán kính cho phép</span><span class="v">150 m</span></div>
+        <div class="pf-info-row"><span class="k">Số NV đã check-in</span><span class="v">36 / 42</span></div>
+        <div class="pf-info-row"><span class="k">Đang ngoài vùng</span><span class="v"><span class="text-danger">1 NV</span></span></div>
+        <div class="pf-info-row"><span class="k">Chưa check-in</span><span class="v">5 NV (nghỉ phép / ca chiều)</span></div>
+
+        <hr class="hr-soft" style="margin:14px 0">
+        <div class="t-micro-u mb-1">Nguyên tắc chấm công</div>
+        <div class="t-caption" style="line-height:1.7">
+          <i data-lucide="check" style="width:12px;height:12px;vertical-align:-1px;color:var(--moss)"></i> Check-in/out chỉ hợp lệ khi điện thoại nằm trong bán kính 150m.<br/>
+          <i data-lucide="check" style="width:12px;height:12px;vertical-align:-1px;color:var(--moss)"></i> Chấm công ngoài vùng được ghi nhận chờ tổ trưởng xác nhận.<br/>
+          <i data-lucide="check" style="width:12px;height:12px;vertical-align:-1px;color:var(--moss)"></i> Dữ liệu công liên thông trực tiếp KPI chuyên cần & bảng lương.
+        </div>
+      </div>
+    </div>
+  </div><!-- /tab-gps -->
+
+  <!-- ===================== PANE: BÁO CÁO ===================== -->
+  <div data-tab-pane="tab-baocao" style="display:none">
+    <div class="grid grid-12 mb-4">
+      <div class="card">
+        <div class="t-h5 mb-3"><i data-lucide="pie-chart" style="width:16px;height:16px"></i> Cơ cấu quỹ lương T6/2026</div>
+        <div id="chartCost" style="display:flex;justify-content:center;min-height:240px"></div>
+      </div>
+      <div class="card">
+        <div class="t-h5 mb-3"><i data-lucide="trending-up" style="width:16px;height:16px"></i> Quỹ lương 6 tháng gần nhất</div>
+        <div id="chartTrend" style="min-height:240px"></div>
+      </div>
+    </div>
+
+    <div class="card mb-4">
+      <div class="flex-between mb-3">
+        <div class="t-h5"><i data-lucide="bar-chart-3" style="width:16px;height:16px"></i> Thưởng KPI theo công nhân · top 6 · T6/2026</div>
+        <span class="badge badge-success">Tự động từ điểm KPI</span>
+      </div>
+      <div id="chartKpi" style="min-height:280px"></div>
+    </div>
+
+    <div class="card mb-6">
+      <div class="flex-between mb-3" style="gap:8px;flex-wrap:wrap">
+        <div class="t-h5"><i data-lucide="building-2" style="width:16px;height:16px"></i> Tổng hợp lương theo bộ phận · T6/2026</div>
+        <select id="repDept" class="att-input" style="padding:6px 9px;font-size:12px"></select>
+      </div>
+      <div class="table-wrap" style="border:none">
+        <table class="tbl">
+          <thead>
+            <tr><th>Bộ phận</th><th class="num">Số NV</th><th class="num">Lương cơ bản</th><th class="num">Phụ cấp</th><th class="num">Thưởng KPI</th><th class="num">Khấu trừ</th><th class="num">Thực chi</th></tr>
+          </thead>
+          <tbody id="repTbody">
+            <tr data-dept="Cắt CNC"><td>Cắt CNC</td><td class="num">8</td><td class="num">66.800.000</td><td class="num">8.400.000</td><td class="num text-success"><b>11.200.000</b></td><td class="num text-danger">−7.900.000</td><td class="num"><b>78.500.000₫</b></td></tr>
+            <tr data-dept="Hoàn thiện"><td>Hoàn thiện</td><td class="num">4</td><td class="num">30.400.000</td><td class="num">3.200.000</td><td class="num text-success"><b>4.600.000</b></td><td class="num text-danger">−3.600.000</td><td class="num"><b>34.600.000₫</b></td></tr>
+            <tr data-dept="Uốn vòm"><td>Uốn vòm</td><td class="num">3</td><td class="num">20.400.000</td><td class="num">1.800.000</td><td class="num text-success"><b>2.000.000</b></td><td class="num text-danger">−2.200.000</td><td class="num"><b>22.000.000₫</b></td></tr>
+            <tr data-dept="Ép góc"><td>Ép góc</td><td class="num">6</td><td class="num">38.600.000</td><td class="num">3.000.000</td><td class="num text-success"><b>3.600.000</b></td><td class="num text-danger">−3.400.000</td><td class="num"><b>41.800.000₫</b></td></tr>
+            <tr data-dept="Lắp đặt công trình"><td>Lắp đặt công trình</td><td class="num">3</td><td class="num">19.400.000</td><td class="num">1.500.000</td><td class="num text-success"><b>1.800.000</b></td><td class="num text-danger">−1.700.000</td><td class="num"><b>21.000.000₫</b></td></tr>
+            <tr data-dept="Kinh doanh / VP / KCS"><td>Kinh doanh / VP / KCS</td><td class="num">18</td><td class="num">142.000.000</td><td class="num">22.600.000</td><td class="num text-success"><b>18.800.000</b></td><td class="num text-danger">−16.300.000</td><td class="num"><b>167.100.000₫</b></td></tr>
+          </tbody>
+          <tfoot>
+            <tr style="background:var(--ink);color:white">
+              <td><b style="color:white">Tổng 42 NV</b></td>
+              <td class="num" style="color:white"><b>42</b></td>
+              <td class="num" style="color:white">317.600.000</td>
+              <td class="num" style="color:white">40.500.000</td>
+              <td class="num" style="color:var(--brand-yellow)"><b>42.000.000</b></td>
+              <td class="num" style="color:white">−35.100.000</td>
+              <td class="num" style="color:var(--brand-yellow)"><b>365.000.000₫</b></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+  </div><!-- /tab-baocao -->
+
+  <!-- Sticky note -->
+  <div style="text-align:center;padding:16px">
+    <div class="sticky teal"><i data-lucide="link" style="width:14px;height:14px"></i> Lương = Lương bậc + Phụ cấp + Thưởng KPI − (BHXH + biên bản phạt) · KPI tự động từ LSX/QR, QC & Chấm công GPS · phạt liên thông trang Biên bản (28)</div>
+  </div>
+
+  </div><!-- /tab-group -->
+
+  <!-- Drawer: phiếu lương chi tiết 1 NV -->
+  <div class="drawer-overlay" id="pay-overlay"></div>
+  <aside class="drawer" id="pay-drawer" aria-hidden="true">
+    <button class="btn-icon drawer-close" id="pay-close" title="Đóng"><i data-lucide="x" style="width:18px;height:18px"></i></button>
+    <div id="pay-body"></div>
+  </aside>
+
+  <!-- Drawer: bảng công chi tiết 1 NV -->
+  <div class="drawer-overlay" id="cong-overlay"></div>
+  <aside class="drawer drawer-wide" id="cong-drawer" aria-hidden="true">
+    <button class="btn-icon drawer-close" id="cong-close" title="Đóng"><i data-lucide="x" style="width:18px;height:18px"></i></button>
+    <div id="cong-body"></div>
+  </aside>
+
+</div>
+
+<script src="../assets/js/layout.js"></script>
+<script src="../assets/js/pricing-engine.js"></script>
+<script src="../assets/js/quote-data.js"></script>
+<script src="../assets/js/loss-data.js"></script>
+<script src="../assets/js/loss-ui.js"></script>
+<script>
+  document.addEventListener('erp:ready', () => {
+    /* ===== Charts vẽ lười khi mở tab Báo cáo (tránh width=0 khi tab đang ẩn) ===== */
+    let reportDrawn = false;
+    function drawReport() {
+      if (reportDrawn) return; reportDrawn = true;
+      ERPCharts.donut('chartCost', {
+        labels: ['Lương cơ bản','Phụ cấp','Thưởng KPI','BHXH DN đóng'],
+        values: [317.6, 40.5, 42, 68.3],
+        colors: ['#2f5d3a','#4a5560','#9c7714','#c5400a'],
+      }, { centerLabel: 'Quỹ lương', centerValue: '430M' });
+      ERPCharts.line('chartTrend', {
+        labels: ['T1','T2','T3','T4','T5','T6'],
+        values: [402, 411, 408, 419, 421, 430],
+      }, { height: 240, color: '#c5400a', fill: true });
+      ERPCharts.bar('chartKpi', {
+        labels: ['Tú','Minh','Nam','Bình','Sơn','Hải'],
+        values: [1700000, 1250000, 1400000, 700000, 650000, 420000],
+      }, { height: 280, color: '#9c7714' });
+    }
+    const baocaoTab = document.querySelector('[data-tab="tab-baocao"]');
+    if (baocaoTab) baocaoTab.addEventListener('click', () => setTimeout(drawReport, 60));
+
+    /* ===== Bảng công theo từng người (chấm công theo giờ qua GPS) ===== */
+    /* Tháng 6/2026: 1/6 = Thứ Hai. Chủ nhật nghỉ → 26 ngày công kế hoạch.
+       ov: P=nghỉ phép, O=tăng ca, L=đi muộn, X=nghỉ không lương */
+    const CONG = [
+      { ma:'NV-018', ten:'Trần Văn Tú',     bp:'Cắt CNC',  gps:['Trong vùng','badge-moss'],    ov:{5:'O',13:'P',16:'O'} },
+      { ma:'NV-022', ten:'Đỗ Văn Minh',     bp:'Cắt CNC',  gps:['Trong vùng','badge-moss'],    ov:{6:'O',14:'O'} },
+      { ma:'CN-020', ten:'Phạm Văn Nam',    bp:'Hoàn thiện',   gps:['Trong vùng','badge-moss'],    ov:{6:'O',14:'O'} },
+      { ma:'CN-019', ten:'Lê Văn Bình',     bp:'Uốn vòm',   gps:['Ngoài vùng','status-warning'],ov:{7:'O',24:'P'} },
+      { ma:'CN-021', ten:'Nguyễn Văn Hải',  bp:'Hoàn thiện',   gps:['Trong vùng','badge-moss'],    ov:{13:'P',14:'P'} },
+      { ma:'NV-035', ten:'Hoàng Văn Sơn',   bp:'Uốn vòm',   gps:['Trong vùng','badge-moss'],    ov:{} },
+      { ma:'NV-031', ten:'Nguyễn Thị Mai',  bp:'KCS',         gps:['Trong vùng','badge-moss'],    ov:{12:'L'} },
+      { ma:'NV-009', ten:'Bùi Thị Lan',     bp:'Kinh doanh dự án', gps:['Đi công tác','badge-steel'],  ov:{20:'P'} },
+      { ma:'NV-027', ten:'Lê Thị Ngọc',     bp:'Văn phòng',  gps:['Trong vùng','badge-moss'],    ov:{} },
+    ];
+    const dow = d => (1 + (d - 1)) % 7;            // 1/6/2026 = Thứ Hai (Mon=1, Sun=0)
+    function congStats(e){
+      let cong=0, ot=0, phep=0, late=0;
+      for(let d=1; d<=30; d++){
+        if(dow(d)===0) continue;                    // Chủ nhật nghỉ
+        const o = e.ov[d];
+        if(o==='P'){ phep++; continue; }
+        if(o==='X'){ continue; }
+        cong++;
+        if(o==='O') ot++;
+        if(o==='L') late++;
+      }
+      return { cong, ot, phep, late };
+    }
+    function congCells(e){
+      let html = '';
+      for(let i=0;i<1;i++) html += `<div class="cal-day" style="visibility:hidden"></div>`; // ô trống đầu tháng (CN→T2)
+      for(let d=1; d<=30; d++){
+        let cls='work', label='8h';
+        if(dow(d)===0){ cls='off'; label='CN'; }
+        else {
+          const o = e.ov[d];
+          if(o==='P'){ cls='absent'; label='Nghỉ phép'; }
+          else if(o==='O'){ cls='overtime'; label='10h ↑'; }
+          else if(o==='L'){ cls='work'; label='8h · muộn'; }
+          else if(o==='X'){ cls='off'; label='Nghỉ'; }
+        }
+        html += `<div class="cal-day ${cls}"><div class="d-num">${d}</div><div>${label}</div></div>`;
+      }
+      return html;
+    }
+    const congInit = n => { const w = n.trim().split(/\s+/); return ((w[0]?.[0]||'') + (w[w.length-1]?.[0]||'')).toUpperCase(); };
+
+    /* --- Drawer bảng công chi tiết (trượt từ phải, không cần cuộn trang) --- */
+    const congBody    = document.getElementById('cong-body');
+    const congDrawer  = document.getElementById('cong-drawer');
+    const congOverlay = document.getElementById('cong-overlay');
+    function openCong(){ congDrawer.classList.add('open'); congOverlay.classList.add('open'); congDrawer.setAttribute('aria-hidden','false'); }
+    function closeCong(){ congDrawer.classList.remove('open'); congOverlay.classList.remove('open'); congDrawer.setAttribute('aria-hidden','true'); document.querySelectorAll('#congTbody tr').forEach(r=>r.classList.remove('row-selected')); }
+
+    function renderCong(ma){
+      const e = CONG.find(x=>x.ma===ma); if(!e || !congBody) return;
+      const s = congStats(e);
+      const head = ['CN','T2','T3','T4','T5','T6','T7'].map(d=>`<div class="cal-head">${d}</div>`).join('');
+      const hasPay = !!document.querySelector(`.tbl tbody tr[data-emp="${e.ma}"]`);
+      const payBtn = hasPay
+        ? `<button class="btn btn-secondary btn-sm" style="width:100%" data-go-pay="${e.ma}"><i data-lucide="banknote" style="width:13px;height:13px"></i> Xem phiếu lương nhân viên này</button>`
+        : '';
+      congBody.innerHTML = `
+        <div class="pf-head mb-3">
+          <div class="pf-avatar">${congInit(e.ten)}</div>
+          <div style="min-width:0">
+            <div class="t-h4">${e.ten}</div>
+            <div class="t-caption">${e.ma} · ${e.bp}</div>
+            <div class="mt-1"><span class="badge ${e.gps[1]}">GPS hôm nay: ${e.gps[0]}</span></div>
+          </div>
+        </div>
+
+        <div class="grid grid-4 mb-3" style="gap:8px">
+          <div style="text-align:center;padding:10px 6px;background:var(--teal-light);border-radius:8px"><div class="t-h4">${s.cong}</div><div class="t-caption">Công</div></div>
+          <div style="text-align:center;padding:10px 6px;background:var(--surface-yellow);border-radius:8px"><div class="t-h4">${s.ot}</div><div class="t-caption">Tăng ca</div></div>
+          <div style="text-align:center;padding:10px 6px;background:var(--coral-light);border-radius:8px"><div class="t-h4">${s.phep}</div><div class="t-caption">Nghỉ phép</div></div>
+          <div style="text-align:center;padding:10px 6px;background:var(--surface-blue);border-radius:8px"><div class="t-h4">${s.late}</div><div class="t-caption">Đi muộn</div></div>
+        </div>
+
+        <div class="t-micro-u mb-2">Chi tiết ngày công · Tháng 6/2026</div>
+        <div class="calendar mb-2">${head}</div>
+        <div class="calendar">${congCells(e)}</div>
+        <div class="flex" style="gap:12px;margin-top:12px;font-size:11px;color:var(--steel);flex-wrap:wrap">
+          <span><span class="badge-dot" style="background:var(--brand-teal);margin-right:4px"></span>Làm việc</span>
+          <span><span class="badge-dot" style="background:var(--brand-yellow-deep);margin-right:4px"></span>Tăng ca</span>
+          <span><span class="badge-dot" style="background:var(--brand-coral);margin-right:4px"></span>Nghỉ phép</span>
+          <span><span class="badge-dot" style="background:var(--canvas);border:1px solid var(--hairline);margin-right:4px"></span>CN / Nghỉ</span>
+        </div>
+
+        <hr class="hr-soft">
+        ${payBtn}`;
+      if(window.lucide) window.lucide.createIcons();
+      const goPay = congBody.querySelector('[data-go-pay]');
+      if(goPay) goPay.addEventListener('click', ()=>{
+        closeCong();
+        const t = document.querySelector('[data-tab="tab-luong"]'); if(t) t.click();
+        const row = document.querySelector(`.tbl tbody tr[data-emp="${goPay.dataset.goPay}"]`);
+        if(row) setTimeout(()=>row.click(), 80);
+      });
+      congDrawer.scrollTop = 0;
+      document.querySelectorAll('#congTbody tr').forEach(r=>r.classList.toggle('row-selected', r.dataset.cong===ma));
+    }
+
+    /* --- Danh sách + tìm kiếm + lọc bộ phận (xử lý được khi có hàng nghìn NV) --- */
+    const congTbody  = document.getElementById('congTbody');
+    const congSearch = document.getElementById('congSearch');
+    const congDept   = document.getElementById('congDept');
+    const congCount  = document.getElementById('congCount');
+    function congRow(e){
+      const s = congStats(e);
+      return `<tr data-cong="${e.ma}" style="cursor:pointer">
+        <td><b>${e.ma}</b></td><td>${e.ten}</td><td>${e.bp}</td>
+        <td class="num">${s.cong}</td>
+        <td class="num">${s.ot||'—'}</td>
+        <td class="num">${s.phep?`<span class="text-danger">${s.phep}</span>`:'—'}</td>
+        <td class="num">${s.late?`<span class="text-danger">${s.late}</span>`:'—'}</td>
+        <td><span class="badge ${e.gps[1]}">${e.gps[0]}</span></td>
+      </tr>`;
+    }
+    function applyCongFilter(){
+      if(!congTbody) return;
+      const q = (congSearch?.value || '').toLowerCase().trim();
+      const dep = congDept?.value || '';
+      const list = CONG.filter(e =>
+        (!q || e.ten.toLowerCase().includes(q) || e.ma.toLowerCase().includes(q)) &&
+        (!dep || e.bp === dep));
+      congTbody.innerHTML = list.length
+        ? list.map(congRow).join('')
+        : `<tr><td colspan="8" style="text-align:center;color:var(--ash);padding:18px">Không tìm thấy nhân viên phù hợp</td></tr>`;
+      congTbody.querySelectorAll('tr[data-cong]').forEach(tr=>{
+        tr.addEventListener('click', ()=>{ renderCong(tr.dataset.cong); openCong(); });
+      });
+      if(congCount) congCount.textContent = `Hiển thị ${list.length}/42 nhân viên · (demo ${CONG.length} NV tiêu biểu — danh sách thật phân trang & tải dần)`;
+    }
+    if(congTbody){
+      if(congDept){
+        const depts = [...new Set(CONG.map(e=>e.bp))].sort();
+        congDept.innerHTML = '<option value="">Tất cả bộ phận</option>' + depts.map(d=>`<option value="${d}">${d}</option>`).join('');
+        congDept.addEventListener('change', applyCongFilter);
+      }
+      if(congSearch) congSearch.addEventListener('input', applyCongFilter);
+      applyCongFilter();
+    }
+    if(congOverlay) congOverlay.addEventListener('click', closeCong);
+    const congCloseBtn = document.getElementById('cong-close');
+    if(congCloseBtn) congCloseBtn.addEventListener('click', closeCong);
+    document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closeCong(); });
+
+    /* ===== Bộ lọc theo bộ phận cho từng tab ===== */
+    const deptOf = txt => (txt.split('·')[0] || '').trim();
+
+    /* Tab Bảng lương: lọc bộ phận + tìm kiếm tên/mã */
+    (function(){
+      const rows = [...document.querySelectorAll('[data-tab-pane="tab-luong"] .tbl tbody tr[data-emp]')];
+      if(!rows.length) return;
+      const sel = document.getElementById('luongDept');
+      const search = document.getElementById('luongSearch');
+      const count = document.getElementById('luongCount');
+      const depts = [...new Set(rows.map(r => deptOf(r.children[2].textContent)))].sort();
+      if(sel) sel.innerHTML = '<option value="">Tất cả bộ phận</option>' + depts.map(d=>`<option>${d}</option>`).join('');
+      function apply(){
+        const q = (search?.value||'').toLowerCase().trim();
+        const d = sel?.value || '';
+        let n = 0;
+        rows.forEach(r=>{
+          const ma = (r.dataset.emp||'').toLowerCase();
+          const ten = (r.children[1].textContent||'').toLowerCase();
+          const ok = (!q || ma.includes(q) || ten.includes(q)) && (!d || deptOf(r.children[2].textContent)===d);
+          r.style.display = ok ? '' : 'none';
+          if(ok) n++;
+        });
+        if(count) count.textContent = `Hiển thị ${n}/${rows.length} nhân viên (demo) · danh sách thật 42 NV phân trang & tải dần`;
+      }
+      sel?.addEventListener('change', apply);
+      search?.addEventListener('input', apply);
+      apply();
+    })();
+
+    /* Tab Lương khoán: lọc theo bộ phận */
+    (function(){
+      const rows = [...document.querySelectorAll('#khoanTbody tr[data-kdept]')];
+      if(!rows.length) return;
+      const sel = document.getElementById('khoanDept');
+      const count = document.getElementById('khoanCount');
+      const depts = [...new Set(rows.map(r=>r.dataset.kdept))];
+      if(sel) sel.innerHTML = '<option value="">Tất cả bộ phận</option>' + depts.map(d=>`<option>${d}</option>`).join('');
+      function apply(){
+        const d = sel?.value||''; let n=0;
+        rows.forEach(r=>{ const ok = !d || r.dataset.kdept===d; r.style.display = ok?'':'none'; if(ok)n++; });
+        if(count) count.textContent = `Hiển thị ${n}/${rows.length} thợ hưởng lương khoán`;
+      }
+      sel?.addEventListener('change', apply);
+      apply();
+    })();
+
+    /* Tab Chấm công GPS: lọc log theo bộ phận */
+    (function(){
+      const rows = [...document.querySelectorAll('#gpsLog .gps-log')];
+      if(!rows.length) return;
+      const sel = document.getElementById('gpsDept');
+      const count = document.getElementById('gpsCount');
+      const depts = [...new Set(rows.map(r=>r.dataset.dept))].sort();
+      if(sel) sel.innerHTML = '<option value="">Tất cả bộ phận</option>' + depts.map(d=>`<option>${d}</option>`).join('');
+      function apply(){
+        const d = sel?.value||''; let n=0;
+        rows.forEach(r=>{ const ok = !d || r.dataset.dept===d; r.style.display = ok?'':'none'; if(ok)n++; });
+        if(count) count.textContent = `${n}/${rows.length} lượt chấm công hôm nay`;
+      }
+      sel?.addEventListener('change', apply);
+      apply();
+    })();
+
+    /* Tab Báo cáo: lọc bảng tổng hợp theo bộ phận */
+    (function(){
+      const rows = [...document.querySelectorAll('#repTbody tr[data-dept]')];
+      if(!rows.length) return;
+      const sel = document.getElementById('repDept');
+      const depts = [...new Set(rows.map(r=>r.dataset.dept))];
+      if(sel) sel.innerHTML = '<option value="">Tất cả bộ phận</option>' + depts.map(d=>`<option>${d}</option>`).join('');
+      function apply(){
+        const d = sel?.value||'';
+        rows.forEach(r=>{ r.style.display = (!d || r.dataset.dept===d) ? '' : 'none'; });
+      }
+      sel?.addEventListener('change', apply);
+      apply();
+    })();
+
+    /* ===== Phiếu lương chi tiết — drawer khi click 1 dòng =====
+       Mô hình: Lương bậc + Phụ cấp + Thưởng KPI − (BHXH + biên bản phạt) = thực lĩnh
+       Số liệu nhất quán với trang 27 (Bậc lương & KPI). */
+    const fmt = n => n.toLocaleString('vi-VN');
+    const EMP = {
+      'NV-018': { init:'TT', ten:'Trần Văn Tú', bp:'Cắt CNC · Thợ cắt CNC chính · Bậc 5/7', cong:25, ot:2, nghi:1,
+        lcb:8800000, lcbSub:'Bậc 5/7 · hệ số 1.47', pc:1150000, pcSub:'Ca đêm 2 ngày + thâm niên 5 năm',
+        kpi:1700000, kpiSub:'KPI 94/100 → bậc thưởng cao nhất', bhxh:1150000, phat:0,
+        ktSub:'BHXH/YT/TN 10,5% · không biên bản phạt', tl:10500000,
+        badges:'<span class="badge badge-moss">Theo bậc + KPI</span> <span class="badge badge-steel">Đã chốt công</span>',
+        note:'Kỳ này không có biên bản phạt. Lũy kế phạt còn lại: 0₫ · dồn kỳ sau: 0₫.' },
+      'NV-022': { init:'ĐM', ten:'Đỗ Văn Minh', bp:'Cắt CNC · Tổ trưởng cắt CNC · Bậc 4/7', cong:26, ot:2, nghi:0,
+        lcb:8000000, lcbSub:'Bậc 4/7 · hệ số 1.33', pc:1500000, pcSub:'Trách nhiệm tổ trưởng + ca đêm',
+        kpi:1250000, kpiSub:'KPI 89/100', bhxh:1000000, phat:0,
+        ktSub:'BHXH/YT/TN 10,5% · không biên bản phạt', tl:9750000,
+        badges:'<span class="badge badge-moss">Theo bậc + KPI</span> <span class="badge badge-steel">Tổ trưởng</span>',
+        note:'Đủ 26 công. Không có khấu trừ phạt trong kỳ.' },
+      'CN-020': { init:'PN', ten:'Phạm Văn Nam', bp:'Hoàn thiện · Tổ trưởng đóng kiện · Bậc 4/7', cong:26, ot:2, nghi:0,
+        lcb:8000000, lcbSub:'Bậc 4/7 · hệ số 1.33', pc:1100000, pcSub:'Trách nhiệm tổ trưởng + cơm',
+        kpi:1400000, kpiSub:'KPI 91/100', bhxh:840000, phat:0,
+        ktSub:'BHXH/YT/TN 10,5% · không biên bản phạt', tl:9660000,
+        badges:'<span class="badge badge-moss">Theo bậc + KPI</span> <span class="badge badge-steel">Tổ trưởng hoàn thiện – đóng kiện</span>',
+        note:'Đủ 26 công. Không có khấu trừ phạt trong kỳ.' },
+      'CN-019': { init:'LB', ten:'Lê Văn Bình', bp:'Uốn vòm · Thợ uốn vòm · Bậc 3/7', cong:25, ot:1, nghi:1,
+        lcb:7200000, lcbSub:'Bậc 3/7 · hệ số 1.20', pc:560000, pcSub:'Cơm + chuyên cần',
+        kpi:700000, kpiSub:'KPI 84/100', bhxh:756000, phat:0,
+        ktSub:'BHXH/YT/TN 10,5% · không biên bản phạt', tl:7704000,
+        badges:'<span class="badge badge-moss">Theo bậc + KPI</span> <span class="badge status-warning">1 lần ngoài vùng GPS</span>',
+        note:'Có 1 lần chấm công ngoài vùng (~320m) — đã ghi nhận, chờ tổ trưởng xác nhận.' },
+      'CN-021': { init:'NH', ten:'Nguyễn Văn Hải', bp:'Hoàn thiện · Thợ đóng kiện · Bậc 3/7', cong:24, ot:0, nghi:2,
+        lcb:7200000, lcbSub:'Bậc 3/7 · hệ số 1.20', pc:520000, pcSub:'Cơm + chuyên cần',
+        kpi:420000, kpiSub:'KPI 79/100', bhxh:456000, phat:300000,
+        ktSub:'BHXH/YT/TN 10,5% (456.000) + biên bản BB-2026-021 (300.000)', tl:7384000,
+        badges:'<span class="badge badge-moss">Theo bậc + KPI</span> <span class="badge badge-rust">Liên thông biên bản phạt</span>',
+        note:'Liên thông Biên bản BB-2026-021 (−300.000). Nguyên tắc thực lĩnh ≥ 0, phần phạt vượt được dồn kỳ sau. Lũy kế phạt còn lại: 0₫.' },
+      'NV-035': { init:'HS', ten:'Hoàng Văn Sơn', bp:'Uốn vòm · Thợ uốn vòm · Bậc 2/7', cong:26, ot:0, nghi:0,
+        lcb:6600000, lcbSub:'Bậc 2/7 · hệ số 1.10', pc:560000, pcSub:'Cơm + chuyên cần',
+        kpi:650000, kpiSub:'KPI 83/100', bhxh:693000, phat:0,
+        ktSub:'BHXH/YT/TN 10,5% · không biên bản phạt', tl:7117000,
+        badges:'<span class="badge badge-moss">Theo bậc + KPI</span> <span class="badge badge-steel">Đủ công</span>',
+        note:'Đủ 26 công. Không có khấu trừ phạt trong kỳ.' },
+      'NV-009': { init:'BL', ten:'Bùi Thị Lan', bp:'Kinh doanh dự án · NV phát triển đại lý · Bậc 4/7', cong:25, ot:0, nghi:1,
+        lcb:8000000, lcbSub:'Lương cứng theo bậc KD', pc:10000000, pcSub:'Hoa hồng 8,4M + thưởng target 1,6M',
+        kpi:1000000, kpiSub:'KPI 96/100 · đạt mức trần', bhxh:840000, phat:0,
+        ktSub:'BHXH/YT/TN 10,5% trên lương cứng', tl:18160000,
+        badges:'<span class="badge badge-orange">Lương cứng + Hoa hồng</span> <span class="badge badge-steel">Vượt target</span>',
+        note:'Hoa hồng + thưởng target gộp trong cột Phụ cấp. Số liệu doanh số lấy từ Đơn hàng bán & Báo giá.' },
+      'NV-027': { init:'LN', ten:'Lê Thị Ngọc', bp:'Văn phòng · Kế toán trưởng · Bậc 6/7', cong:26, ot:0, nghi:0,
+        lcb:9800000, lcbSub:'Bậc 6/7 · hệ số 1.63', pc:1680000, pcSub:'Lương theo thời gian + trách nhiệm + cơm',
+        kpi:1300000, kpiSub:'KPI 90/100', bhxh:1029000, phat:0,
+        ktSub:'BHXH/YT/TN 10,5% · không biên bản phạt', tl:11751000,
+        badges:'<span class="badge badge-steel">Theo bậc + thời gian</span> <span class="badge badge-steel">Kế toán trưởng</span>',
+        note:'Khối văn phòng tính lương theo bậc + thời gian (công chuẩn 26).' },
+    };
+
+    const payRow = (lbl, sub, amt, cls) =>
+      `<div class="pay-row"><span class="lbl">${lbl}${sub ? `<span class="sub">${sub}</span>` : ''}</span><span class="amt ${cls||''}">${amt}</span></div>`;
+
+    function srcRows(e){
+      const isKD = /Kinh doanh/.test(e.bp);
+      const items = isKD ? [
+        ['file-text','prod','Doanh số tháng', e.pcSub, 'link','03-don-hang.html','Đơn hàng bán'],
+        ['target','qa','KPI cá nhân', e.kpiSub, 'link','27-bac-luong-kpi.html','Bậc lương & KPI'],
+        ['map-pin','time','Chuyên cần', 'Công '+e.cong+'/26', 'gps','','Chấm công GPS'],
+        ['file-check','disc','Chấp hành', e.phat>0?'Có biên bản phạt':'0 biên bản', 'link','28-phieu-loi-bien-ban.html','Biên bản'],
+      ] : [
+        ['qr-code','prod','Năng suất (KPI)', e.kpiSub, 'link','06-lsx-phieu-cong-nghe.html','LSX / QR'],
+        ['shield-check','qa','Chất lượng', 'Đạt chuẩn KCS', 'link','12-kcs.html','QC'],
+        ['map-pin','time','Chuyên cần', 'Công '+e.cong+'/26 · '+e.ot+' ngày OT', 'gps','','Chấm công GPS'],
+        ['file-check','disc','Chấp hành', e.phat>0?('Biên bản −'+fmt(e.phat)+'₫'):'0 biên bản', 'link','28-phieu-loi-bien-ban.html','Biên bản'],
+      ];
+      return items.map(([ic,kind,t,v,type,target,from])=>{
+        const inner = `<span class="src-ic ${kind}"><i data-lucide="${ic}" style="width:15px;height:15px"></i></span><div style="min-width:0;flex:1"><div class="src-t">${t}</div><div class="src-v">${v}</div></div><div class="src-from">← ${from} <i data-lucide="chevron-right" style="width:13px;height:13px;vertical-align:-2px"></i></div>`;
+        return type==='link'
+          ? `<a class="src-row" href="${target}">${inner}</a>`
+          : `<button class="src-row" data-gps="1">${inner}</button>`;
+      }).join('');
+    }
+
+    const body = document.getElementById('pay-body');
+    const drawer = document.getElementById('pay-drawer');
+    const overlay = document.getElementById('pay-overlay');
+    function openDrawer(){ drawer.classList.add('open'); overlay.classList.add('open'); drawer.setAttribute('aria-hidden','false'); }
+    function closeDrawer(){ drawer.classList.remove('open'); overlay.classList.remove('open'); drawer.setAttribute('aria-hidden','true'); document.querySelectorAll('.tbl tbody tr[data-emp]').forEach(r=>r.classList.remove('row-selected')); }
+
+    function render(ma){
+      const e = EMP[ma]; if(!e || !body) return;
+      const kt = e.bhxh + e.phat;
+      body.innerHTML = `
+        <div class="pf-head mb-3">
+          <div class="pf-avatar">${e.init}</div>
+          <div style="min-width:0">
+            <div class="t-h4">${e.ten}</div>
+            <div class="t-caption">${ma} · ${e.bp}</div>
+            <div class="mt-1">${e.badges}</div>
+          </div>
+        </div>
+
+        <div class="t-micro-u mb-1">Chấm công tháng 6/2026</div>
+        <div class="pf-info-row"><span class="k">Ngày công</span><span class="v">${e.cong} / 26 công</span></div>
+        <div class="pf-info-row"><span class="k">Tăng ca · Nghỉ phép</span><span class="v">${e.ot} ngày · ${e.nghi} ngày</span></div>
+        <div class="pf-info-row"><span class="k">Nguồn chấm công</span><span class="v">GPS geofence 150m</span></div>
+
+        <hr class="hr-soft">
+        <div class="t-micro-u mb-1">Chi tiết các thành phần</div>
+        ${payRow('Lương cơ bản (bậc)', e.lcbSub, '+'+fmt(e.lcb)+'₫')}
+        ${payRow('Phụ cấp', e.pcSub, '+'+fmt(e.pc)+'₫')}
+        ${payRow('Thưởng KPI', e.kpiSub, '+'+fmt(e.kpi)+'₫', 'text-success')}
+        ${payRow('Khấu trừ', e.ktSub, '−'+fmt(kt)+'₫', 'text-danger')}
+        <div class="pay-row total"><span class="lbl"><b>Thực lĩnh</b></span><span class="amt">${fmt(e.tl)}₫</span></div>
+
+        <div class="t-caption mt-2" style="color:var(--rust-deep);line-height:1.5">
+          <i data-lucide="info" style="width:12px;height:12px;vertical-align:-1px"></i> ${e.note}
+        </div>
+
+        <hr class="hr-soft">
+        <div class="t-micro-u mb-1">Nguồn dữ liệu (tự động)</div>
+        <div class="t-caption mb-2">Bấm vào từng nguồn để mở phân hệ tương ứng.</div>
+        ${srcRows(e)}
+
+        <hr class="hr-soft">
+        <div class="flex" style="gap:8px">
+          <button class="btn btn-secondary btn-sm" style="flex:1" data-go-cong><i data-lucide="calendar-days" style="width:13px;height:13px"></i> Xem bảng công GPS</button>
+          <button class="btn btn-primary btn-sm" style="flex:1"><i data-lucide="download" style="width:13px;height:13px"></i> Tải phiếu lương</button>
+        </div>`;
+      if(window.lucide) window.lucide.createIcons();
+      const goCong = body.querySelector('[data-go-cong]');
+      if(goCong) goCong.addEventListener('click', ()=>{ closeDrawer(); const t=document.querySelector('[data-tab="tab-cong"]'); if(t) t.click(); });
+      body.querySelectorAll('[data-gps]').forEach(b=> b.addEventListener('click', ()=>{ closeDrawer(); const t=document.querySelector('[data-tab="tab-gps"]'); if(t) t.click(); }));
+      drawer.scrollTop = 0;
+    }
+
+    document.querySelectorAll('.tbl tbody tr[data-emp]').forEach(tr=>{
+      tr.addEventListener('click', (ev)=>{
+        if(ev.target.closest('button, a, input')) return;
+        document.querySelectorAll('.tbl tbody tr[data-emp]').forEach(r=>r.classList.remove('row-selected'));
+        tr.classList.add('row-selected');
+        render(tr.dataset.emp);
+        openDrawer();
+      });
+    });
+    overlay.addEventListener('click', closeDrawer);
+    document.getElementById('pay-close').addEventListener('click', closeDrawer);
+    document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closeDrawer(); });
+  });
+</script>
+</body>
+</html>

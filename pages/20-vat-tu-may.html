@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vật tư – linh kiện máy — ERP NHÔM OWIN</title>
+  <link rel="stylesheet" href="../assets/css/style.css" />
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+  <style>
+    .lnk { color: var(--rust); border-bottom: 1px solid rgba(197,64,10,.35); font-family: var(--ff-mono); font-size: 11.5px; cursor: pointer; }
+    .lnk:hover { color: var(--rust-deep); border-bottom-color: var(--rust-deep); text-decoration: none; }
+
+    .stat-strip { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 10px; margin-bottom: 12px; }
+    @media (max-width: 860px) { .stat-strip { grid-template-columns: repeat(2, minmax(0,1fr)); } }
+    .stat-strip .s { background: var(--canvas); border: 1px solid var(--rule-soft); border-radius: var(--r-4); padding: 10px 14px; min-height: 64px; display: flex; flex-direction: column; justify-content: center; }
+    .stat-strip .s .l { font-family: var(--ff-mono); font-size: 9px; letter-spacing: .14em; text-transform: uppercase; color: var(--ash); }
+    .stat-strip .s .v { font-size: 22px; font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; line-height: 1.1; margin-top: 3px; }
+    .stat-strip .s .v small { font-size: 11px; color: var(--ash); font-weight: 400; }
+    .stat-strip .s .v.bad { color: var(--signal); }
+
+    .km-toolbar { background: var(--canvas); border: 1px solid var(--rule-soft); border-radius: var(--r-5); padding: 10px 12px; margin-bottom: 10px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    .km-toolbar .search-wrap { flex: 1; min-width: 220px; display: flex; align-items: center; background: var(--paper-2); border-radius: var(--r-3); padding: 0 12px; height: 36px; }
+    .km-toolbar .search-wrap i { color: var(--ash-2); flex-shrink: 0; margin-right: 6px; }
+    .km-toolbar .search-wrap input { flex: 1; background: transparent; border: 0; outline: none; font-size: 13px; color: var(--ink); }
+
+    .seg-tabs { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 10px; }
+    .seg-tabs .seg { padding: 8px 14px; background: transparent; border: 1px solid transparent; color: var(--ash); font-size: 13px; font-weight: 500; border-radius: var(--r-3); cursor: pointer; display: inline-flex; align-items: center; gap: 7px; }
+    .seg-tabs .seg:hover { color: var(--ink); }
+    .seg-tabs .seg .count { font-family: var(--ff-mono); font-size: 10px; padding: 1px 6px; background: var(--paper-2); border-radius: 2px; }
+    .seg-tabs .seg.active { background: var(--ink); color: var(--paper); }
+    .seg-tabs .seg.active .count { background: rgba(245,241,232,.15); color: var(--paper); }
+
+    #vtTbl tbody td { font-size: 13px; white-space: nowrap; }
+    #vtTbl tbody tr { height: 44px; cursor: pointer; }
+    #vtTbl tbody td.nm { white-space: normal; min-width: 180px; }
+    .cell-main { font-weight: 600; color: var(--ink); }
+    .cell-mini { font-size: 11px; color: var(--ash); margin-top: 2px; white-space: normal; }
+    .warn-bad { color: #8a1f1f; font-weight: 600; font-size: 12px; }
+    .warn-good { color: #1f6b3a; font-weight: 600; font-size: 12px; }
+    .warn-none { color: var(--ash-3); }
+    .row-act { width: 30px; height: 30px; border: 1px solid var(--rule); background: var(--canvas); border-radius: var(--r-2); cursor: pointer; color: var(--ash); display: inline-flex; align-items: center; justify-content: center; }
+    .row-act:hover { border-color: var(--ink); color: var(--ink); }
+    .may-chips { display: flex; gap: 3px; flex-wrap: wrap; }
+
+    .kx-drawer { position: fixed; inset: 0; z-index: 100; pointer-events: none; }
+    .kx-drawer .ov { position: absolute; inset: 0; background: rgba(20,19,15,.42); opacity: 0; transition: opacity 240ms ease; }
+    .kx-drawer .panel { position: absolute; right: 0; top: 0; bottom: 0; width: 100%; max-width: 760px; background: var(--paper); border-left: 1px solid var(--rule); transform: translateX(100%); transition: transform 280ms cubic-bezier(.2,.8,.2,1); overflow-y: auto; display: flex; flex-direction: column; box-shadow: -16px 0 48px rgba(20,19,15,.15); }
+    .kx-drawer.is-open { pointer-events: auto; }
+    .kx-drawer.is-open .ov { opacity: 1; }
+    .kx-drawer.is-open .panel { transform: translateX(0); }
+
+    .dr-hero { padding: 18px 22px 20px; background: #14130f; color: #f5f1e8; flex-shrink: 0; position: relative; }
+    .dr-hero::before { content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 3px; background: #c5400a; }
+    .dr-hero .top-bar { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+    .dr-hero .tag-row { display: inline-flex; align-items: center; gap: 8px; font-family: var(--ff-mono); font-size: 10px; font-weight: 500; letter-spacing: .16em; text-transform: uppercase; color: rgba(245,241,232,.55); }
+    .dr-hero .stage-chip { padding: 3px 9px; background: rgba(245,241,232,.1); color: #e85a2a; border-radius: 2px; border: 1px solid rgba(232,90,42,.3); font-weight: 600; }
+    .dr-hero .nav-btn { background: rgba(245,241,232,.08); border: 1px solid rgba(245,241,232,.16); color: #f5f1e8; width: 30px; height: 30px; border-radius: var(--r-2); display: inline-flex; align-items: center; justify-content: center; cursor: pointer; }
+    .dr-hero .nav-btn:hover { background: rgba(245,241,232,.16); }
+    .dr-hero h2 { font-size: 24px; font-weight: 500; letter-spacing: -.015em; line-height: 1.1; margin-top: 8px; }
+    .dr-hero .sub { font-family: var(--ff-mono); font-size: 12px; color: rgba(245,241,232,.6); margin-top: 5px; }
+    .dr-hero .meta-line { margin-top: 10px; font-size: 12px; color: rgba(245,241,232,.6); display: flex; flex-wrap: wrap; gap: 6px; }
+    .dr-hero .meta-line b { color: #f5f1e8; font-weight: 500; }
+    .dr-hero .meta-line .sep { opacity: .35; }
+    .dr-hero .actions { margin-top: 14px; display: flex; gap: 6px; flex-wrap: wrap; }
+    .dr-hero .actions button { min-height: 36px; padding: 8px 13px; background: rgba(245,241,232,.08); border: 1px solid rgba(245,241,232,.16); color: #f5f1e8; border-radius: var(--r-2); font-size: 12.5px; font-weight: 500; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+    .dr-hero .actions button:hover { background: rgba(245,241,232,.16); }
+    .dr-hero .actions .primary { background: #c5400a; border-color: #c5400a; }
+    .dr-hero .actions .primary:hover { background: #8a2d07; }
+
+    .dr-body { padding: 16px 20px 22px; display: flex; flex-direction: column; gap: 12px; }
+    .sec-card { background: var(--canvas); border: 1px solid var(--rule-soft); border-radius: var(--r-5); padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+    .sec-h { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+    .sec-h .t { font-size: 13px; font-weight: 600; color: var(--ink); display: flex; align-items: center; gap: 8px; }
+    .sec-h .x { font-family: var(--ff-mono); font-size: 9.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--ash); padding: 2px 7px; background: var(--paper-2); border-radius: 2px; }
+    .config-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 20px; }
+    @media (max-width: 640px) { .config-grid { grid-template-columns: 1fr; } }
+    .cfg-row { display: flex; flex-direction: column; gap: 3px; padding: 7px 0; border-bottom: 1px solid var(--rule-hair); }
+    .cfg-row .k { font-family: var(--ff-mono); font-size: 9px; letter-spacing: .14em; text-transform: uppercase; color: var(--ash); }
+    .cfg-row .v { color: var(--ink); font-weight: 600; font-size: 13px; }
+    .cfg-row .v.accent { color: var(--rust); }
+    .cfg-row .v.bad { color: #8a1f1f; }
+    .cfg-row .v.good { color: #1f6b3a; }
+    .cfg-row.wide { grid-column: 1 / -1; }
+    .cfg-row input.input, .cfg-row select.input { font-size: 12.5px; padding: 5px 8px; }
+    .p-tbl { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+    .p-tbl th { font-family: var(--ff-mono); font-size: 9px; letter-spacing: .1em; text-transform: uppercase; color: var(--ash); text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--rule); }
+    .p-tbl td { padding: 7px 8px; border-bottom: 1px solid var(--rule-hair); }
+    .p-tbl .r { text-align: right; font-variant-numeric: tabular-nums; }
+    .act-bar { display: flex; gap: 8px; flex-wrap: wrap; }
+    .act-bar .btn { min-height: 36px; }
+    .info-note { font-size: 11.5px; color: var(--ash); line-height: 1.5; background: var(--paper-2); border-radius: var(--r-3); padding: 9px 11px; display: flex; gap: 8px; }
+    .info-note i { color: var(--rust); flex-shrink: 0; margin-top: 1px; }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    @media (max-width: 540px) { .form-grid { grid-template-columns: 1fr; } }
+    .form-grid .full { grid-column: 1 / -1; }
+    .fld { display: flex; flex-direction: column; gap: 5px; }
+    .fld label { font-family: var(--ff-mono); font-size: 9.5px; font-weight: 500; letter-spacing: .12em; text-transform: uppercase; color: var(--ash); }
+    .erp-modal-overlay:has(.mm-wide) .erp-modal { max-width: 720px; }
+  </style>
+</head>
+<body>
+
+<div id="app-shell" data-active="vat-tu-may" data-title="Vật tư – linh kiện máy" data-crumb="<b>Kỹ thuật máy</b> · Vật tư – linh kiện">
+
+  <div class="page-header">
+    <div>
+      <h1>Linh kiện thay thế cho máy</h1>
+      <p>Danh mục linh kiện đặc thù xưởng cửa nhôm — tồn kho, tuổi thọ trung bình, dự kiến thay tiếp và đề nghị mua bù tồn.</p>
+    </div>
+    <div class="actions">
+      <button class="btn btn-primary" id="btnAdd" data-no-interact="true"><i data-lucide="plus" style="width:14px;height:14px"></i> Thêm linh kiện</button>
+    </div>
+  </div>
+
+  <div class="stat-strip">
+    <div class="s"><span class="l">Mã linh kiện</span><span class="v" id="stTotal">0</span></div>
+    <div class="s"><span class="l">Dưới định mức</span><span class="v bad" id="stLow">0</span></div>
+    <div class="s"><span class="l">Giá trị tồn kho</span><span class="v" id="stValue">0<small>₫</small></span></div>
+    <div class="s"><span class="l">Sắp đến hạn thay</span><span class="v" id="stDue">0<small> mã</small></span></div>
+  </div>
+
+  <div class="km-toolbar">
+    <div class="search-wrap"><i data-lucide="search" style="width:14px;height:14px"></i><input id="searchInput" placeholder="Tìm theo mã, tên linh kiện, quy cách, máy..." /></div>
+    <button class="filter-pill"><i data-lucide="cog" style="width:12px;height:12px"></i> Máy <i data-lucide="chevron-down" style="width:11px;height:11px"></i></button>
+    <button class="filter-pill"><i data-lucide="truck" style="width:12px;height:12px"></i> Nhà cung cấp <i data-lucide="chevron-down" style="width:11px;height:11px"></i></button>
+  </div>
+
+  <div class="seg-tabs" id="segTabs">
+    <button class="seg active" data-f="all">Tất cả <span class="count" data-c="all">0</span></button>
+    <button class="seg" data-f="low">Dưới định mức <span class="count" data-c="low">0</span></button>
+    <button class="seg" data-f="due">Sắp đến hạn thay <span class="count" data-c="due">0</span></button>
+    <button class="seg" data-f="ok">Đủ dùng <span class="count" data-c="ok">0</span></button>
+  </div>
+
+  <div class="table-wrap">
+    <table class="tbl" id="vtTbl">
+      <thead>
+        <tr>
+          <th>Mã</th><th>Tên linh kiện</th><th>Quy cách</th><th>Máy dùng được</th><th>ĐVT</th>
+          <th class="num">Tồn</th><th class="num">ĐM tối thiểu</th><th class="num">Tuổi thọ TB</th>
+          <th>Lần thay gần nhất</th><th>Dự kiến thay tiếp</th><th class="num">Đơn giá</th><th>NCC</th>
+          <th>Cảnh báo</th><th class="center">Thao tác</th>
+        </tr>
+      </thead>
+      <tbody id="vtBody"></tbody>
+    </table>
+  </div>
+
+</div>
+
+<div class="kx-drawer" id="drawer">
+  <div class="ov" id="drawerOv"></div>
+  <div class="panel" id="drawerPanel"></div>
+</div>
+
+<script src="../assets/js/layout.js"></script>
+<script src="../assets/js/pricing-engine.js"></script>
+<script src="../assets/js/quote-data.js"></script>
+<script src="../assets/js/loss-data.js"></script>
+<script src="../assets/js/loss-ui.js"></script>
+<script src="../assets/js/purchase-data.js"></script>
+<script>
+  const $ = (s) => document.querySelector(s);
+  const fmt = (n) => Math.round(Number(n) || 0).toLocaleString('vi-VN');
+  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+  const TBM = (function () {
+    const KEY = 'erp_tbm_nhomowin_v1';
+    function read() { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { return {}; } }
+    function write(d) { try { localStorage.setItem(KEY, JSON.stringify(d)); } catch (e) {} }
+    function list(col) { return read()[col] || []; }
+    function seed(col, arr) {
+      const d = read();
+      if (!d['_s_' + col]) { d[col] = (arr || []).concat(d[col] || []); d['_s_' + col] = 1; write(d); }
+      return list(col);
+    }
+    function add(col, rec) { const d = read(); d[col] = d[col] || []; d[col].unshift(rec); write(d); return rec; }
+    function put(col, id, patch) {
+      const d = read(); d[col] = d[col] || [];
+      const i = d[col].findIndex(x => x.id === id);
+      if (i >= 0) { d[col][i] = Object.assign({}, d[col][i], patch); write(d); return d[col][i]; }
+      return null;
+    }
+    return { list, seed, add, put };
+  })();
+
+  const NCC_NAME = { hungvuong: 'Cơ khí WEIKE Việt Nam', vuhoangminh: 'Hoá chất Xây dựng Việt', mucvn: 'Phụ kiện Kinlong VN' };
+
+  /* ============================================================
+     Danh mục linh kiện thay thế — xưởng cửa nhôm Owin
+     ============================================================ */
+  const SEED_VTM = [
+    { id: 'VTM-001', name: 'Lưỡi cắt hợp kim Ø500 84T', spec: 'Ø500 × 84 răng · lỗ trục Ø30', mays: ['CAT-01', 'CAT-02'], unit: 'cái', stock: 1, min: 4, lifeH: 320, last: '12/01/2026', next: '20/05/2026', price: 2850000, ncc: 'hungvuong',
+      hist: [{ d: '12/01/2026', may: 'CAT-01', qty: 2, ref: 'BT-0108', p: 'bt' }], warn: { t: 'bad', text: 'Dưới định mức · sắp hết' } },
+    { id: 'VTM-002', name: 'Lưỡi cắt hợp kim Ø500 120T', spec: 'Ø500 × 120 răng · lỗ trục Ø30', mays: ['CAT-01', 'CAT-02'], unit: 'cái', stock: 3, min: 2, lifeH: 280, last: '18/02/2026', next: '05/06/2026', price: 3450000, ncc: 'hungvuong',
+      hist: [{ d: '18/02/2026', may: 'CAT-01', qty: 1, ref: 'BT-0114', p: 'bt' }], warn: null },
+    { id: 'VTM-003', name: 'Dao phay ngón Ø6', spec: 'HSS-Co Ø6 × 50 mm · 4 me', mays: ['CNC-03', 'CNC-21', 'CNC-22'], unit: 'cái', stock: 2, min: 8, lifeH: 120, last: '18/05/2026', next: '12/06/2026', price: 285000, ncc: 'hungvuong',
+      hist: [{ d: '18/05/2026', may: 'CNC-22', qty: 4, ref: 'BT-0122', p: 'bt' }], warn: { t: 'bad', text: 'Dưới định mức · sắp hết' } },
+    { id: 'VTM-004', name: 'Dao phay ngón Ø10', spec: 'HSS-Co Ø10 × 75 mm · 4 me', mays: ['CNC-03', 'CNC-21', 'CNC-22'], unit: 'cái', stock: 12, min: 6, lifeH: 150, last: '15/03/2026', next: '28/06/2026', price: 420000, ncc: 'hungvuong',
+      hist: [{ d: '15/03/2026', may: 'CNC-03', qty: 3, ref: 'BT-0117', p: 'bt' }], warn: { t: 'good', text: 'Đủ dùng 6 tháng' } },
+    { id: 'VTM-005', name: 'Mũi khoan tâm Ø3,2', spec: 'HSS Ø3,2 × 60 mm', mays: ['CNC-03'], unit: 'cái', stock: 9, min: 4, lifeH: 90, last: '15/03/2026', next: '02/06/2026', price: 95000, ncc: 'hungvuong',
+      hist: [{ d: '15/03/2026', may: 'CNC-03', qty: 2, ref: 'BT-0117', p: 'bt' }], warn: null },
+    { id: 'VTM-006', name: 'Đầu ép góc 14×14', spec: 'Thép hợp kim SKD11 · cặp 2 đầu', mays: ['EP-02'], unit: 'bộ', stock: 1, min: 2, lifeH: 1800, last: '10/04/2026', next: '20/10/2026', price: 1650000, ncc: 'hungvuong',
+      hist: [{ d: '10/04/2026', may: 'EP-02', qty: 1, ref: 'BT-0118', p: 'bt' }], warn: { t: 'bad', text: 'Dưới định mức · sắp hết' } },
+    { id: 'VTM-007', name: 'Dưỡng ép góc 40–180', spec: 'Thép tôi · bộ 6 cỡ khổ nhôm', mays: ['EP-02'], unit: 'bộ', stock: 2, min: 1, lifeH: 2400, last: '14/04/2026', next: '10/02/2027', price: 980000, ncc: 'hungvuong',
+      hist: [{ d: '14/04/2026', may: 'EP-02', qty: 1, ref: 'SC-0039', p: 'sc' }], warn: null },
+    { id: 'VTM-008', name: 'Ray dẫn hướng HGR20-1200', spec: 'Ray tuyến tính 20 mm · dài 1.200 mm', mays: ['CAT-01', 'CAT-02', 'CNC-03'], unit: 'thanh', stock: 2, min: 1, lifeH: 6000, last: '15/03/2026', next: '15/03/2028', price: 1850000, ncc: 'hungvuong',
+      hist: [{ d: '15/03/2026', may: 'CNC-03', qty: 1, ref: 'BT-0117', p: 'bt' }], warn: null },
+    { id: 'VTM-009', name: 'Vòng bi trục chính 6205-2RS', spec: 'SKF 25 × 52 × 15 mm', mays: ['CNC-03', 'CNC-21', 'CNC-22'], unit: 'cái', stock: 14, min: 6, lifeH: 2000, last: '18/02/2026', next: '18/02/2027', price: 165000, ncc: 'hungvuong',
+      hist: [{ d: '18/02/2026', may: 'CAT-01', qty: 2, ref: 'BT-0114', p: 'bt' }], warn: { t: 'good', text: 'Đủ dùng 8 tháng' } },
+    { id: 'VTM-010', name: 'Dây curoa răng HTD 8M-1200', spec: '8M × 1.200 × bản 20 mm', mays: ['CAT-01', 'CAT-02', 'EP-02'], unit: 'sợi', stock: 1, min: 3, lifeH: 2500, last: '20/11/2025', next: '25/05/2026', price: 320000, ncc: 'hungvuong',
+      hist: [{ d: '20/11/2025', may: 'CAT-02', qty: 1, ref: 'BT-0096', p: 'bt' }], warn: { t: 'bad', text: 'Dưới định mức · sắp hết' } },
+    { id: 'VTM-011', name: 'Van khí nén 5/2 SY5120', spec: 'SMC 5/2 · cuộn 24 VDC', mays: ['CNC-21', 'CNC-22', 'DOT-01'], unit: 'cái', stock: 5, min: 3, lifeH: 1500, last: '28/03/2026', next: '28/09/2026', price: 450000, ncc: 'hungvuong',
+      hist: [{ d: '28/03/2026', may: 'CNC-21', qty: 1, ref: 'BT-0116', p: 'bt' }, { d: '26/02/2026', may: 'DOT-01', qty: 1, ref: 'SC-0036', p: 'sc' }], warn: null },
+    { id: 'VTM-012', name: 'Lọc khí nén AF30', spec: 'SMC ren 1/2" · lõi 5 µm', mays: ['KHI-01', 'DOT-01'], unit: 'cái', stock: 6, min: 4, lifeH: 1000, last: '08/04/2026', next: '08/08/2026', price: 380000, ncc: 'hungvuong',
+      hist: [{ d: '08/04/2026', may: 'KHI-01', qty: 2, ref: 'BT-0111', p: 'bt' }, { d: '20/02/2026', may: 'DOT-01', qty: 1, ref: 'BT-0112', p: 'bt' }], warn: null },
+    { id: 'VTM-013', name: 'Xy-lanh khí nén SC63×100', spec: 'Airtac SC63 × hành trình 100 mm', mays: ['EP-02', 'DOT-01'], unit: 'cái', stock: 3, min: 2, lifeH: 2000, last: '14/04/2026', next: '14/02/2027', price: 620000, ncc: 'hungvuong',
+      hist: [{ d: '14/04/2026', may: 'EP-02', qty: 1, ref: 'SC-0039', p: 'sc' }, { d: '10/04/2026', may: 'EP-02', qty: 1, ref: 'BT-0118', p: 'bt' }], warn: null },
+    { id: 'VTM-014', name: 'Cảm biến quang E3F-DS30C4', spec: 'Omron NPN · khoảng phát hiện 30 cm', mays: ['CAT-01', 'CAT-02', 'LAP-01'], unit: 'cái', stock: 4, min: 3, lifeH: 3000, last: '22/04/2026', next: '22/04/2027', price: 240000, ncc: 'hungvuong',
+      hist: [{ d: '22/04/2026', may: 'CAT-01', qty: 1, ref: 'SC-0040', p: 'sc' }, { d: '18/02/2026', may: 'CAT-01', qty: 1, ref: 'BT-0114', p: 'bt' }], warn: null },
+    { id: 'VTM-015', name: 'Bơm thuỷ lực bánh răng CBN-E316', spec: '16 cc/vòng · áp làm việc 16 MPa', mays: ['UON-02'], unit: 'cái', stock: 0, min: 1, lifeH: 12000, last: 'Chưa thay lần nào', next: '20/05/2026', price: 4250000, ncc: 'hungvuong',
+      hist: [], warn: { t: 'bad', text: 'Hết tồn · UON-02 đang dừng chờ' } },
+    { id: 'VTM-016', name: 'Con lăn uốn R600', spec: 'Thép tôi HRC58 · rãnh hệ 120', mays: ['UON-01', 'UON-02'], unit: 'bộ', stock: 1, min: 1, lifeH: 4000, last: '08/05/2026', next: '20/12/2026', price: 5800000, ncc: 'hungvuong',
+      hist: [{ d: '08/05/2026', may: 'UON-01', qty: 1, ref: 'SC-0041', p: 'sc' }, { d: '25/03/2026', may: 'UON-01', qty: 1, ref: 'BT-0120', p: 'bt' }], warn: null },
+    { id: 'VTM-017', name: 'Con lăn uốn R900', spec: 'Thép tôi HRC58 · rãnh hệ 120/180', mays: ['UON-01', 'UON-02'], unit: 'bộ', stock: 2, min: 1, lifeH: 4500, last: '14/10/2025', next: '30/08/2026', price: 5800000, ncc: 'hungvuong',
+      hist: [{ d: '14/10/2025', may: 'UON-02', qty: 1, ref: 'BT-0089', p: 'bt' }], warn: null },
+    { id: 'VTM-018', name: 'Con lăn uốn R1200', spec: 'Thép tôi HRC58 · rãnh hệ 180', mays: ['UON-01', 'UON-02'], unit: 'bộ', stock: 2, min: 1, lifeH: 5000, last: '02/09/2025', next: '15/09/2026', price: 5800000, ncc: 'hungvuong',
+      hist: [{ d: '02/09/2025', may: 'UON-01', qty: 1, ref: 'BT-0082', p: 'bt' }], warn: { t: 'good', text: 'Đủ dùng 12 tháng' } },
+    { id: 'VTM-019', name: 'Đá mài Ø150', spec: 'Nhôm oxit Ø150 × 20 mm', mays: ['KC-01', 'DOT-01'], unit: 'viên', stock: 3, min: 6, lifeH: 60, last: '12/03/2026', next: '28/05/2026', price: 85000, ncc: 'hungvuong',
+      hist: [{ d: '12/03/2026', may: 'KC-01', qty: 4, ref: 'SC-0037', p: 'sc' }, { d: '20/02/2026', may: 'DOT-01', qty: 4, ref: 'BT-0112', p: 'bt' }], warn: { t: 'bad', text: 'Dưới định mức · sắp hết' } },
+    { id: 'VTM-020', name: 'Dầu thuỷ lực ISO VG46 (can 18L)', spec: 'Can 18 L · cấp ISO VG46', mays: ['UON-01', 'UON-02'], unit: 'can', stock: 5, min: 3, lifeH: 2000, last: '08/05/2026', next: '08/11/2026', price: 1150000, ncc: 'vuhoangminh',
+      hist: [{ d: '08/05/2026', may: 'UON-01', qty: 1, ref: 'SC-0041', p: 'sc' }, { d: '25/03/2026', may: 'UON-01', qty: 2, ref: 'BT-0120', p: 'bt' }, { d: '12/02/2026', may: 'UON-02', qty: 2, ref: 'BT-0115', p: 'bt' }], warn: null },
+    { id: 'VTM-021', name: 'Mỡ bôi trơn EP2 (hộp 1kg)', spec: 'Hộp 1 kg · mỡ EP2 chịu tải', mays: ['CAT-01', 'CAT-02', 'CNC-03', 'CNC-21', 'CNC-22', 'EP-02', 'LAP-01'], unit: 'hộp', stock: 14, min: 6, lifeH: 250, last: '02/04/2026', next: '02/06/2026', price: 180000, ncc: 'vuhoangminh',
+      hist: [{ d: '02/04/2026', may: 'CAT-02', qty: 1, ref: 'BT-0119', p: 'bt' }, { d: '28/03/2026', may: 'CNC-21', qty: 1, ref: 'BT-0116', p: 'bt' }, { d: '06/03/2026', may: 'LAP-01', qty: 1, ref: 'BT-0113', p: 'bt' }], warn: null },
+    { id: 'VTM-022', name: 'Bộ lọc dầu thuỷ lực 10µm', spec: 'Lõi lọc 10 µm · ren 3/4"', mays: ['UON-01', 'UON-02'], unit: 'cái', stock: 2, min: 4, lifeH: 1000, last: '25/03/2026', next: '25/09/2026', price: 520000, ncc: 'hungvuong',
+      hist: [{ d: '25/03/2026', may: 'UON-01', qty: 1, ref: 'BT-0120', p: 'bt' }, { d: '12/02/2026', may: 'UON-02', qty: 2, ref: 'BT-0115', p: 'bt' }], warn: { t: 'bad', text: 'Dưới định mức · sắp hết' } },
+    { id: 'VTM-023', name: 'Contactor LC1D25', spec: 'Schneider 25 A · cuộn 220 VAC', mays: ['CAT-01', 'CNC-21', 'CNC-22'], unit: 'cái', stock: 4, min: 2, lifeH: 8000, last: '16/05/2026', next: '16/05/2028', price: 690000, ncc: 'hungvuong',
+      hist: [{ d: '16/05/2026', may: 'CNC-22', qty: 1, ref: 'SC-0042', p: 'sc' }], warn: null },
+    { id: 'VTM-024', name: 'Biến tần 2,2 kW Delta VFD022', spec: 'VFD022E43A · 380 V · 2,2 kW', mays: ['CNC-21', 'CNC-22'], unit: 'cái', stock: 1, min: 1, lifeH: 20000, last: '16/05/2026', next: '16/05/2030', price: 4900000, ncc: 'hungvuong',
+      hist: [{ d: '16/05/2026', may: 'CNC-22', qty: 1, ref: 'SC-0042', p: 'sc' }], warn: null }
+  ];
+
+  const LIST = TBM.seed('vtm', SEED_VTM);
+  let curF = 'all', curId = null, editing = false;
+
+  const isLow = (v) => (Number(v.stock) || 0) < (Number(v.min) || 0);
+  const isDue = (v) => !!(v.warn && v.warn.t === 'bad') || ['20/05/2026', '25/05/2026', '28/05/2026', '02/06/2026', '05/06/2026', '12/06/2026'].indexOf(v.next) >= 0;
+
+  /* lịch sử thay thế: seed tĩnh + bản ghi thật đã tạo ở phiếu BT/SC */
+  function histOf(v) {
+    const out = (v.hist || []).slice();
+    const seen = {}; out.forEach(h => { seen[h.ref + '|' + h.may] = 1; });
+    ['bt', 'sc'].forEach(col => {
+      TBM.list(col).forEach(r => {
+        (r.parts || []).forEach(p => {
+          if (p.code !== v.id) return;
+          const key = r.id + '|' + r.may;
+          if (seen[key]) return;
+          seen[key] = 1;
+          out.push({ d: r.endAt || r.startAt || r.planDate || r.reportAt || '', may: r.may, qty: p.qty, ref: r.id, p: col });
+        });
+      });
+    });
+    return out;
+  }
+
+  function renderStats() {
+    $('#stTotal').textContent = LIST.length;
+    $('#stLow').textContent = LIST.filter(isLow).length;
+    $('#stValue').innerHTML = fmt(LIST.reduce((s, v) => s + (Number(v.stock) || 0) * (Number(v.price) || 0), 0)) + '<small> ₫</small>';
+    $('#stDue').innerHTML = LIST.filter(isDue).length + '<small> mã</small>';
+    document.querySelectorAll('[data-c]').forEach(el => {
+      const k = el.dataset.c;
+      el.textContent = k === 'all' ? LIST.length : k === 'low' ? LIST.filter(isLow).length : k === 'due' ? LIST.filter(isDue).length : LIST.filter(v => !isLow(v) && !isDue(v)).length;
+    });
+  }
+  function warnCell(v) {
+    if (!v.warn || !v.warn.text) return '<span class="warn-none">—</span>';
+    return `<span class="${v.warn.t === 'bad' ? 'warn-bad' : 'warn-good'}">${esc(v.warn.text)}</span>`;
+  }
+  function mayLinks(v) {
+    return `<span class="may-chips">${(v.mays || []).map(m => `<a href="17-may-moc.html?may=${encodeURIComponent(m)}" class="lnk">${esc(m)}</a>`).join(' ')}</span>`;
+  }
+  function renderTable() {
+    const q = ($('#searchInput').value || '').toLowerCase().trim();
+    const rows = LIST.filter(v => {
+      if (curF === 'low' && !isLow(v)) return false;
+      if (curF === 'due' && !isDue(v)) return false;
+      if (curF === 'ok' && (isLow(v) || isDue(v))) return false;
+      return !q || (v.id + ' ' + v.name + ' ' + v.spec + ' ' + (v.mays || []).join(' ')).toLowerCase().includes(q);
+    });
+    $('#vtBody').innerHTML = rows.map(v => `
+      <tr data-id="${esc(v.id)}">
+        <td><a href="20-vat-tu-may.html?vtm=${encodeURIComponent(v.id)}" class="lnk">${esc(v.id)}</a></td>
+        <td class="nm"><div class="cell-main" style="font-weight:500">${esc(v.name)}</div></td>
+        <td><div style="font-size:12px;color:var(--ash)">${esc(v.spec)}</div></td>
+        <td>${mayLinks(v)}</td>
+        <td>${esc(v.unit)}</td>
+        <td class="num"><b style="color:${isLow(v) ? '#8a1f1f' : 'var(--ink)'}">${fmt(v.stock)}</b></td>
+        <td class="num">${fmt(v.min)}</td>
+        <td class="num">${fmt(v.lifeH)} h</td>
+        <td><span style="font-family:var(--ff-mono);font-size:11.5px">${esc(v.last)}</span></td>
+        <td><span style="font-family:var(--ff-mono);font-size:11.5px;color:${isDue(v) ? '#8a1f1f' : 'var(--ink)'}">${esc(v.next)}</span></td>
+        <td class="num">${fmt(v.price)}</td>
+        <td><a href="21-nha-cung-cap.html?ncc=${encodeURIComponent(v.ncc)}" class="lnk">${esc(NCC_NAME[v.ncc] || v.ncc)}</a></td>
+        <td>${warnCell(v)}</td>
+        <td class="center"><button class="row-act" data-act="open"><i data-lucide="arrow-right" style="width:14px;height:14px"></i></button></td>
+      </tr>`).join('');
+    if (!rows.length) $('#vtBody').innerHTML = `<tr><td colspan="14" style="text-align:center;color:var(--ash);padding:32px">Không có linh kiện phù hợp.</td></tr>`;
+    if (window.lucide) lucide.createIcons();
+    $('#vtBody').querySelectorAll('tr[data-id]').forEach(tr => tr.addEventListener('click', (e) => {
+      const a = e.target.closest('a.lnk');
+      if (a && a.getAttribute('href').indexOf('20-vat-tu-may') < 0) return;
+      if (a) e.preventDefault();
+      openDrawer(tr.dataset.id);
+    }));
+  }
+
+  function row(k, field, val, opts) {
+    opts = opts || {};
+    if (editing && field && !opts.ro) {
+      return `<div class="cfg-row${opts.wide ? ' wide' : ''}"><span class="k">${k}</span><input class="input" data-f="${field}" data-num="${opts.num ? 1 : 0}" value="${esc(val)}" /></div>`;
+    }
+    return `<div class="cfg-row${opts.wide ? ' wide' : ''}"><span class="k">${k}</span><span class="v${opts.cls ? ' ' + opts.cls : ''}">${opts.html ? val : esc(val)}</span></div>`;
+  }
+
+  function openDrawer(id) { curId = id; editing = false; renderDrawer(); $('#drawer').classList.add('is-open'); }
+  function closeDrawer() { $('#drawer').classList.remove('is-open'); editing = false; }
+
+  function renderDrawer() {
+    const v = LIST.find(x => x.id === curId); if (!v) return;
+    const idx = LIST.findIndex(x => x.id === curId);
+    const hist = histOf(v);
+    const low = isLow(v);
+
+    $('#drawerPanel').innerHTML = `
+      <div class="dr-hero">
+        <div class="top-bar">
+          <div class="tag-row"><span class="stage-chip">${low ? 'DƯỚI ĐỊNH MỨC' : 'ĐỦ TỒN'}</span><span style="opacity:.4">·</span><span>Linh kiện thay thế</span></div>
+          <div style="display:flex;gap:4px;align-items:center">
+            <button class="nav-btn" data-nav="prev"><i data-lucide="chevron-up" style="width:14px;height:14px"></i></button>
+            <span style="font-family:var(--ff-mono);font-size:10px;color:rgba(245,241,232,.55);margin:0 4px">${idx + 1}/${LIST.length}</span>
+            <button class="nav-btn" data-nav="next"><i data-lucide="chevron-down" style="width:14px;height:14px"></i></button>
+            <button class="nav-btn" data-nav="close"><i data-lucide="x" style="width:14px;height:14px"></i></button>
+          </div>
+        </div>
+        <h2>${esc(v.name)}</h2>
+        <div class="sub">${esc(v.id)} · ${esc(v.spec)}</div>
+        <div class="meta-line">
+          <span>Tồn <b>${fmt(v.stock)} ${esc(v.unit)}</b></span><span class="sep">·</span>
+          <span>Định mức <b>${fmt(v.min)} ${esc(v.unit)}</b></span><span class="sep">·</span>
+          <span>Đơn giá <b>${fmt(v.price)} ₫</b></span><span class="sep">·</span>
+          <span>Giá trị tồn <b>${fmt((Number(v.stock) || 0) * (Number(v.price) || 0))} ₫</b></span>
+        </div>
+        <div class="actions">
+          ${editing
+            ? `<button class="primary" data-act="save" data-no-interact="true"><i data-lucide="check" style="width:13px;height:13px"></i> Lưu</button>
+               <button data-act="cancel" data-no-interact="true"><i data-lucide="x" style="width:13px;height:13px"></i> Huỷ</button>`
+            : `<button class="primary" data-act="edit" data-no-interact="true"><i data-lucide="pencil" style="width:13px;height:13px"></i> Sửa</button>
+               <button data-act="dnm" data-no-interact="true"><i data-lucide="clipboard-plus" style="width:13px;height:13px"></i> → Đề nghị mua</button>`}
+        </div>
+      </div>
+
+      <div class="dr-body">
+        <div class="sec-card">
+          <div class="sec-h"><div class="t"><i data-lucide="box" style="width:15px;height:15px"></i> Thông tin linh kiện</div><span class="x">${esc(v.id)}</span></div>
+          <div class="config-grid">
+            ${row('Tên linh kiện', 'name', v.name, { wide: true })}
+            ${row('Quy cách', 'spec', v.spec, { wide: true })}
+            ${row('Máy dùng được', '', mayLinks(v), { ro: true, html: true, wide: true })}
+            ${row('Đơn vị tính', 'unit', v.unit)}
+            ${row('Đơn giá', 'price', editing ? v.price : fmt(v.price) + ' ₫', { num: true, cls: 'accent' })}
+            ${row('Tồn kho', 'stock', v.stock, { num: true, cls: low ? 'bad' : 'good' })}
+            ${row('Định mức tối thiểu', 'min', v.min, { num: true })}
+            ${row('Nhà cung cấp', '', `<a href="21-nha-cung-cap.html?ncc=${encodeURIComponent(v.ncc)}" class="lnk">${esc(NCC_NAME[v.ncc] || v.ncc)}</a>`, { ro: true, html: true })}
+            ${row('Giá trị tồn kho', '', fmt((Number(v.stock) || 0) * (Number(v.price) || 0)) + ' ₫', { ro: true })}
+          </div>
+        </div>
+
+        <div class="sec-card">
+          <div class="sec-h"><div class="t"><i data-lucide="timer" style="width:15px;height:15px"></i> Tuổi thọ &amp; chu kỳ thay</div><span class="x">${fmt(v.lifeH)} giờ/lần</span></div>
+          <div class="config-grid">
+            ${row('Tuổi thọ trung bình', 'lifeH', editing ? v.lifeH : fmt(v.lifeH) + ' giờ chạy / lần thay', { num: true })}
+            ${row('Lần thay gần nhất', 'last', v.last)}
+            ${row('Dự kiến thay tiếp', 'next', v.next, { cls: isDue(v) ? 'bad' : 'good' })}
+            ${row('Số lần đã thay', '', hist.length + ' lần', { ro: true })}
+          </div>
+          ${v.warn && v.warn.text ? `<div class="info-note"><i data-lucide="alert-triangle" style="width:14px;height:14px"></i><span class="${v.warn.t === 'bad' ? 'warn-bad' : 'warn-good'}">${esc(v.warn.text)}</span></div>` : ''}
+        </div>
+
+        <div class="sec-card">
+          <div class="sec-h"><div class="t"><i data-lucide="history" style="width:15px;height:15px"></i> Lịch sử thay thế theo máy</div><span class="x">${hist.length} lần</span></div>
+          <table class="p-tbl">
+            <thead><tr><th>Ngày</th><th>Máy</th><th class="r">SL</th><th>Phiếu</th></tr></thead>
+            <tbody>${hist.length ? hist.map(h => `<tr>
+              <td style="font-family:var(--ff-mono);font-size:11.5px">${esc(h.d)}</td>
+              <td><a href="17-may-moc.html?may=${encodeURIComponent(h.may)}" class="lnk">${esc(h.may)}</a></td>
+              <td class="r">${String(h.qty).replace('.', ',')} ${esc(v.unit)}</td>
+              <td><a href="${h.p === 'sc' ? '19-sua-chua.html?sc=' : '18-phieu-bao-tri.html?bt='}${encodeURIComponent(h.ref)}" class="lnk">${esc(h.ref)}</a></td>
+            </tr>`).join('') : '<tr><td colspan="4" style="color:var(--ash);padding:12px 8px">Chưa có lịch sử thay thế.</td></tr>'}</tbody>
+          </table>
+        </div>
+
+        <div class="sec-card">
+          <div class="sec-h"><div class="t"><i data-lucide="send" style="width:15px;height:15px"></i> Đẩy sang Mua hàng</div></div>
+          <div class="act-bar">
+            <button class="btn btn-yellow" data-act="dnm" data-no-interact="true"><i data-lucide="clipboard-plus" style="width:14px;height:14px"></i> → Đề nghị mua ${esc(v.id)}</button>
+          </div>
+          <div class="info-note"><i data-lucide="info" style="width:14px;height:14px"></i>
+            <span>Đề nghị mua tạo ra là bản ghi thật ở <a href="13-de-xuat-mua.html" class="lnk">Đề xuất mua</a>; sau khi duyệt sẽ chuyển thành PO tại <a href="13-mua-hang.html" class="lnk">Mua hàng</a>.</span>
+          </div>
+        </div>
+      </div>`;
+    if (window.lucide) lucide.createIcons();
+
+    const P = $('#drawerPanel');
+    P.querySelectorAll('[data-nav]').forEach(b => b.addEventListener('click', () => {
+      const a = b.dataset.nav;
+      if (a === 'close') return closeDrawer();
+      let i = LIST.findIndex(x => x.id === curId);
+      i = a === 'next' ? (i + 1) % LIST.length : (i - 1 + LIST.length) % LIST.length;
+      openDrawer(LIST[i].id);
+    }));
+    P.querySelectorAll('[data-act]').forEach(b => b.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const a = b.dataset.act;
+      if (a === 'edit') { editing = true; renderDrawer(); }
+      else if (a === 'cancel') { editing = false; renderDrawer(); }
+      else if (a === 'save') saveEdits();
+      else if (a === 'dnm') makeDNM(v);
+    }));
+  }
+
+  function saveEdits() {
+    const v = LIST.find(x => x.id === curId); if (!v) return;
+    $('#drawerPanel').querySelectorAll('[data-f]').forEach(inp => {
+      const f = inp.dataset.f; if (!f) return;
+      let val = inp.value;
+      if (inp.dataset.num === '1') { const n = parseFloat(String(val).replace(/\./g, '').replace(',', '.')); val = isNaN(n) ? 0 : n; }
+      v[f] = val;
+    });
+    if (isLow(v)) v.warn = { t: 'bad', text: 'Dưới định mức · sắp hết' };
+    else if (v.warn && v.warn.t === 'bad' && /Dưới định mức/.test(v.warn.text)) v.warn = null;
+    TBM.put('vtm', v.id, v);
+    editing = false;
+    renderDrawer(); renderTable(); renderStats();
+    ERPInteract.showToast('Đã lưu linh kiện <b>' + esc(v.id) + '</b>', 'success');
+  }
+
+  function makeDNM(v) {
+    const suggest = Math.max(1, (Number(v.min) || 1) * 2 - (Number(v.stock) || 0));
+    ERPInteract.showModal({
+      title: 'Đề nghị mua · ' + v.id,
+      body: `<div class="mm-wide">
+        <p style="color:var(--ash);font-size:12.5px">Linh kiện <b>${esc(v.name)}</b> — tồn <b>${fmt(v.stock)} ${esc(v.unit)}</b> / định mức <b>${fmt(v.min)} ${esc(v.unit)}</b>. Dùng cho máy ${esc((v.mays || []).join(', '))}.</p>
+        <div class="form-grid" style="margin-top:10px">
+          <div class="fld"><label>Số lượng đề nghị</label><input class="input" id="dnQty" value="${suggest}" /></div>
+          <div class="fld"><label>Đơn giá (₫)</label><input class="input" id="dnPrice" value="${v.price}" /></div>
+          <div class="fld full"><label>Nhà cung cấp</label><input class="input" id="dnNcc" value="${esc(NCC_NAME[v.ncc] || v.ncc)}" /></div>
+          <div class="fld full"><label>Lý do</label><input class="input" id="dnNote" value="Bù tồn linh kiện dưới định mức, phục vụ bảo trì – sửa chữa máy ${esc((v.mays || [])[0] || '')}" /></div>
+        </div>
+      </div>`,
+      primaryText: 'Tạo đề nghị mua', secondaryText: 'Huỷ',
+      onPrimary: () => {
+        const g = (id) => (document.getElementById(id) || {}).value || '';
+        const qty = parseFloat(String(g('dnQty')).replace(',', '.')) || suggest;
+        let id = 'DNM-2026-000';
+        if (window.ERPPurchase && ERPPurchase.create) {
+          id = ERPPurchase.create({
+            from: 'Kỹ thuật máy · Linh kiện', ref: v.id, note: g('dnNote'),
+            lines: [{ code: v.id, name: v.name, unit: v.unit, stock: Number(v.stock) || 0, minStock: Number(v.min) || 0, qty: qty, price: Number(g('dnPrice')) || v.price, supplier: g('dnNcc') }]
+          }).id;
+        }
+        ERPInteract.showToast('Đã tạo <a href="13-de-xuat-mua.html?dnm=' + encodeURIComponent(id) + '" class="lnk">' + id + '</a> — bấm để mở', 'success', 6000);
+      }
+    });
+  }
+
+  function openAdd() {
+    ERPInteract.showModal({
+      title: 'Thêm linh kiện thay thế',
+      body: `<div class="mm-wide"><div class="form-grid">
+        <div class="fld"><label>Mã linh kiện</label><input class="input" id="naId" placeholder="VTM-025" /></div>
+        <div class="fld"><label>Tên linh kiện</label><input class="input" id="naName" placeholder="VD: Lưỡi cắt hợp kim Ø450" /></div>
+        <div class="fld"><label>Quy cách</label><input class="input" id="naSpec" placeholder="Ø450 × 100 răng" /></div>
+        <div class="fld"><label>Máy dùng được</label><input class="input" id="naMay" placeholder="CAT-01, CAT-02" /></div>
+        <div class="fld"><label>ĐVT</label><input class="input" id="naUnit" value="cái" /></div>
+        <div class="fld"><label>Đơn giá (₫)</label><input class="input" id="naPrice" type="number" placeholder="2850000" /></div>
+        <div class="fld"><label>Tồn</label><input class="input" id="naStock" type="number" value="0" /></div>
+        <div class="fld"><label>Định mức tối thiểu</label><input class="input" id="naMin" type="number" value="2" /></div>
+      </div></div>`,
+      primaryText: 'Thêm linh kiện', secondaryText: 'Huỷ',
+      onPrimary: () => {
+        const g = (id) => (document.getElementById(id) || {}).value || '';
+        const rec = {
+          id: g('naId') || ('VTM-' + ('00' + (LIST.length + 1)).slice(-3)), name: g('naName') || 'Linh kiện mới', spec: g('naSpec'),
+          mays: g('naMay').split(',').map(s => s.trim()).filter(Boolean), unit: g('naUnit') || 'cái',
+          stock: Number(g('naStock')) || 0, min: Number(g('naMin')) || 0, lifeH: 1000,
+          last: 'Chưa thay lần nào', next: '—', price: Number(g('naPrice')) || 0, ncc: 'hungvuong', hist: [], warn: null
+        };
+        if (rec.stock < rec.min) rec.warn = { t: 'bad', text: 'Dưới định mức · sắp hết' };
+        LIST.unshift(rec); TBM.add('vtm', rec);
+        renderTable(); renderStats();
+        ERPInteract.showToast('Đã thêm linh kiện <b>' + esc(rec.id) + '</b>', 'success');
+      }
+    });
+  }
+
+  document.addEventListener('erp:ready', () => {
+    renderStats(); renderTable();
+    $('#searchInput').addEventListener('input', renderTable);
+    $('#segTabs').querySelectorAll('.seg').forEach(s => s.addEventListener('click', () => {
+      curF = s.dataset.f;
+      $('#segTabs').querySelectorAll('.seg').forEach(x => x.classList.toggle('active', x === s));
+      renderTable();
+    }));
+    $('#btnAdd').addEventListener('click', openAdd);
+    $('#drawerOv').addEventListener('click', closeDrawer);
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !document.querySelector('.erp-print-overlay')) closeDrawer(); });
+
+    const p = new URLSearchParams(location.search);
+    const vtm = p.get('vtm'), may = p.get('may');
+    if (vtm && LIST.some(v => v.id === vtm)) openDrawer(vtm);
+    else if (may) { $('#searchInput').value = may; renderTable(); }
+  });
+</script>
+</body>
+</html>

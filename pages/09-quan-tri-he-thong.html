@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Quản trị hệ thống — ERP NHÔM OWIN</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/css/style.css" />
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+  <style>
+    .perm-grid { display: grid; grid-template-columns: 250px repeat(5, 1fr); gap: 0; font-size: 12.5px; }
+    .perm-grid > div { padding: 9px 10px; border-bottom: 1px solid var(--rule-hair, #ece8df); display: flex; align-items: center; justify-content: center; gap: 4px; }
+    .perm-grid > div:first-child, .perm-grid .row-head { justify-content: flex-start; font-weight: 500; color: var(--ink); }
+    .perm-grid .col-head { background: var(--paper-2); font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; color: var(--ash); text-align: center; justify-content: center; }
+    .perm-grid .grp-head { grid-column: 1 / -1; background: var(--paper-2); font-family: var(--ff-mono); font-size: 10px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ash); justify-content: flex-start; }
+    .perm-grid .row-head code { font-family: var(--ff-mono); font-size: 10px; color: var(--ash); margin-left: 6px; }
+    .check-on { color: var(--moss); }
+    .check-off { color: var(--ash-2, #b8b2a2); }
+    .approval-step { background: var(--paper-2); border-radius: var(--r-3); padding: 12px 14px; display: flex; align-items: center; gap: 12px; }
+    .approval-step .step-num { width: 26px; height: 26px; background: var(--ink); color: #fff; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: 600; font-size: 12px; flex-shrink: 0; }
+  </style>
+</head>
+<body>
+
+<div id="app-shell" data-active="admin" data-title="Quản trị hệ thống" data-crumb="<b>Hệ thống</b> · Quản trị">
+
+  <div class="page-header">
+    <div>
+      <h1>Quản trị hệ thống</h1>
+      <p>Người dùng · Phân quyền theo chức danh nhà máy cửa nhôm · Workflow duyệt · Backup · Audit log</p>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="card mb-4" style="padding:14px">
+    <div class="tabs">
+      <button class="tab tab-active" data-no-interact="true">Người dùng</button>
+      <button class="tab" data-no-interact="true">Phân quyền</button>
+      <button class="tab" data-no-interact="true">Workflow duyệt</button>
+      <button class="tab" data-no-interact="true">Backup</button>
+      <button class="tab" data-no-interact="true">Audit log</button>
+      <button class="tab" data-no-interact="true">Tham số HT</button>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="grid grid-4 mb-4">
+    <div class="card-feature-yellow" style="padding:20px"><div class="t-micro-u" style="color:var(--rust)">USER ĐANG HOẠT ĐỘNG</div><div class="t-h3 mt-2">42</div></div>
+    <div class="card-feature-teal" style="padding:20px"><div class="t-micro-u" style="color:var(--moss)">CHỨC DANH / VAI TRÒ</div><div class="t-h3 mt-2">10</div></div>
+    <div class="card-feature-coral" style="padding:20px"><div class="t-micro-u" style="color:var(--rust-2)">CHỜ DUYỆT</div><div class="t-h3 mt-2">12</div></div>
+    <div class="card-feature-blue" style="padding:20px"><div class="t-micro-u" style="color:var(--steel)">BACKUP CUỐI</div><div class="t-h3 mt-2">02:00</div></div>
+  </div>
+
+  <div class="grid grid-12 mb-6">
+
+    <!-- LEFT: User list -->
+    <div class="card">
+      <div class="flex-between mb-4">
+        <div class="t-h5">Danh sách người dùng</div>
+        <button class="btn btn-primary btn-sm" data-no-interact="true"><i data-lucide="user-plus" style="width:13px;height:13px"></i> Thêm user</button>
+      </div>
+
+      <div class="flex mb-3" style="gap:8px">
+        <div style="flex:1;position:relative"><input class="input input-search" placeholder="Tìm user..." /></div>
+        <button class="filter-pill" data-no-interact="true"><i data-lucide="building" style="width:13px;height:13px"></i> Bộ phận <i data-lucide="chevron-down" style="width:13px;height:13px"></i></button>
+        <button class="filter-pill" data-no-interact="true"><i data-lucide="shield" style="width:13px;height:13px"></i> Chức danh <i data-lucide="chevron-down" style="width:13px;height:13px"></i></button>
+      </div>
+
+      <div class="table-wrap" style="border:none">
+        <table class="tbl">
+          <thead><tr><th>User</th><th>Username</th><th>Bộ phận</th><th>Chức danh</th><th>Trạng thái</th><th></th></tr></thead>
+          <tbody>
+            <tr>
+              <td><div style="display:flex;align-items:center;gap:10px"><div class="avatar" style="width:32px;height:32px;background:var(--ink);color:#fff">PT</div><div><b>Phạm Văn Thành</b><div class="t-caption">thanh.pham@owin.com.vn</div></div></div></td>
+              <td>giamdoc</td><td>Ban Giám đốc</td>
+              <td><span class="badge badge-rust">Giám đốc</span></td>
+              <td><span class="badge badge-moss">Hoạt động</span></td>
+              <td><button class="btn-icon" style="width:28px;height:28px" data-no-interact="true"><i data-lucide="more-horizontal" style="width:14px;height:14px"></i></button></td>
+            </tr>
+            <tr>
+              <td><div style="display:flex;align-items:center;gap:10px"><div class="avatar" style="width:32px;height:32px;background:var(--steel-soft);color:var(--steel)">NQ</div><div><b>Nguyễn Quang Đạt</b><div class="t-caption">dat.nguyen@owin.com.vn</div></div></div></td>
+              <td>dat.quandoc</td><td>Nhà máy Thường Tín</td>
+              <td><span class="badge badge-steel">Quản đốc nhà máy</span></td>
+              <td><span class="badge badge-moss">Hoạt động</span></td>
+              <td><button class="btn-icon" style="width:28px;height:28px" data-no-interact="true"><i data-lucide="more-horizontal" style="width:14px;height:14px"></i></button></td>
+            </tr>
+            <tr>
+              <td><div style="display:flex;align-items:center;gap:10px"><div class="avatar" style="width:32px;height:32px;background:var(--rust-soft);color:var(--rust-deep)">LH</div><div><b>Lê Văn Hùng</b><div class="t-caption">hung.le@owin.com.vn</div></div></div></td>
+              <td>hung.le</td><td>Cắt CNC</td>
+              <td><span class="badge badge-coral">Tổ trưởng cắt CNC</span></td>
+              <td><span class="badge badge-moss">Hoạt động</span></td>
+              <td><button class="btn-icon" style="width:28px;height:28px" data-no-interact="true"><i data-lucide="more-horizontal" style="width:14px;height:14px"></i></button></td>
+            </tr>
+            <tr>
+              <td><div style="display:flex;align-items:center;gap:10px"><div class="avatar" style="width:32px;height:32px;background:var(--rust-soft);color:var(--rust-deep)">TT</div><div><b>Trần Văn Tú</b><div class="t-caption">tu.tran@owin.com.vn</div></div></div></td>
+              <td>tu.tran</td><td>Ép góc</td>
+              <td><span class="badge badge-coral">Tổ trưởng ép góc</span></td>
+              <td><span class="badge badge-moss">Hoạt động</span></td>
+              <td><button class="btn-icon" style="width:28px;height:28px" data-no-interact="true"><i data-lucide="more-horizontal" style="width:14px;height:14px"></i></button></td>
+            </tr>
+            <tr>
+              <td><div style="display:flex;align-items:center;gap:10px"><div class="avatar" style="width:32px;height:32px;background:var(--moss-soft);color:var(--moss-deep)">NH</div><div><b>Nguyễn Thị Hoa</b><div class="t-caption">hoa.nguyen@owin.com.vn</div></div></div></td>
+              <td>hoa.nguyen</td><td>KCS</td>
+              <td><span class="badge badge-moss">KCS nhôm kính</span></td>
+              <td><span class="badge badge-moss">Hoạt động</span></td>
+              <td><button class="btn-icon" style="width:28px;height:28px" data-no-interact="true"><i data-lucide="more-horizontal" style="width:14px;height:14px"></i></button></td>
+            </tr>
+            <tr>
+              <td><div style="display:flex;align-items:center;gap:10px"><div class="avatar" style="width:32px;height:32px;background:var(--amber-soft);color:var(--amber)">ĐK</div><div><b>Đỗ Văn Khánh</b><div class="t-caption">khanh.do@owin.com.vn</div></div></div></td>
+              <td>khanh.kho</td><td>Kho nhôm – kính</td>
+              <td><span class="badge badge-orange">Thủ kho nhôm – kính</span></td>
+              <td><span class="badge badge-moss">Hoạt động</span></td>
+              <td><button class="btn-icon" style="width:28px;height:28px" data-no-interact="true"><i data-lucide="more-horizontal" style="width:14px;height:14px"></i></button></td>
+            </tr>
+            <tr>
+              <td><div style="display:flex;align-items:center;gap:10px"><div class="avatar" style="width:32px;height:32px;background:var(--steel-soft);color:var(--steel)">TH</div><div><b>Trần Thị Thu Hà</b><div class="t-caption">ha.tran@owin.com.vn</div></div></div></td>
+              <td>ha.ketoan</td><td>Tài chính – Kế toán</td>
+              <td><span class="badge badge-steel">Kế toán</span></td>
+              <td><span class="badge badge-moss">Hoạt động</span></td>
+              <td><button class="btn-icon" style="width:28px;height:28px" data-no-interact="true"><i data-lucide="more-horizontal" style="width:14px;height:14px"></i></button></td>
+            </tr>
+            <tr>
+              <td><div style="display:flex;align-items:center;gap:10px"><div class="avatar" style="width:32px;height:32px;background:var(--rust-soft);color:var(--rust-deep)">VA</div><div><b>Vũ Ngọc Anh</b><div class="t-caption">anh.vu@owin.com.vn</div></div></div></td>
+              <td>anh.kd</td><td>Kinh doanh dự án</td>
+              <td><span class="badge badge-rust">Nhân viên KD dự án</span></td>
+              <td><span class="badge badge-moss">Hoạt động</span></td>
+              <td><button class="btn-icon" style="width:28px;height:28px" data-no-interact="true"><i data-lucide="more-horizontal" style="width:14px;height:14px"></i></button></td>
+            </tr>
+            <tr>
+              <td><div style="display:flex;align-items:center;gap:10px"><div class="avatar" style="width:32px;height:32px;background:var(--rust-soft);color:var(--rust-deep)">BM</div><div><b>Bùi Thị Mai</b><div class="t-caption">mai.bui@owin.com.vn</div></div></div></td>
+              <td>mai.daily</td><td>Phát triển đại lý</td>
+              <td><span class="badge badge-rust">NV phát triển đại lý</span></td>
+              <td><span class="badge badge-moss">Hoạt động</span></td>
+              <td><button class="btn-icon" style="width:28px;height:28px" data-no-interact="true"><i data-lucide="more-horizontal" style="width:14px;height:14px"></i></button></td>
+            </tr>
+            <tr>
+              <td><div style="display:flex;align-items:center;gap:10px"><div class="avatar" style="width:32px;height:32px;background:var(--paper-2);color:var(--ash)">VL</div><div><b>Võ Văn Lâm</b><div class="t-caption">lam.vo@owin.com.vn</div></div></div></td>
+              <td>lam.uonvom</td><td>Uốn vòm</td>
+              <td><span class="badge">Thợ uốn vòm</span></td>
+              <td><span class="badge">Đã nghỉ việc</span></td>
+              <td><button class="btn-icon" style="width:28px;height:28px" data-no-interact="true"><i data-lucide="more-horizontal" style="width:14px;height:14px"></i></button></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- RIGHT: System health -->
+    <div>
+      <div class="card mb-4" style="background:var(--ink);color:#fff;padding:24px">
+        <div class="t-micro-u" style="color:rgba(255,255,255,.6)">SYSTEM STATUS</div>
+        <div class="t-h3 mt-2" style="color:#fff">Tất cả OK</div>
+        <div class="mt-4" style="font-size:13px">
+          <div class="flex-between mb-2"><span style="color:rgba(255,255,255,.6)">Database</span><span><span class="dot green"></span> Online</span></div>
+          <div class="flex-between mb-2"><span style="color:rgba(255,255,255,.6)">App server</span><span><span class="dot green"></span> Online</span></div>
+          <div class="flex-between mb-2"><span style="color:rgba(255,255,255,.6)">MISA sync</span><span><span class="dot green"></span> 14:30</span></div>
+          <div class="flex-between mb-2"><span style="color:rgba(255,255,255,.6)">HĐĐT Viettel</span><span><span class="dot green"></span> Online</span></div>
+          <div class="flex-between"><span style="color:rgba(255,255,255,.6)">Uptime tháng</span><span><b style="color:#e5c454">99.92%</b></span></div>
+        </div>
+      </div>
+
+      <div class="card mb-4">
+        <div class="t-h5 mb-3">Backup gần nhất</div>
+        <div class="flex-between mb-2"><span>Hôm nay 02:00</span><span class="badge badge-moss">Thành công</span></div>
+        <div class="flex-between mb-2"><span>Hôm qua 02:00</span><span class="badge badge-moss">Thành công</span></div>
+        <div class="flex-between mb-2"><span>17/05 02:00</span><span class="badge badge-moss">Thành công</span></div>
+        <div class="t-caption mt-3">Dung lượng: 2.4GB · Lưu 30 ngày + snapshot tuần</div>
+        <button class="btn btn-primary mt-3" style="width:100%" data-no-interact="true"><i data-lucide="download" style="width:14px;height:14px"></i> Backup ngay</button>
+      </div>
+
+      <div class="card">
+        <div class="t-h5 mb-3">Thông tin doanh nghiệp</div>
+        <div style="font-size:12.5px;line-height:1.65;color:var(--ash)">
+          <div><b style="color:var(--ink)">CÔNG TY CỔ PHẦN THƯƠNG MẠI OWIN</b></div>
+          <div>MST 0109541582</div>
+          <div>Trụ sở: 359 Phúc Diễn – Xuân Phương – Hà Nội</div>
+          <div>Nhà máy: Số 8 Giá Ngự – Xâm Xuyên – Thường Tín – Hà Nội</div>
+          <div>Hotline 056.386.9999 · owingroup@gmail.com · owin.com.vn</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Ma trận phân quyền — danh mục chức năng khớp NAV ===== -->
+  <div class="card mb-6">
+    <div class="flex-between mb-4">
+      <div>
+        <div class="t-h5">Ma trận phân quyền theo chức danh</div>
+        <div class="t-caption">Đầy đủ (thêm/sửa/xoá) · Thao tác giới hạn · Chỉ xem · Không truy cập — danh mục chức năng khớp menu hệ thống</div>
+      </div>
+      <button class="btn btn-secondary" data-no-interact="true"><i data-lucide="plus" style="width:14px;height:14px"></i> Thêm chức danh</button>
+    </div>
+
+    <div style="overflow-x:auto">
+      <div class="perm-grid" style="min-width:1020px;border:1px solid var(--rule);border-radius:var(--r-3);overflow:hidden">
+        <div class="col-head">Chức năng</div>
+        <div class="col-head">Giám đốc</div>
+        <div class="col-head">Quản đốc nhà máy</div>
+        <div class="col-head">NV KD dự án / ĐL</div>
+        <div class="col-head">Thủ kho nhôm–kính</div>
+        <div class="col-head">Kế toán</div>
+
+        <div class="grp-head">Tổng quan</div>
+        <div class="row-head">Dashboard <code>01-dashboard</code></div>
+        <div><i data-lucide="check" class="check-on" style="width:15px;height:15px"></i> Toàn công ty</div>
+        <div><i data-lucide="eye" class="check-on" style="width:15px;height:15px"></i> Nhà máy</div>
+        <div><i data-lucide="eye" class="check-on" style="width:15px;height:15px"></i> Của mình</div>
+        <div><i data-lucide="eye" class="check-on" style="width:15px;height:15px"></i> Kho</div>
+        <div><i data-lucide="eye" class="check-on" style="width:15px;height:15px"></i> Tài chính</div>
+
+        <div class="grp-head">Kinh doanh</div>
+        <div class="row-head">Sản phẩm <code>20-san-pham</code></div>
+        <div><i data-lucide="check" class="check-on" style="width:15px;height:15px"></i> Đầy đủ</div>
+        <div><i data-lucide="eye" class="check-on" style="width:15px;height:15px"></i> Xem</div>
+        <div><i data-lucide="check" class="check-on" style="width:15px;height:15px"></i> Đầy đủ</div>
+        <div><i data-lucide="eye" class="check-on" style="width:15px;height:15px"></i> Xem</div>
+        <div><i data-lucide="eye" class="check-on" style="width:15px;height:15px"></i> Xem</div>
+
+        <div class="row-head">Tính giá thành <code>17-tinh-gia</code></div>
+        <div><i data-lucide="check" class="check-on" style="width:15px;height:15px"></i> Duyệt giá</div>
+        <div><i data-lucide="eye" class="check-on" style="width:15px;height:15px"></i> Xem</div>
+        <div><i data-lucide="check" class="check-on" style="width:15px;height:15px"></i> Đầy đủ</div>
+        <div><i data-lucide="x" class="check-off" style="width:15px;height:15px"></i></div>
+        <div><i data-lucide="eye" class="check-on" style="width:15px;height:15px"></i> Xem</div>
+
+        <div class="row-head">Báo giá <code>02-bao-gia</code></div>
+        <div><i data-lucide="eye" class="check-on" style="width:15px;height:15px"></i> Xem + Duyệt</div>
+        <div><i data-lucide="x" class="check-off" style="width:15px;height:15px"></i></div>
+        <div><i data-lucide="check" class="check-on" style="width:15px;height:15px"></i> Đầy đủ</div>
+        <div><i data-lucide="x" class="check-off" style="width:15px;height:15px"></i></div>
+        <div><i data-lucide="eye" class="check-on" style="width:15px;height:15px"></i> Xem</div>
+
+        <div class="row-head">Hợp đồng <code>18-hop-dong</code></div>
+        <div><i data-lucide="check" class="check-on" style="width:15px;height:15px"></i> Ký duyệt</div>
+        <div><i data-lucide="x" class="check-off" style="width:15px;height:15px"></i></div>
+        <div><i data-lucide="check" class="check-on" style="width:15px;height:15px"></i> Soạn</div>
+        <div><i data-lucide="x" class="check-off" style="width:15px;height:15px"></i></div>
+        <div><i data-lucide="eye" class="check-on" style="width:15px;height:15px"></i> Xem + Ghi sổ</div>
+
+        <div class="row-head">Đơn hàng bán <code>03-don-hang</code></div>
+        <div><i data-lucide="eye" class="check-on" style="width:15px;height:15px"></i> Xem + Duyệt</div>
+        <div><i data-lucide="eye" class="check-on" style="width:15px;height:15px"></i> Xem</div>
+        <div><i data-lucide="check" class="check-on" style="width:15px;height:15px"></i> Đầy đủ</div>
+        <div><i data-lucide="eye" class="check-on" style="width:15px;height:15px"></i> Xem để xuất kho</div>
+        <div><i data-lucide="eye" class="check-on" style="width:15px;height:15px"></i> Xem</div>
+
+        <div class="row-head">Khách hàng &amp; đại lý <code>07-crm</code></div>
+        <div><i data-lucide="check" class="check-on" style="width:15px;height:15px"></i> Đầy đủ</div>
+        <div><i data-lucide="x" class="check-off" style="width:15px;height:15px"></i></div>
+        <div><i data-lucide="check" class="check-on" style="width:15px;height:15px"></i> Đầy đủ</div>
+        <div><i data-lucide="x" class="check-off" style="width:15px;height:15px"></i></div>
+        <div><i data-lucide="eye" class="check-on" style="width:15px;height:15px"></i> Xem công nợ</div>
+
+        <div class="grp-head">Sản xuất</div>
+        <div class="row-head">Lệnh dạng Kanban <code>04-san-xuat-kanban</code></div>
+        <div><i data-lucide="eye" class="check-on" style="width:15px;height:15px"></i> Xem</div>
+        <div><i data-lucide="check" class="check-on" style="width:15px;height:15px"></i> Đầy đủ</div>
+        <div><i data-lucide="eye" class="check-on" style="width:15px;height:15px"></i> Xem</div>
+        <div><i data-lucide="eye" class="check-on" style="width:15px;height:15px"></i> Xem</div>
+        <div><i data-lucide="x" class="check-off" style="width:15px;height:15px"></i></div>
+
+        <div class="row-head">Lệnh dạng Gantt <code>04-san-xuat-gantt</code></div>
+        <div><i data-lucide="eye" class="check-on" style="width:15px;height:15px"></i> Xem</div>
+        <div><i data-lucide="check" class="check-on" style="width:15px;height:15px"></i> Đầy đủ</div>
+        <div><i data-lucide="eye" class="check-on" style="width:15px;height:15px"></i> Xem</div>
+        <div><i data-lucide="x" class="check-off" style="width:15px;height:15px"></i></div>
+        <div><i data-lucide="x" class="check-off" style="width:15px;height:15px"></i></div>
+
+        <div class="row-head">Lệnh dạng danh sách <code>19-lsx-san-xuat</code></div>
+        <div><i data-lucide="eye" class="check-on" style="width:15px;height:15px"></i> Xem</div>
+        <div><i data-lucide="check" class="check-on" style="width:15px;height:15px"></i> Đầy đủ</div>
+        <div><i data-lucide="eye" class="check-on" style="width:15px;height:15px"></i> Xem</div>
+        <div><i data-lucide="eye" class="check-on" style="width:15px;height:15px"></i> Xem</div>
+        <div><i data-lucide="eye" class="check-on" style="width:15px;height:15px"></i> Xem giá thành</div>
+
+        <div class="row-head">Lệnh SX &amp; phiếu công nghệ <code>06-lsx-phieu-cong-nghe</code></div>
+        <div><i data-lucide="eye" class="check-on" style="width:15px;height:15px"></i> Xem</div>
+        <div><i data-lucide="check" class="check-on" style="width:15px;height:15px"></i> Đầy đủ</div>
+        <div><i data-lucide="eye" class="check-on" style="width:15px;height:15px"></i> Xem</div>
+        <div><i data-lucide="check" class="check-on" style="width:15px;height:15px"></i> Cấp NVL</div>
+        <div><i data-lucide="eye" class="check-on" style="width:15px;height:15px"></i> Xem</div>
+
+        <div class="row-head">Định mức BOM <code>bom-dinh-muc</code></div>
+        <div><i data-lucide="check" class="check-on" style="width:15px;height:15px"></i> Duyệt định mức</div>
+        <div><i data-lucide="check" class="check-on" style="width:15px;height:15px"></i> Đầy đủ</div>
+        <div><i data-lucide="eye" class="check-on" style="width:15px;height:15px"></i> Xem</div>
+        <div><i data-lucide="eye" class="check-on" style="width:15px;height:15px"></i> Xem</div>
+        <div><i data-lucide="eye" class="check-on" style="width:15px;height:15px"></i> Xem</div>
+
+        <div class="row-head">Kế hoạch sản xuất <code>11-ke-hoach-san-xuat</code></div>
+        <div><i data-lucide="eye" class="check-on" style="width:15px;height:15px"></i> Xem + Duyệt</div>
+        <div><i data-lucide="check" class="check-on" style="width:15px;height:15px"></i> Đầy đủ</div>
+        <div><i data-lucide="eye" class="check-on" style="width:15px;height:15px"></i> Xem</div>
+        <div><i data-lucide="eye" class="check-on" style="width:15px;height:15px"></i> Xem</div>
+        <div><i data-lucide="x" class="check-off" style="width:15px;height:15px"></i></div>
+
+        <div class="grp-head">Kho</div>
+        <div class="row-head">Kho vật tư nhôm – kính <code>05-kho</code></div>
+        <div><i data-lucide="eye" class="check-on" style="width:15px;height:15px"></i> Xem</div>
+        <div><i data-lucide="eye" class="check-on" style="width:15px;height:15px"></i> Xem</div>
+        <div><i data-lucide="x" class="check-off" style="width:15px;height:15px"></i></div>
+        <div><i data-lucide="check" class="check-on" style="width:15px;height:15px"></i> Đầy đủ</div>
+        <div><i data-lucide="eye" class="check-on" style="width:15px;height:15px"></i> Xem</div>
+
+        <div class="row-head">Kho bán thành phẩm · thành phẩm</div>
+        <div><i data-lucide="eye" class="check-on" style="width:15px;height:15px"></i> Xem</div>
+        <div><i data-lucide="check" class="check-on" style="width:15px;height:15px"></i> Nhập từ LSX</div>
+        <div><i data-lucide="eye" class="check-on" style="width:15px;height:15px"></i> Xem tồn khả dụng</div>
+        <div><i data-lucide="check" class="check-on" style="width:15px;height:15px"></i> Đầy đủ</div>
+        <div><i data-lucide="eye" class="check-on" style="width:15px;height:15px"></i> Xem</div>
+
+        <div class="grp-head">Mua hàng</div>
+        <div class="row-head">Đề xuất mua <code>13-de-xuat-mua</code></div>
+        <div><i data-lucide="eye" class="check-on" style="width:15px;height:15px"></i> Xem + Duyệt</div>
+        <div><i data-lucide="check" class="check-on" style="width:15px;height:15px"></i> Tạo + Sửa</div>
+        <div><i data-lucide="x" class="check-off" style="width:15px;height:15px"></i></div>
+        <div><i data-lucide="check" class="check-on" style="width:15px;height:15px"></i> Tạo + Sửa</div>
+        <div><i data-lucide="eye" class="check-on" style="width:15px;height:15px"></i> Xem</div>
+
+        <div class="row-head">PO mua hàng <code>13-mua-hang</code></div>
+        <div><i data-lucide="eye" class="check-on" style="width:15px;height:15px"></i> Duyệt PO &gt; 100tr</div>
+        <div><i data-lucide="eye" class="check-on" style="width:15px;height:15px"></i> Xem</div>
+        <div><i data-lucide="x" class="check-off" style="width:15px;height:15px"></i></div>
+        <div><i data-lucide="check" class="check-on" style="width:15px;height:15px"></i> Nhận hàng</div>
+        <div><i data-lucide="check" class="check-on" style="width:15px;height:15px"></i> Đầy đủ</div>
+
+        <div class="row-head">Nhà cung cấp <code>21-nha-cung-cap</code></div>
+        <div><i data-lucide="check" class="check-on" style="width:15px;height:15px"></i> Đầy đủ</div>
+        <div><i data-lucide="eye" class="check-on" style="width:15px;height:15px"></i> Xem</div>
+        <div><i data-lucide="x" class="check-off" style="width:15px;height:15px"></i></div>
+        <div><i data-lucide="eye" class="check-on" style="width:15px;height:15px"></i> Xem</div>
+        <div><i data-lucide="check" class="check-on" style="width:15px;height:15px"></i> Đầy đủ</div>
+
+        <div class="row-head">Công nợ NCC <code>21-cong-no-ncc</code></div>
+        <div><i data-lucide="eye" class="check-on" style="width:15px;height:15px"></i> Xem</div>
+        <div><i data-lucide="x" class="check-off" style="width:15px;height:15px"></i></div>
+        <div><i data-lucide="x" class="check-off" style="width:15px;height:15px"></i></div>
+        <div><i data-lucide="x" class="check-off" style="width:15px;height:15px"></i></div>
+        <div><i data-lucide="check" class="check-on" style="width:15px;height:15px"></i> Đầy đủ</div>
+
+        <div class="grp-head">Kỹ thuật máy</div>
+        <div class="row-head">Thiết bị · bảo trì · sửa chữa</div>
+        <div><i data-lucide="eye" class="check-on" style="width:15px;height:15px"></i> Xem</div>
+        <div><i data-lucide="check" class="check-on" style="width:15px;height:15px"></i> Đầy đủ</div>
+        <div><i data-lucide="x" class="check-off" style="width:15px;height:15px"></i></div>
+        <div><i data-lucide="eye" class="check-on" style="width:15px;height:15px"></i> Xem</div>
+        <div><i data-lucide="eye" class="check-on" style="width:15px;height:15px"></i> Xem chi phí</div>
+
+        <div class="grp-head">Tài chính · nhân sự</div>
+        <div class="row-head">Kế toán · phiếu thu/chi <code>15-ke-toan</code></div>
+        <div><i data-lucide="eye" class="check-on" style="width:15px;height:15px"></i> Duyệt chi &gt; 50tr</div>
+        <div><i data-lucide="x" class="check-off" style="width:15px;height:15px"></i></div>
+        <div><i data-lucide="eye" class="check-on" style="width:15px;height:15px"></i> Xem công nợ KH</div>
+        <div><i data-lucide="x" class="check-off" style="width:15px;height:15px"></i></div>
+        <div><i data-lucide="check" class="check-on" style="width:15px;height:15px"></i> Đầy đủ</div>
+
+        <div class="row-head">Chấm công &amp; lương khoán <code>16-cham-cong-luong-khoan</code></div>
+        <div><i data-lucide="eye" class="check-on" style="width:15px;height:15px"></i> Xem + Duyệt</div>
+        <div><i data-lucide="check" class="check-on" style="width:15px;height:15px"></i> Chấm công tổ</div>
+        <div><i data-lucide="x" class="check-off" style="width:15px;height:15px"></i></div>
+        <div><i data-lucide="x" class="check-off" style="width:15px;height:15px"></i></div>
+        <div><i data-lucide="check" class="check-on" style="width:15px;height:15px"></i> Tính lương</div>
+
+        <div class="grp-head">Báo cáo &amp; hệ thống</div>
+        <div class="row-head">Báo cáo <code>08-bao-cao</code></div>
+        <div><i data-lucide="eye" class="check-on" style="width:15px;height:15px"></i> Toàn công ty</div>
+        <div><i data-lucide="eye" class="check-on" style="width:15px;height:15px"></i> Của nhà máy</div>
+        <div><i data-lucide="eye" class="check-on" style="width:15px;height:15px"></i> Của mình</div>
+        <div><i data-lucide="eye" class="check-on" style="width:15px;height:15px"></i> Kho</div>
+        <div><i data-lucide="eye" class="check-on" style="width:15px;height:15px"></i> Tài chính</div>
+
+        <div class="row-head">Báo cáo thiệt hại <code>31-bao-cao-thiet-hai</code></div>
+        <div><i data-lucide="eye" class="check-on" style="width:15px;height:15px"></i> Toàn công ty</div>
+        <div><i data-lucide="check" class="check-on" style="width:15px;height:15px"></i> Ghi nhận nguyên nhân</div>
+        <div><i data-lucide="x" class="check-off" style="width:15px;height:15px"></i></div>
+        <div><i data-lucide="eye" class="check-on" style="width:15px;height:15px"></i> Phần kho</div>
+        <div><i data-lucide="eye" class="check-on" style="width:15px;height:15px"></i> Quy ra tiền</div>
+
+        <div class="row-head">Quản trị hệ thống <code>09-quan-tri-he-thong</code></div>
+        <div><i data-lucide="check" class="check-on" style="width:15px;height:15px"></i> Đầy đủ</div>
+        <div><i data-lucide="x" class="check-off" style="width:15px;height:15px"></i></div>
+        <div><i data-lucide="x" class="check-off" style="width:15px;height:15px"></i></div>
+        <div><i data-lucide="x" class="check-off" style="width:15px;height:15px"></i></div>
+        <div><i data-lucide="x" class="check-off" style="width:15px;height:15px"></i></div>
+      </div>
+    </div>
+
+    <div class="t-caption mt-3">
+      Chức danh khác đã khai báo: <b>Tổ trưởng cắt CNC</b> · <b>Tổ trưởng ép góc</b> · <b>KCS nhôm kính</b> · <b>Thợ uốn vòm</b>
+      — quyền thao tác giới hạn trong công đoạn phụ trách (ghi kết quả sản xuất, báo lỗi, báo sự cố máy).
+    </div>
+  </div>
+
+  <!-- Approval workflow -->
+  <div class="card-feature-yellow mb-6">
+    <div class="t-h5 mb-2" style="color:var(--rust)">Workflow duyệt chứng từ</div>
+    <div class="t-caption mb-4" style="color:var(--rust)">Duyệt đa cấp theo giá trị chứng từ · Owin có thể tuỳ chỉnh ngưỡng</div>
+
+    <div class="grid grid-2" style="gap:16px">
+      <div style="background:var(--canvas);border-radius:var(--r-5);padding:20px">
+        <div class="t-h5 mb-3">Báo giá → Hợp đồng → Đơn hàng</div>
+        <div class="approval-step mb-2"><span class="step-num">1</span><div><b>NV KD dự án / NV phát triển đại lý lập báo giá</b><div class="t-caption">Tự động trạng thái "Nháp" · giá lấy từ phiếu tính giá</div></div></div>
+        <div class="approval-step mb-2"><span class="step-num">2</span><div><b>Trưởng phòng Kinh doanh dự án duyệt</b><div class="t-caption">Bắt buộc nếu giá trị &gt; 50 triệu</div></div></div>
+        <div class="approval-step"><span class="step-num">3</span><div><b>Giám đốc duyệt</b><div class="t-caption">Bắt buộc nếu &gt; 300 triệu, chiết khấu &gt; 10%, hoặc bán dàn máy chuyển giao</div></div></div>
+      </div>
+
+      <div style="background:var(--canvas);border-radius:var(--r-5);padding:20px">
+        <div class="t-h5 mb-3">Đề xuất mua → PO → Phiếu chi</div>
+        <div class="approval-step mb-2"><span class="step-num">1</span><div><b>Thủ kho nhôm–kính / Quản đốc đề xuất mua</b><div class="t-caption">Khi nhôm thanh hoặc kính dưới tồn tối thiểu</div></div></div>
+        <div class="approval-step mb-2"><span class="step-num">2</span><div><b>Kế toán lập PO &amp; duyệt giá NCC</b><div class="t-caption">Mọi đơn mua nhôm, kính, phụ kiện</div></div></div>
+        <div class="approval-step"><span class="step-num">3</span><div><b>Giám đốc duyệt</b><div class="t-caption">PO &gt; 100 triệu hoặc chi ngoài kế hoạch</div></div></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script src="../assets/js/layout.js"></script>
+<script src="../assets/js/pricing-engine.js"></script>
+<script src="../assets/js/quote-data.js"></script>
+<script src="../assets/js/loss-data.js"></script>
+<script src="../assets/js/loss-ui.js"></script>
+</body>
+</html>

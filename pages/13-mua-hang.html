@@ -1,0 +1,1402 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PO mua hàng — ERP NHÔM OWIN</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/css/style.css" />
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+  <style>
+    .ow-filter { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+    .ow-filter .grow { flex:1; min-width:220px; }
+    .ow-cardhead { display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:12px; }
+    .btn { min-height:36px; }
+  </style>
+</head>
+<body>
+
+<div id="app-shell" data-active="mua-hang" data-title="PO mua hàng" data-crumb="<b>Thu mua</b> · PO mua hàng">
+
+  <div class="page-header">
+    <div>
+      <h1>PO mua hàng</h1>
+      <p id="poSub">—</p>
+    </div>
+    <div class="actions"><a href="13-de-xuat-mua.html" class="btn btn-secondary"><i data-lucide="clipboard-list" style="width:14px;height:14px"></i> Đề xuất mua</a><button class="btn btn-primary" data-no-interact="true" onclick="owOpenCreatePO()"><i data-lucide="plus" style="width:14px;height:14px"></i> Tạo PO</button></div>
+  </div>
+
+  <div class="ow-strip" id="poStrip"></div>
+
+  <div class="ow-vtabs" id="poTabs"></div>
+
+  <div class="card mb-4" style="padding:14px">
+    <div class="ow-filter">
+      <div class="grow"><input class="input input-search" id="poSearch" placeholder="Tìm mã PO / nhà cung cấp / nội dung mua..." /></div>
+      <a href="13-de-xuat-mua.html" class="filter-pill"><i data-lucide="clipboard-list" style="width:13px;height:13px"></i> Đề xuất mua</a>
+      <a href="21-cong-no-ncc.html" class="filter-pill"><i data-lucide="wallet" style="width:13px;height:13px"></i> Công nợ NCC</a>
+      <a href="21-nha-cung-cap.html" class="filter-pill"><i data-lucide="contact" style="width:13px;height:13px"></i> Nhà cung cấp</a>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ow-cardhead">
+      <div class="t-h5">Danh sách đơn đặt hàng mua (PO)</div>
+      <span class="t-caption">Bấm một dòng để mở bản ghi · nhận hàng ghi phiếu nhập kho và tăng tồn NVL</span>
+    </div>
+    <div class="table-wrap" style="border:none">
+      <table class="tbl ow-tbl">
+        <thead id="poThead"></thead>
+        <tbody id="poBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<script src="../assets/js/layout.js"></script>
+<script src="../assets/js/loss-data.js"></script>
+<script src="../assets/js/loss-ui.js"></script>
+<script src="../assets/js/pricing-engine.js"></script>
+<script src="../assets/js/quote-data.js"></script>
+<script src="../assets/js/stock-data.js"></script>
+<script src="../assets/js/bom-data.js"></script>
+<script src="../assets/js/inventory.js"></script>
+<script src="../assets/js/purchase-data.js"></script>
+<script src="../assets/js/accounting.js"></script>
+<script>
+/* ============================================================
+   OWIN — Lõi dùng chung module THU MUA (nhúng trong trang)
+   Danh mục NCC · chấm điểm · kho PO · đề xuất mua · drawer bản ghi
+   Dùng lại API sẵn có: ERPInv.post · ERPCash.create · ERPPrint
+   ERPInteract.showModal / showToast · StockStore.suggestFromLSX
+   ============================================================ */
+(function (g) {
+  'use strict';
+  if (g.OwinCore) return;
+
+  var TODAY = '22/09/2026';
+
+  /* ---------- tiện ích ---------- */
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+    });
+  }
+  function fmt(n) { return Math.round(Number(n) || 0).toLocaleString('vi-VN'); }
+  function vnd(n) { return fmt(n) + '₫'; }
+  function num2(n) { return (Math.round((Number(n) || 0) * 100) / 100).toLocaleString('vi-VN'); }
+  function gon(n) {
+    n = Number(n) || 0;
+    if (Math.abs(n) >= 1e9) return (n / 1e9).toFixed(2).replace('.', ',') + ' tỷ';
+    if (Math.abs(n) >= 1e5) return (n / 1e6).toFixed(1).replace('.', ',') + ' tr';
+    return fmt(n) + '₫';
+  }
+  function toDate(s) {
+    var m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(String(s || '').trim());
+    return m ? new Date(+m[3], +m[2] - 1, +m[1]) : null;
+  }
+  function dstr(d) {
+    var p = function (n) { return ('0' + n).slice(-2); };
+    return p(d.getDate()) + '/' + p(d.getMonth() + 1) + '/' + d.getFullYear();
+  }
+  function dk(s) { var d = toDate(s); return d ? d.getTime() : 0; }
+  function addDays(s, n) { var d = toDate(s); if (!d) return s; return dstr(new Date(d.getTime() + n * 86400000)); }
+  /* >0 = còn N ngày nữa mới tới hạn · <0 = đã quá hạn N ngày */
+  function daysLeft(s) { var d = toDate(s); if (!d) return null; return Math.round((d - toDate(TODAY)) / 86400000); }
+  function monthOf(s) { var d = toDate(s); return d ? (d.getMonth() + 1) + '/' + d.getFullYear() : ''; }
+  var THIS_MONTH = monthOf(TODAY);
+
+  var RED = '#8a1f1f', GREEN = '#1f6b3a', AMBER = '#9c7714', STEEL = '#4a5560';
+  function warnRed(t) { return '<span class="ow-w red">' + t + '</span>'; }
+  function warnGreen(t) { return '<span class="ow-w green">' + t + '</span>'; }
+  var DASH = '<span class="ow-dash">—</span>';
+
+  /* ---------- Danh mục nhà cung cấp + chấm điểm ---------- */
+  var CRIT = [
+    { k: 'cl',   label: 'Chất lượng hàng',        w: 30, note: 'Sai lệch kích thước ≤2mm · độ dày anod ≥15µm · độ bám sơn' },
+    { k: 'giao', label: 'Đúng hẹn giao',          w: 25, note: 'Tỷ lệ đợt giao đúng ngày hẹn trên PO 6 tháng' },
+    { k: 'gia',  label: 'Giá cạnh tranh',         w: 20, note: 'So với giá rổ trung bình cùng nhóm vật tư' },
+    { k: 'ph',   label: 'Phản hồi & hỗ trợ',      w: 10, note: 'Thời gian phản hồi báo giá, xử lý khiếu nại' },
+    { k: 'tt',   label: 'Điều khoản thanh toán',  w: 10, note: 'Số ngày công nợ, chiết khấu trả sớm' },
+    { k: 'hs',   label: 'Hồ sơ pháp lý / CO-CQ',  w:  5, note: 'CO/CQ nhôm 6063-T5 · ISO 9001:2015 · QCVN 16:2023/BXD' }
+  ];
+  var NCC = [
+    { key: 'dongan', ten: 'Đùn ép Nhôm Đông Anh', mst: '0101248637',
+      dc: 'KCN Nguyên Khê, huyện Đông Anh, TP Hà Nội', lh: 'A. Hùng — Giám đốc Kinh doanh',
+      sdt: '024 3883 1728', mail: 'kinhdoanh@nhomdonganh.vn', dm: 'Nhôm thanh định hình 6063-T5',
+      term: 'Công nợ 30 ngày · CK 2% nếu trả trong 10 ngày', lead: '8 ngày',
+      cert: 'CO/CQ nhôm 6063-T5 · ISO 9001:2015',
+      sc: { cl: 92, giao: 88, gia: 84, ph: 90, tt: 80, hs: 95 },
+      nx: 'Nhôm đùn đều thành, dung sai tiết diện ổn định; đôi lô cây 5,8m cong nhẹ phải nắn lại.',
+      svu: [{ date: '06/09/2026', po: 'PO-2026-0760', mo: 'Lô 1.200 kg thanh hệ 93 cong vênh quá dung sai (>1,5mm/m)', bb: 'BB-CL-2609', kt: 12400000 }] },
+    { key: 'luxanode', ten: 'Nhôm Luxanode nhập khẩu', mst: '0106733915',
+      dc: 'Kho cảng Hồng Vân, Thường Tín, TP Hà Nội', lh: 'C. Ngân — Trưởng bộ phận nhập khẩu',
+      sdt: '024 3771 9046', mail: 'import@luxanode.vn', dm: 'Nhôm Anodized-ED 121 · nhôm hệ nhập khẩu',
+      term: 'Công nợ 30 ngày · đặt cọc 30% khi mở đơn', lead: '21 ngày (hàng nhập)',
+      cert: 'Phiếu kiểm định lớp phủ anod · CO/CQ · ISO 9001:2015',
+      sc: { cl: 96, giao: 72, gia: 68, ph: 82, tt: 70, hs: 100 },
+      nx: 'Lớp anod dày đều ≥17µm, màu ED đồng nhất; điểm trừ duy nhất là lịch tàu hay lệch.',
+      svu: [] },
+    { key: 'kinhvn', ten: 'Kính Việt Nhật Hải Long', mst: '0900512346',
+      dc: 'KCN Phố Nối A, tỉnh Hưng Yên', lh: 'A. Tuấn — Phụ trách dự án',
+      sdt: '0221 3972 118', mail: 'duan@kinhhailong.vn', dm: 'Kính hộp · kính cường lực · kính dán an toàn',
+      term: 'Công nợ 45 ngày', lead: '10 ngày',
+      cert: 'Chứng nhận kính an toàn · QCVN 16:2023/BXD',
+      sc: { cl: 86, giao: 64, gia: 88, ph: 78, tt: 85, hs: 90 },
+      nx: 'Giá tốt nhất nhóm kính; hay vỡ cạnh khi vận chuyển xa, cần kê giá chữ A.',
+      svu: [
+        { date: '06/09/2026', po: 'PO-2026-0766', mo: '18 tấm kính hộp 5-9-5 nứt cạnh khi hạ hàng (KINH-NUT)', bb: 'BB-CL-2611', kt: 6930000 },
+        { date: '21/08/2026', po: 'PO-2026-0766', mo: 'Giao trễ 4 ngày làm chậm công đoạn lắp kính LSX-0333', bb: 'BB-GH-2208', kt: 1800000 }
+      ] },
+    { key: 'kinlong', ten: 'Phụ kiện Kinlong VN', mst: '0312884571',
+      dc: 'Lô C2, KCN Quang Minh, TP Hà Nội', lh: 'C. Mai — Quản lý vùng miền Bắc',
+      sdt: '024 3958 6677', mail: 'mienbac@kinlong.vn', dm: 'Bản lề thuỷ lực · khoá · tay nắm · gioăng · ke góc',
+      term: 'Công nợ 30 ngày · CK 3% đơn ≥200 triệu', lead: '5 ngày',
+      cert: 'CQ nhà sản xuất · thử tải bản lề 150kg/cánh · ISO 9001:2015',
+      sc: { cl: 94, giao: 92, gia: 76, ph: 88, tt: 90, hs: 92 },
+      nx: 'Bản lề thuỷ lực sàn tự hồi tốt sau 200.000 lần đóng mở; giá cao hơn mặt bằng ~8%.',
+      svu: [] },
+    { key: 'hoachat', ten: 'Hoá chất Xây dựng Việt', mst: '0108236470',
+      dc: 'Số 24 Phan Trọng Tuệ, Thanh Trì, TP Hà Nội', lh: 'A. Nghĩa — Nhân viên kinh doanh',
+      sdt: '024 3688 4512', mail: 'sales@hoachatxaydungviet.vn', dm: 'Keo silicon · keo kết cấu · hoá chất vệ sinh nhôm',
+      term: 'Công nợ 15 ngày', lead: '4 ngày',
+      cert: 'CQ lô hàng · phiếu kiểm nghiệm độ bám dính',
+      sc: { cl: 82, giao: 80, gia: 90, ph: 70, tt: 75, hs: 80 },
+      nx: 'Silicon trung tính bám tốt, hạn dùng còn dài; hỗ trợ kỹ thuật chậm khi cần tư vấn.',
+      svu: [] },
+    { key: 'phumy', ten: 'Bao bì Phú Mỹ', mst: '0305447821',
+      dc: 'Cụm CN Ngọc Hồi, Thanh Trì, TP Hà Nội', lh: 'C. Hoa — Điều phối đơn hàng',
+      sdt: '024 3681 2299', mail: 'donhang@baobiphumy.vn', dm: 'Màng bảo vệ bề mặt · xốp · kiện gỗ đóng cửa',
+      term: 'Công nợ 30 ngày', lead: '6 ngày',
+      cert: 'CQ màng PE · cam kết không để lại keo sau 6 tháng',
+      sc: { cl: 78, giao: 86, gia: 92, ph: 74, tt: 80, hs: 70 },
+      nx: 'Giá rẻ nhất nhóm bao bì; màng bảo vệ đôi lô dính keo khi bóc sau 4 tháng.',
+      svu: [{ date: '18/08/2026', po: 'PO-2026-0758', mo: 'Màng bảo vệ để lại vệt keo trên 40 cánh, phải lau dung môi', bb: 'BB-CL-2604', kt: 2100000 }] },
+    { key: 'adong', ten: 'Sơn tĩnh điện Á Đông', mst: '0107995124',
+      dc: 'Xã Tiền Phong, Thường Tín, TP Hà Nội', lh: 'A. Cường — Quản đốc xưởng sơn',
+      sdt: '024 3376 8090', mail: 'xuongson@adong.vn', dm: 'Gia công sơn tĩnh điện · phủ vân gỗ thanh nhôm',
+      term: 'Trả ngay khi nhận hàng', lead: '12 ngày',
+      cert: 'Thiếu hồ sơ độ bám sơn (cross-cut) 2 kỳ gần nhất',
+      sc: { cl: 54, giao: 48, gia: 70, ph: 58, tt: 62, hs: 50 },
+      nx: 'Lô phủ vân gỗ hay xước và lệch tông giữa các mẻ; đã nhắc 3 lần chưa cải thiện.',
+      svu: [
+        { date: '14/09/2026', po: 'PO-2026-0770', mo: '620 kg thanh chấn song xước sơn, bong màng vân gỗ (SON-XUOC)', bb: 'BB-CL-2614', kt: 8800000 },
+        { date: '02/08/2026', po: 'PO-2026-0744', mo: 'Lệch tông vân gỗ giữa 2 mẻ, phải sơn lại 180 kg', bb: 'BB-CL-2598', kt: 5400000 }
+      ] },
+    { key: 'weike', ten: 'Cơ khí WEIKE Việt Nam', mst: '0109112447',
+      dc: 'Số 8 Giá Ngự, Xâm Xuyên, Thường Tín, TP Hà Nội', lh: 'A. Lâm — Kỹ thuật bán hàng',
+      sdt: '024 3378 1188', mail: 'service@weike.vn', dm: 'Máy làm cửa nhôm · lưỡi cắt · dao phay · ke góc vít inox',
+      term: 'Công nợ 30 ngày · bảo hành máy 12 tháng', lead: '14 ngày',
+      cert: 'CO/CQ máy · biên bản nghiệm thu chạy thử',
+      sc: { cl: 74, giao: 60, gia: 58, ph: 80, tt: 62, hs: 75 },
+      nx: 'Hỗ trợ kỹ thuật tại xưởng nhanh; vật tư phụ (lưỡi, dao) hay về chậm và giá cao.',
+      svu: [{ date: '12/08/2026', po: 'PO-2026-0754', mo: '20 bộ ke góc sai bước ren, không vào vít inox M6', bb: 'BB-CL-2601', kt: 3700000 }] }
+  ];
+  var NCC_MAP = {};
+  NCC.forEach(function (n) { NCC_MAP[n.key] = n; });
+  function ncc(key) { return NCC_MAP[key] || null; }
+  function nccName(key) { var n = ncc(key); return n ? n.ten : key; }
+  function score(n) {
+    if (typeof n === 'string') n = ncc(n);
+    if (!n) return 0;
+    return Math.round(CRIT.reduce(function (s, c) { return s + (Number(n.sc[c.k]) || 0) * c.w / 100; }, 0) * 10) / 10;
+  }
+  function rank(t) { return t >= 85 ? 'A' : t >= 75 ? 'B' : t >= 60 ? 'C' : 'D'; }
+  function rankColor(r) { return r === 'A' ? GREEN : r === 'B' ? STEEL : r === 'C' ? AMBER : RED; }
+  function rankChip(t) {
+    var r = rank(t);
+    return '<span class="ow-rank" style="background:' + rankColor(r) + '">' + r + '</span>';
+  }
+
+  /* ---------- Danh mục vật tư (mã GIỮ NGUYÊN theo kho) ---------- */
+  var MAT = [
+    { code: 'GIAY-IV300-6586',  name: 'Thanh nhôm hệ thuỷ lực 120 (6063-T5)', unit: 'kg',   price: 78500,   sup: 'dongan' },
+    { code: 'GIAY-CU150-6090',  name: 'Thanh nhôm hệ thuỷ lực 180',           unit: 'kg',   price: 82000,   sup: 'dongan' },
+    { code: 'GIAY-CU250-7290',  name: 'Thanh nhôm hệ trượt quay 93',          unit: 'kg',   price: 76000,   sup: 'dongan' },
+    { code: 'GIAY-DC230-65100', name: 'Thanh nhôm Luxanode Anodized-ED 121',  unit: 'kg',   price: 96000,   sup: 'luxanode' },
+    { code: 'GIAY-FT80-79109',  name: 'Thanh nhôm hệ chấn song + phào',       unit: 'kg',   price: 71000,   sup: 'dongan' },
+    { code: 'GIAY-BT350-7090',  name: 'Kính hộp 5-9-5 cường lực',             unit: 'm²',   price: 385000,  sup: 'kinhvn' },
+    { code: 'GIAY-DC400-7090',  name: 'Kính cường lực 8mm',                   unit: 'm²',   price: 295000,  sup: 'kinhvn' },
+    { code: 'KEM-CTP-525',      name: 'Bộ bản lề thuỷ lực sàn (Đức)',         unit: 'bộ',   price: 4850000, sup: 'kinlong' },
+    { code: 'MUC-CMYK',         name: 'Bộ khoá & tay nắm cao cấp',            unit: 'bộ',   price: 3200000, sup: 'kinlong' },
+    { code: 'DECAL-GIAY',       name: 'Gioăng EPDM',                          unit: 'm',    price: 9500,    sup: 'kinlong' },
+    { code: 'DECAL-PP',         name: 'Keo silicon trung tính',               unit: 'tuýp', price: 62000,   sup: 'hoachat' },
+    { code: 'DECAL-TRONG',      name: 'Màng bảo vệ bề mặt nhôm',              unit: 'm²',   price: 15000,   sup: 'phumy' },
+    { code: 'CAN-BONG',         name: 'Xốp + kiện gỗ đóng cửa',               unit: 'bộ',   price: 145000,  sup: 'phumy' },
+    { code: 'BAN-FLEXO',        name: 'Ke góc & vít inox (bộ)',               unit: 'bộ',   price: 185000,  sup: 'kinlong' }
+  ];
+  var MAT_MAP = {};
+  MAT.forEach(function (m) { MAT_MAP[m.code] = m; });
+  function mat(code) { return MAT_MAP[code] || null; }
+
+  /* Tồn kho thực tế (ưu tiên ERPInv → StockStore → danh mục) */
+  function onHand(code) {
+    try {
+      if (g.ERPInv && g.ERPInv.getItem) { var it = g.ERPInv.getItem(code); if (it) return Number(it.onHand) || 0; }
+    } catch (e) {}
+    try {
+      if (g.StockStore && g.StockStore.getMaterial) { var m = g.StockStore.getMaterial(code); if (m) return Number(m.onHand) || 0; }
+    } catch (e) {}
+    return 0;
+  }
+  function minStock(code) {
+    try {
+      if (g.ERPInv && g.ERPInv.getItem) { var it = g.ERPInv.getItem(code); if (it) return Number(it.minStock) || 0; }
+    } catch (e) {}
+    try {
+      if (g.StockStore && g.StockStore.getMaterial) { var m = g.StockStore.getMaterial(code); if (m) return Number(m.minStock) || 0; }
+    } catch (e) {}
+    return 0;
+  }
+
+  /* ============================================================
+     KHO PO — đơn đặt hàng mua (PO) · nhận hàng · trả tiền NCC
+     ============================================================ */
+  var PKEY = 'erp_po_nhomowin_v1';
+
+  function L(code, qty, name, unit, price) {
+    var m = mat(code);
+    var n = name || (m ? m.name : code);
+    var u = unit || (m ? m.unit : '');
+    var p = (price != null) ? price : (m ? m.price : 0);
+    return { code: code, name: n, unit: u, qty: qty, price: p, amount: Math.round(qty * p), recvQty: 0, lot: '' };
+  }
+  function tot(lines) { return lines.reduce(function (s, l) { return s + (l.amount || 0); }, 0); }
+  function po(o) {
+    o.total = tot(o.lines);
+    o.payments = o.payments || [];
+    return o;
+  }
+
+  function seedPO() {
+    return [
+      /* ---------- PO đã đặt (chưa nhận hàng) ---------- */
+      po({ id: 'PO-2026-0781', date: '18/09/2026', nccKey: 'dongan', content: 'Thanh nhôm hệ thuỷ lực 120 · 6063-T5 · cây 5,8m',
+        lines: [L('GIAY-IV300-6586', 12000)], due: '28/09/2026', status: 'đã đặt', payTerm: 'Công nợ 30 ngày',
+        note: 'Bù phôi cho cụm LSX cửa thuỷ lực quý IV', src: 'Đề xuất tự động · gộp BOM LSX đang chạy' }),
+      po({ id: 'PO-2026-0780', date: '15/09/2026', nccKey: 'luxanode', content: 'Thanh nhôm Luxanode Anodized-ED 121',
+        lines: [L('GIAY-DC230-65100', 6000)], due: '06/10/2026', status: 'đang giao', payTerm: 'Công nợ 30 ngày · cọc 30%',
+        note: 'Hàng nhập về cảng Hồng Vân, đã có vận đơn', src: 'DNM-2026-017' }),
+      po({ id: 'PO-2026-0778', date: '05/09/2026', nccKey: 'kinhvn', content: 'Kính hộp 5-9-5 cường lực · tấm 1,2×2,4m',
+        lines: [L('GIAY-BT350-7090', 900)], due: '13/09/2026', status: 'đã đặt', payTerm: 'Công nợ 45 ngày',
+        note: 'Phục vụ LSX-0333 lắp kính cửa trượt quay', src: 'Đề xuất tự động' }),
+      po({ id: 'PO-2026-0776', date: '02/09/2026', nccKey: 'kinlong', content: 'Bộ bản lề thuỷ lực sàn (Đức) · tải 150kg/cánh',
+        lines: [L('KEM-CTP-525', 60)], due: '16/09/2026', status: 'đã đặt', payTerm: 'Công nợ 30 ngày · CK 3%',
+        note: 'Hãng báo chậm tàu, đang chờ lịch giao mới', src: 'DNM-2026-016' }),
+      po({ id: 'PO-2026-0774', date: '12/09/2026', nccKey: 'hoachat', content: 'Keo silicon trung tính · tuýp 300ml',
+        lines: [L('DECAL-PP', 600)], due: '26/09/2026', status: 'đã đặt', payTerm: 'Công nợ 15 ngày',
+        note: '', src: 'DNM-2026-016' }),
+      po({ id: 'PO-2026-0772', date: '10/09/2026', nccKey: 'phumy', content: 'Xốp + kiện gỗ đóng cửa · bộ/1 bộ cửa',
+        lines: [L('CAN-BONG', 500)], due: '24/09/2026', status: 'đã đặt', payTerm: 'Công nợ 30 ngày',
+        note: '', src: 'Đề xuất tự động' }),
+      po({ id: 'PO-2026-0770', date: '08/09/2026', nccKey: 'adong', content: 'Thanh nhôm hệ chấn song + phào · phủ vân gỗ',
+        lines: [L('GIAY-FT80-79109', 4000)], due: '20/09/2026', status: 'đã đặt', payTerm: 'Trả ngay khi nhận hàng',
+        note: 'Xưởng sơn báo kẹt lò, đã lập biên bản nhắc lần 3', src: 'DNM-2026-020' }),
+
+      /* ---------- PO đã nhập kho ---------- */
+      po({ id: 'PO-2026-0768', date: '28/08/2026', nccKey: 'dongan', content: 'Thanh nhôm hệ thuỷ lực 120 · 6063-T5',
+        lines: [(function () { var l = L('GIAY-IV300-6586', 15000); l.recvQty = 15000; l.lot = 'LO-DA-0905'; return l; })()],
+        due: '07/09/2026', status: 'đã nhập', recvDate: '05/09/2026', pnkId: 'PNK-2026-0011',
+        payTerm: 'Công nợ 30 ngày · CK 2%', src: 'Đề xuất tự động · gộp BOM LSX cửa thuỷ lực', payDue: '27/09/2026', note: 'Nhận đủ 100%, kiểm tiết diện đạt',
+        payments: [{ id: 'PC-2026-011', date: '10/09/2026', amount: 800000000, method: 'ck', account: 'MB 0988837389 — CTCP TM OWIN' }] }),
+      po({ id: 'PO-2026-0766', date: '25/08/2026', nccKey: 'kinhvn', content: 'Kính hộp 5-9-5 cường lực',
+        lines: [(function () { var l = L('GIAY-BT350-7090', 1200); l.recvQty = 1182; l.lot = 'LO-KH-0906'; return l; })()],
+        due: '02/09/2026', status: 'đã nhập', recvDate: '06/09/2026', pnkId: 'PNK-2026-0010',
+        payTerm: 'Công nợ 45 ngày', src: 'DNM-2026-011 · Kho nhôm – kính', payDue: '06/10/2026', note: '18 tấm nứt cạnh khi hạ hàng — đã lập BB-CL-2611, khấu trừ 6,93 tr',
+        payments: [{ id: 'PC-2026-012', date: '12/09/2026', amount: 200000000, method: 'ck', account: 'MB 0988837389 — CTCP TM OWIN' }] }),
+      po({ id: 'PO-2026-0764', date: '20/08/2026', nccKey: 'luxanode', content: 'Thanh nhôm Luxanode Anodized-ED 121 · anod ≥15µm',
+        lines: [(function () { var l = L('GIAY-DC230-65100', 8000); l.recvQty = 8000; l.lot = 'LO-LUX-0903'; return l; })()],
+        due: '04/09/2026', status: 'đã nhập', recvDate: '03/09/2026', pnkId: 'PNK-2026-0009',
+        payTerm: 'Công nợ 30 ngày', src: 'Đề xuất tự động · tồn Luxanode dưới định mức', payDue: '18/09/2026', note: 'Đo lớp anod 17,2µm — đạt',
+        payments: [{ id: 'PC-2026-010', date: '08/09/2026', amount: 300000000, method: 'ck', account: 'MB 0988837389 — CTCP TM OWIN' }] }),
+      po({ id: 'PO-2026-0762', date: '18/08/2026', nccKey: 'kinlong', content: 'Bộ khoá & tay nắm cao cấp · khoá vân tay + tay gạt',
+        lines: [(function () { var l = L('MUC-CMYK', 90); l.recvQty = 90; l.lot = 'LO-KL-0828'; return l; })()],
+        due: '28/08/2026', status: 'đã nhập', recvDate: '28/08/2026', pnkId: 'PNK-2026-0008',
+        payTerm: 'Công nợ 30 ngày · CK 3%', src: 'DNM-2026-009 · Sản xuất', payDue: '25/09/2026', note: 'Nhận đủ, đúng hẹn',
+        payments: [{ id: 'PC-2026-009', date: '05/09/2026', amount: 288000000, method: 'ck', account: 'MB 0988837389 — CTCP TM OWIN' }] }),
+      po({ id: 'PO-2026-0760', date: '12/08/2026', nccKey: 'dongan', content: 'Thanh nhôm hệ trượt quay 93 · cây 5,8m',
+        lines: [(function () { var l = L('GIAY-CU250-7290', 9000); l.recvQty = 9000; l.lot = 'LO-DA-0822'; return l; })()],
+        due: '22/08/2026', status: 'đã nhập', recvDate: '22/08/2026', pnkId: 'PNK-2026-0007',
+        payTerm: 'Công nợ 30 ngày', src: 'Đề xuất tự động · gộp BOM LSX trượt quay', payDue: '11/09/2026', note: '1.200 kg cong vênh quá dung sai — BB-CL-2609, khấu trừ 12,4 tr',
+        payments: [{ id: 'PC-2026-007', date: '28/08/2026', amount: 400000000, method: 'ck', account: 'MB 0988837389 — CTCP TM OWIN' }] }),
+      po({ id: 'PO-2026-0758', date: '08/08/2026', nccKey: 'phumy', content: 'Màng bảo vệ bề mặt nhôm · cuộn 1m×200m',
+        lines: [(function () { var l = L('DECAL-TRONG', 3000); l.recvQty = 3000; l.lot = 'LO-PM-0814'; return l; })()],
+        due: '16/08/2026', status: 'đã nhập', recvDate: '14/08/2026', pnkId: 'PNK-2026-0006',
+        payTerm: 'Công nợ 30 ngày', src: 'DNM-2026-008 · Kho nhôm – kính', payDue: '20/09/2026', note: 'Giao sớm 2 ngày, đủ 100%',
+        payments: [{ id: 'PC-2026-005', date: '20/08/2026', amount: 45000000, method: 'tm', account: 'Quỹ tiền mặt nhà máy' }] }),
+      po({ id: 'PO-2026-0756', date: '04/08/2026', nccKey: 'hoachat', content: 'Keo silicon trung tính · tuýp 300ml',
+        lines: [(function () { var l = L('DECAL-PP', 800); l.recvQty = 800; l.lot = 'LO-HC-0818'; return l; })()],
+        due: '13/08/2026', status: 'đã nhập', recvDate: '18/08/2026', pnkId: 'PNK-2026-0005',
+        payTerm: 'Công nợ 15 ngày', src: 'DNM-2026-007 · Sản xuất', payDue: '18/09/2026', note: 'Về trễ 5 ngày, tổ ép góc phải giãn ca',
+        payments: [{ id: 'PC-2026-004', date: '15/08/2026', amount: 49600000, method: 'ck', account: 'MB 0988837389 — CTCP TM OWIN' }] }),
+      po({ id: 'PO-2026-0754', date: '30/07/2026', nccKey: 'weike', content: 'Ke góc & vít inox (bộ) · bộ/1 cánh',
+        lines: [(function () { var l = L('BAN-FLEXO', 200); l.recvQty = 200; l.lot = 'LO-WK-0810'; return l; })()],
+        due: '13/08/2026', status: 'đã nhập', recvDate: '10/08/2026', pnkId: 'PNK-2026-0004',
+        payTerm: 'Công nợ 30 ngày', src: 'DNM-2026-006 · Kỹ thuật', payDue: '29/08/2026', note: '20 bộ sai bước ren — BB-CL-2601, chờ NCC đổi',
+        payments: [] }),
+      po({ id: 'PO-2026-0752', date: '26/07/2026', nccKey: 'kinlong', content: 'Bộ bản lề thuỷ lực sàn (Đức)',
+        lines: [(function () { var l = L('KEM-CTP-525', 40); l.recvQty = 40; l.lot = 'LO-KL-0802'; return l; })()],
+        due: '04/08/2026', status: 'đã nhập', recvDate: '02/08/2026', pnkId: 'PNK-2026-0003',
+        payTerm: 'Công nợ 30 ngày · CK 3%', src: 'Đề xuất tự động · tồn bản lề dưới định mức', payDue: '25/09/2026', note: 'Thử tải 150kg/cánh đạt',
+        payments: [{ id: 'PC-2026-002', date: '02/08/2026', amount: 100000000, method: 'ck', account: 'MB 0988837389 — CTCP TM OWIN' }] })
+    ];
+  }
+
+  var pmem = null;
+  function pload() {
+    if (pmem) return pmem;
+    try {
+      var v = JSON.parse(g.localStorage.getItem(PKEY));
+      if (v && v.pos && v.pos.length) { pmem = v; return pmem; }
+    } catch (e) {}
+    pmem = { pos: seedPO() };
+    psave();
+    return pmem;
+  }
+  function psave() { try { g.localStorage.setItem(PKEY, JSON.stringify(pmem)); } catch (e) {} }
+
+  function allPO() { return pload().pos; }
+  function getPO(id) { return allPO().filter(function (p) { return p.id === id; })[0] || null; }
+  function nextPO() {
+    var max = 0;
+    allPO().forEach(function (p) {
+      var m = /^PO-2026-(\d+)$/.exec(p.id || '');
+      if (m) max = Math.max(max, parseInt(m[1], 10));
+    });
+    return 'PO-2026-' + ('000' + (max + 1)).slice(-4);
+  }
+  function paidOf(p) { return (p.payments || []).reduce(function (s, x) { return s + (Number(x.amount) || 0); }, 0); }
+  function debtOf(p) { return p.status === 'đã nhập' ? Math.max(0, (p.total || 0) - paidOf(p)) : 0; }
+  /* trễ giao (PO chưa nhận) hoặc trễ nhận (PO đã nhập): >0 là trễ */
+  function lateDays(p) {
+    if (!p.due) return 0;
+    var end = p.status === 'đã nhập' ? p.recvDate : TODAY;
+    return Math.round((toDate(end) - toDate(p.due)) / 86400000);
+  }
+  var PENALTY_RATE = 0.00135;  /* phạt chậm giao 0,135%/ngày trên giá trị PO, trần 8% */
+  var INTEREST_RATE = 0.0005;  /* lãi chậm trả ~0,05%/ngày trên số còn nợ */
+  function penalty(p) {
+    var d = lateDays(p);
+    if (d <= 0) return 0;
+    return Math.round(Math.min((p.total || 0) * PENALTY_RATE * d, (p.total || 0) * 0.08));
+  }
+  function payOverdue(p) {
+    if (debtOf(p) <= 0 || !p.payDue) return 0;
+    var d = -daysLeft(p.payDue);
+    return d > 0 ? d : 0;
+  }
+  function interest(p) { return Math.round(debtOf(p) * INTEREST_RATE * payOverdue(p)); }
+
+  function createPO(o) {
+    var lines = (o.lines || []).map(function (l) {
+      var q = Number(l.qty) || 0, pr = Number(l.price) || 0;
+      return { code: l.code, name: l.name, unit: l.unit || '', qty: q, price: pr, amount: Math.round(q * pr), recvQty: 0, lot: '' };
+    }).filter(function (l) { return l.qty > 0; });
+    var rec = po({
+      id: nextPO(), date: o.date || TODAY, nccKey: o.nccKey, content: o.content || (lines[0] ? lines[0].name : ''),
+      lines: lines, due: o.due || addDays(TODAY, parseInt((ncc(o.nccKey) || {}).lead, 10) || 7),
+      status: 'đã đặt', payTerm: o.payTerm || (ncc(o.nccKey) || {}).term || 'Công nợ 30 ngày',
+      note: o.note || '', src: o.src || ''
+    });
+    allPO().unshift(rec);
+    psave();
+    return rec;
+  }
+
+  /* Nhận hàng → ghi phiếu nhập kho thật (tăng tồn NVL) */
+  function receivePO(id, opt) {
+    var p = getPO(id);
+    if (!p) return { ok: false, message: 'Không tìm thấy PO' };
+    opt = opt || {};
+    var map = {};
+    (opt.lines || []).forEach(function (x) { map[x.code] = x; });
+    var invLines = [];
+    p.lines.forEach(function (l) {
+      var x = map[l.code] || {};
+      var q = (x.recvQty != null && x.recvQty !== '') ? Number(x.recvQty) : l.qty;
+      l.recvQty = q; l.lot = x.lot || l.lot || '';
+      if (q > 0) invLines.push({ code: l.code, name: l.name, unit: l.unit, qty: q, price: l.price, lot: l.lot });
+    });
+    if (!invLines.length) return { ok: false, message: 'Phải nhập số lượng thực nhận > 0 cho ít nhất 1 dòng' };
+    var res = { ok: true, txn: { id: 'PNK-' + id.slice(-4) } };
+    if (g.ERPInv && g.ERPInv.post) {
+      res = g.ERPInv.post({
+        kind: 'in', type: 'nhap_mua', typeLabel: 'Nhập mua NVL',
+        date: opt.date || TODAY, partner: nccName(p.nccKey), ref: p.id,
+        note: 'Nhận hàng theo đơn đặt hàng ' + p.id + (opt.note ? ' — ' + opt.note : ''),
+        lines: invLines
+      });
+      if (!res.ok) return res;
+    }
+    p.status = 'đã nhập';
+    p.recvDate = opt.date || TODAY;
+    p.pnkId = res.txn.id;
+    p.payDue = addDays(p.recvDate, parseInt(String(p.payTerm).replace(/\D+/g, ''), 10) || 30);
+    psave();
+    return { ok: true, po: p, pnk: res.txn };
+  }
+
+  /* Trả tiền NCC → tạo phiếu chi thật */
+  function payPO(id, opt) {
+    var p = getPO(id);
+    if (!p) return { ok: false, message: 'Không tìm thấy PO' };
+    var amount = Math.round(Number(opt.amount) || 0);
+    if (amount <= 0) return { ok: false, message: 'Số tiền trả phải lớn hơn 0' };
+    var con = debtOf(p);
+    if (amount > con) return { ok: false, message: 'Số tiền trả (' + vnd(amount) + ') vượt quá số còn nợ (' + vnd(con) + ')' };
+    var rec = null;
+    if (g.ERPCash && g.ERPCash.create) {
+      rec = g.ERPCash.create({
+        kind: 'chi', type: 'chi_nvl', typeLabel: 'Chi trả nhà cung cấp',
+        date: opt.date || TODAY, partner: nccName(p.nccKey),
+        method: opt.method === 'tm' ? 'tm' : 'ck', amount: amount,
+        reason: 'Thanh toán đơn đặt hàng ' + p.id + ' — ' + p.content + (opt.account ? ' · TK: ' + opt.account : ''),
+        createdBy: 'Kế toán thanh toán', ref: p.id
+      });
+    }
+    var pay = {
+      id: rec ? rec.id : 'PC-2026-' + ('00' + ((p.payments || []).length + 90)).slice(-3),
+      date: opt.date || TODAY, amount: amount, method: opt.method === 'tm' ? 'tm' : 'ck',
+      account: opt.account || ''
+    };
+    p.payments.push(pay);
+    psave();
+    return { ok: true, pay: pay, po: p };
+  }
+
+  /* Công nợ gộp theo NCC */
+  function debtByNcc() {
+    return NCC.map(function (n) {
+      var ps = allPO().filter(function (p) { return p.nccKey === n.key && p.status === 'đã nhập'; });
+      var phatsinh = ps.reduce(function (s, p) { return s + (p.total || 0); }, 0);
+      var datra = ps.reduce(function (s, p) { return s + paidOf(p); }, 0);
+      var connno = ps.reduce(function (s, p) { return s + debtOf(p); }, 0);
+      var open = ps.filter(function (p) { return debtOf(p) > 0; })
+        .sort(function (a, b) { return dk(a.payDue) - dk(b.payDue); });
+      var han = open.length ? open[0].payDue : '';
+      var qh = open.reduce(function (m, p) { return Math.max(m, payOverdue(p)); }, 0);
+      var lai = open.reduce(function (s, p) { return s + interest(p); }, 0);
+      return {
+        key: n.key, ten: n.ten, soPO: ps.length, phatsinh: phatsinh, datra: datra,
+        connno: connno, han: han, quahan: qh, lai: lai, pos: ps, open: open
+      };
+    });
+  }
+
+  /* ============================================================
+     ĐỀ XUẤT MUA — DNM do phòng ban gửi lên
+     ============================================================ */
+  var DKEY = 'erp_dxm_nhomowin_v1';
+  function seedDXM() {
+    return [
+      { id: 'DNM-2026-021', date: '20/09/2026', dept: 'Kho', nguoi: 'Lê Văn Bảo — Thủ kho nhôm – kính',
+        code: 'GIAY-CU150-6090', noidung: 'Thanh nhôm hệ thuỷ lực 180', qty: 18000, unit: 'kg', price: 82000,
+        lydo: 'Tồn 12.000 kg, dưới định mức tối thiểu 15.000 kg', uutien: 'Cao', status: 'Chờ duyệt', nccKey: 'dongan' },
+      { id: 'DNM-2026-020', date: '19/09/2026', dept: 'Sản xuất', nguoi: 'Nguyễn Đức Trung — Tổ trưởng cắt CNC',
+        code: 'GIAY-FT80-79109', noidung: 'Thanh nhôm hệ chấn song + phào', qty: 9000, unit: 'kg', price: 71000,
+        lydo: 'LSX-0331 thiếu phôi chấn song, tồn còn 3.800 kg', uutien: 'Gấp', status: 'Chờ duyệt', nccKey: 'adong' },
+      { id: 'DNM-2026-019', date: '18/09/2026', dept: 'Kỹ thuật', nguoi: 'Phạm Minh Khôi — Kỹ sư cơ khí – nhôm hệ',
+        code: 'VTM-LUOI-500', noidung: 'Lưỡi cắt hợp kim Ø500 + dao phay đố', qty: 12, unit: 'bộ', price: 2850000,
+        lydo: 'Lưỡi máy CAT-01 / CAT-02 mòn, đường cắt ba via >2mm', uutien: 'Cao', status: 'Chờ duyệt', nccKey: 'weike' },
+      { id: 'DNM-2026-018', date: '17/09/2026', dept: 'Hành chính', nguoi: 'Trần Thị Thu Hà — Hành chính nhân sự',
+        code: 'HC-BHLD-Q4', noidung: 'Đồ bảo hộ: găng tay, kính che, khẩu trang', qty: 120, unit: 'bộ', price: 185000,
+        lydo: 'Cấp phát quý IV cho Tổ ép góc – lắp ráp và Tổ hoàn thiện', uutien: 'Thường', status: 'Chờ duyệt', nccKey: 'phumy' },
+      { id: 'DNM-2026-017', date: '16/09/2026', dept: 'Sản xuất', nguoi: 'Vũ Quang Huy — Thợ uốn vòm',
+        code: 'GIAY-IV300-6586', noidung: 'Thanh nhôm hệ thuỷ lực 120 (6063-T5)', qty: 8000, unit: 'kg', price: 78500,
+        lydo: 'Bù phôi hỏng khi uốn vòm bán kính nhỏ — LSX-0340', uutien: 'Cao', status: 'Đã duyệt', nccKey: 'dongan' },
+      { id: 'DNM-2026-016', date: '15/09/2026', dept: 'Kho', nguoi: 'Lê Văn Bảo — Thủ kho nhôm – kính',
+        code: 'DECAL-PP', noidung: 'Keo silicon trung tính (tuýp 300ml)', qty: 600, unit: 'tuýp', price: 62000,
+        lydo: 'Tồn 180 tuýp, dưới định mức 250 tuýp', uutien: 'Cao', status: 'Đã duyệt', nccKey: 'hoachat' },
+      { id: 'DNM-2026-015', date: '12/09/2026', dept: 'Kỹ thuật', nguoi: 'Đỗ Thành Nam — KCS nhôm kính',
+        code: 'VTM-DO-ANOD', noidung: 'Thiết bị đo độ dày lớp anod cầm tay', qty: 1, unit: 'bộ', price: 46500000,
+        lydo: 'Kiểm lớp anod ≥15µm ngay khi nhập nhôm Luxanode', uutien: 'Thường', status: 'Đã duyệt', nccKey: 'weike' },
+      { id: 'DNM-2026-014', date: '10/09/2026', dept: 'Sản xuất', nguoi: 'Nguyễn Đức Trung — Tổ trưởng cắt CNC',
+        code: 'DECAL-TRONG', noidung: 'Màng bảo vệ bề mặt nhôm', qty: 3000, unit: 'm²', price: 15000,
+        lydo: 'Tồn 90 m², dưới định mức 120 m² — không đủ bọc trước đóng kiện', uutien: 'Gấp', status: 'Đã duyệt', nccKey: 'phumy' },
+      { id: 'DNM-2026-013', date: '08/09/2026', dept: 'Hành chính', nguoi: 'Trần Thị Thu Hà — Hành chính nhân sự',
+        code: 'HC-MAYIN-A3', noidung: 'Máy in văn phòng khổ A3', qty: 1, unit: 'cái', price: 12400000,
+        lydo: 'Máy cũ hỏng trục, in phiếu công nghệ bị mờ', uutien: 'Thấp', status: 'Từ chối', nccKey: 'weike',
+        lydoTc: 'Chuyển sang thuê máy in theo tháng, không mua mới' },
+      { id: 'DNM-2026-012', date: '05/09/2026', dept: 'Kho', nguoi: 'Lê Văn Bảo — Thủ kho nhôm – kính',
+        code: 'GIAY-DC400-7090', noidung: 'Kính cường lực 8mm', qty: 2000, unit: 'm²', price: 295000,
+        lydo: 'Dự trữ cho đơn hàng cửa trượt quay quý IV', uutien: 'Thường', status: 'Từ chối', nccKey: 'kinhvn',
+        lydoTc: 'Chưa chốt đơn hàng, tồn kính 8mm còn 15.400 m² — chưa duyệt dự trữ' }
+    ];
+  }
+  var dmem = null;
+  function dload() {
+    if (dmem) return dmem;
+    try {
+      var v = JSON.parse(g.localStorage.getItem(DKEY));
+      if (v && v.rows && v.rows.length) { dmem = v; return dmem; }
+    } catch (e) {}
+    dmem = { rows: seedDXM() };
+    dsave();
+    return dmem;
+  }
+  function dsave() { try { g.localStorage.setItem(DKEY, JSON.stringify(dmem)); } catch (e) {} }
+
+  var DEPT_OF = { 'Kho vật tư': 'Kho', 'Kho nhôm – kính': 'Kho', 'Xưởng sản xuất': 'Sản xuất' };
+  /* Gộp DNM nội bộ + DNM sinh từ ERPPurchase (trang Kho bấm "Đề nghị mua NVL") */
+  function allDXM() {
+    var rows = dload().rows.slice();
+    try {
+      if (g.ERPPurchase && g.ERPPurchase.all) {
+        g.ERPPurchase.all().forEach(function (r) {
+          if (rows.some(function (x) { return x.id === r.id; })) return;
+          var l = (r.lines || [])[0] || {};
+          rows.push({
+            id: r.id, date: r.date, dept: DEPT_OF[r.from] || r.from || 'Kho',
+            nguoi: r.from || 'Thủ kho nhôm – kính', code: l.code || '',
+            noidung: (r.lines || []).length > 1 ? (l.name + ' + ' + ((r.lines.length - 1) + ' mã khác')) : (l.name || r.note || ''),
+            qty: l.qty || 0, unit: l.unit || '', price: l.price || 0,
+            lydo: r.ref || r.note || 'Cảnh báo tồn dưới định mức',
+            uutien: 'Cao', status: /duyệt/.test(r.status || '') && r.status !== 'chờ duyệt' ? 'Đã duyệt' : 'Chờ duyệt',
+            nccKey: (function () {
+              var found = NCC.filter(function (n) { return n.ten === l.supplier; })[0];
+              return found ? found.key : (mat(l.code) || {}).sup || 'dongan';
+            })(), external: true
+          });
+        });
+      }
+    } catch (e) {}
+    return rows.sort(function (a, b) { return dk(b.date) - dk(a.date) || String(b.id).localeCompare(String(a.id)); });
+  }
+  function getDXM(id) { return allDXM().filter(function (r) { return r.id === id; })[0] || null; }
+  function setDXM(id, patch) {
+    var r = dload().rows.filter(function (x) { return x.id === id; })[0];
+    if (!r) { r = getDXM(id); if (r) { dload().rows.push(r); } }
+    if (!r) return null;
+    Object.keys(patch || {}).forEach(function (k) { r[k] = patch[k]; });
+    dsave();
+    return r;
+  }
+
+  /* Đề xuất tự động: gộp BOM các LSX đang chạy + mã dưới định mức */
+  function autoRows() {
+    var rows = [], seen = {};
+    try {
+      if (g.StockStore && g.StockStore.suggestFromLSX) {
+        g.StockStore.suggestFromLSX().forEach(function (r) {
+          seen[r.code] = 1;
+          var m = mat(r.code) || {};
+          rows.push({
+            code: r.code, name: m.name || r.name, unit: m.unit || r.unit,
+            demand: r.demand, onHand: r.onHand, shortage: r.shortage,
+            sup: (function () { var f = NCC.filter(function (n) { return n.ten === r.supplier; })[0]; return f ? f.key : (m.sup || 'dongan'); })(),
+            price: m.price || r.price, qty: r.suggestQty || r.shortage,
+            lsx: r.lsxIds || [], from: 'BOM lệnh sản xuất'
+          });
+        });
+      }
+    } catch (e) {}
+    /* bổ sung các mã dưới tồn tối thiểu chưa có trong danh sách */
+    MAT.forEach(function (m) {
+      if (seen[m.code]) return;
+      var oh = onHand(m.code), mn = minStock(m.code);
+      if (!mn || oh >= mn) return;
+      var need = Math.ceil(mn * 2 - oh);
+      rows.push({
+        code: m.code, name: m.name, unit: m.unit, demand: mn, onHand: oh,
+        shortage: Math.max(0, mn - oh), sup: m.sup, price: m.price, qty: need,
+        lsx: [], from: 'Dưới định mức tồn'
+      });
+    });
+    return rows.sort(function (a, b) { return (b.shortage - a.shortage) || (b.demand - a.demand); });
+  }
+
+  /* ============================================================
+     DRAWER BẢN GHI CHUẨN ERP (xem · sửa tại chỗ · in)
+     ============================================================ */
+  var CSS_ID = 'owin-core-css';
+  function ensureCss() {
+    if (document.getElementById(CSS_ID)) return;
+    var s = document.createElement('style');
+    s.id = CSS_ID;
+    s.textContent =
+      '.ow-strip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:16px}' +
+      '.ow-tile{background:var(--canvas);border:1px solid var(--rule);border-radius:10px;padding:10px 14px;min-height:64px;display:flex;flex-direction:column;justify-content:center}' +
+      '.ow-tile .l{font-family:var(--ff-mono);font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--ash)}' +
+      '.ow-tile .v{font-size:20px;font-weight:700;margin-top:3px;font-variant-numeric:tabular-nums;line-height:1.15}' +
+      '.ow-tile .s{font-size:11px;color:var(--ash);margin-top:2px}' +
+      '@media(max-width:900px){.ow-strip{grid-template-columns:repeat(2,minmax(0,1fr))}}' +
+      '.ow-vtabs{display:flex;gap:8px;margin:0 0 16px}' +
+      '.ow-vtab{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:10px 18px;border:1px solid var(--rule);background:var(--canvas);border-radius:10px;font-family:var(--ff-sans);font-size:13.5px;font-weight:600;color:var(--ash);cursor:pointer}' +
+      '.ow-vtab:hover{border-color:var(--ink);color:var(--ink)}' +
+      '.ow-vtab.on{background:var(--ink);border-color:var(--ink);color:var(--paper)}' +
+      '.ow-vtab .n{font-family:var(--ff-mono);font-size:12px;padding:1px 7px;border-radius:999px;background:rgba(20,19,15,.08)}' +
+      '.ow-vtab.on .n{background:rgba(245,241,232,.18)}' +
+      '.tbl tbody td{font-size:13px}' +
+      '.tbl tbody tr{height:40px}' +
+      '.ow-tbl tbody tr.ow-row{cursor:pointer}' +
+      '.ow-tbl td.ow-ell{max-width:210px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}' +
+      '.ow-tbl td.ow-ell2{max-width:250px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}' +
+      '.ow-tbl tbody tr.ow-row:hover{background:var(--paper-2)}' +
+      '.ow-w{font-size:12.5px;font-weight:600;line-height:1.3;display:inline-block}' +
+      '.ow-w.red{color:' + RED + '}.ow-w.green{color:' + GREEN + '}' +
+      '.ow-dash{color:var(--ash-3)}' +
+      '.lnk{color:var(--rust);font-family:var(--ff-mono);font-size:12.5px;font-weight:600;text-decoration:none;white-space:nowrap;border-bottom:1px dotted rgba(197,64,10,.5)}' +
+      '.lnk:hover{color:var(--rust-deep);border-bottom-style:solid}' +
+      '.badge-success{background:var(--moss-soft);color:var(--moss-deep);border-color:rgba(47,93,58,.18)}' +
+      '.badge-danger{background:var(--signal-soft);color:' + RED + ';border-color:rgba(138,31,31,.2)}' +
+      '.badge-warning{background:var(--amber-soft);color:var(--amber);border-color:rgba(156,119,20,.2)}' +
+      '.ow-rank{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:6px;color:#fff;font-weight:800;font-size:12px}' +
+      '.ow-btn-sm{display:inline-flex;align-items:center;gap:4px;min-height:30px;padding:5px 10px;font-size:12px;font-weight:600;border:1px solid var(--rule);background:var(--canvas);border-radius:7px;color:var(--ink);cursor:pointer;white-space:nowrap}' +
+      '.ow-btn-sm:hover{border-color:var(--ink);background:var(--paper-2)}' +
+      '.ow-btn-sm.pri{background:var(--ink);border-color:var(--ink);color:var(--paper)}' +
+      '.ow-btn-sm.pri:hover{background:var(--ink-2)}' +
+      '.ow-btn-sm.ok{background:var(--moss);border-color:var(--moss);color:#fff}' +
+      '.ow-btn-sm.no{border-color:rgba(138,31,31,.4);color:' + RED + '}' +
+      /* drawer */
+      '.ow-ov{position:fixed;inset:0;background:rgba(20,19,15,.44);backdrop-filter:blur(2px);z-index:900;opacity:0;animation:owov .16s ease forwards}' +
+      '@keyframes owov{to{opacity:1}}' +
+      '.ow-ov.leaving{animation:owov-out .18s ease forwards}@keyframes owov-out{to{opacity:0}}' +
+      '.ow-dr{position:absolute;top:0;bottom:0;right:0;width:min(760px,96vw);background:var(--paper);display:flex;flex-direction:column;box-shadow:-16px 0 48px rgba(20,19,15,.26);transform:translateX(100%);animation:owdr .24s cubic-bezier(.2,.8,.2,1) forwards}' +
+      '@keyframes owdr{to{transform:translateX(0)}}' +
+      '.ow-ov.leaving .ow-dr{animation:owdr-out .18s ease forwards}@keyframes owdr-out{to{transform:translateX(100%)}}' +
+      '.ow-dh{background:linear-gradient(135deg,var(--ink),#2e2b24);color:var(--paper);padding:16px 20px 14px;flex-shrink:0}' +
+      '.ow-dh .cat{font-family:var(--ff-mono);font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--rust-2)}' +
+      '.ow-dh .idr{display:flex;align-items:center;gap:10px;margin-top:7px;flex-wrap:wrap}' +
+      '.ow-dh .idr b{font-family:var(--ff-mono);font-size:21px;font-weight:700;letter-spacing:-.01em}' +
+      '.ow-dh .sub{font-size:12.5px;color:rgba(245,241,232,.66);margin-top:5px}' +
+      '.ow-dh .acts{position:absolute;top:14px;right:16px;display:flex;gap:6px}' +
+      '.ow-hb{display:inline-flex;align-items:center;gap:5px;min-height:30px;padding:5px 11px;font-size:11.5px;font-weight:600;background:rgba(245,241,232,.1);border:1px solid rgba(245,241,232,.26);border-radius:999px;color:var(--paper);cursor:pointer}' +
+      '.ow-hb:hover{background:rgba(245,241,232,.2)}' +
+      '.ow-chip{display:inline-flex;align-items:center;padding:3px 10px;border-radius:999px;font-size:10.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;background:#e8a075;color:#14130f}' +
+      '.ow-chip.ok{background:#8fbf6f}.ow-chip.warn{background:#e5c454}.ow-chip.bad{background:#e07a6a}' +
+      '.ow-db{flex:1;overflow-y:auto;padding:4px 20px 20px}' +
+      '.ow-dtabs{display:flex;gap:2px;padding:0 20px;background:var(--paper);border-bottom:1px solid var(--rule);flex-shrink:0;overflow-x:auto}' +
+      '.ow-dtab{padding:11px 13px;font-size:12.5px;font-weight:500;color:var(--ash);background:transparent;border:0;border-bottom:2px solid transparent;margin-bottom:-1px;cursor:pointer;white-space:nowrap}' +
+      '.ow-dtab:hover{color:var(--ink)}.ow-dtab.on{color:var(--ink);border-bottom-color:var(--rust);font-weight:700}' +
+      '.ow-gh{display:flex;align-items:center;gap:7px;margin:18px 0 8px;font-family:var(--ff-mono);font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--ink)}' +
+      '.ow-gh i{color:var(--rust)}.ow-gh::after{content:"";flex:1;height:1px;background:var(--rule)}' +
+      '.ow-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px 12px}' +
+      '.ow-f{background:var(--canvas);border:1px solid var(--rule);border-radius:9px;padding:8px 11px;min-width:0}' +
+      '.ow-f.wide{grid-column:1/-1}' +
+      '.ow-f label{display:block;font-family:var(--ff-mono);font-size:9px;letter-spacing:.11em;text-transform:uppercase;color:var(--ash);margin-bottom:3px}' +
+      '.ow-f b{display:block;font-size:13px;font-weight:600;color:var(--ink);line-height:1.4;word-break:break-word;font-variant-numeric:tabular-nums}' +
+      '.ow-f input,.ow-f select,.ow-f textarea{width:100%;font-family:inherit;font-size:13px;font-weight:600;color:var(--ink);background:#fff;border:1px solid var(--rust);border-radius:6px;padding:5px 8px}' +
+      '.ow-it{width:100%;border-collapse:collapse;font-size:12.5px;background:var(--canvas);border:1px solid var(--rule);border-radius:9px;overflow:hidden}' +
+      '.ow-it th{font-family:var(--ff-mono);font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--ash);text-align:left;padding:7px 9px;border-bottom:1px solid var(--rule);background:var(--paper-2)}' +
+      '.ow-it td{padding:7px 9px;border-bottom:1px solid var(--rule-hair)}' +
+      '.ow-it tr:last-child td{border-bottom:0}.ow-it .r{text-align:right;font-variant-numeric:tabular-nums}' +
+      '.ow-df{padding:12px 20px;border-top:1px solid var(--rule);background:var(--canvas);display:flex;gap:8px;flex-wrap:wrap;flex-shrink:0}' +
+      '.ow-df .btn{flex:1;justify-content:center;min-height:38px}' +
+      '.ow-crit{width:100%;border-collapse:collapse;font-size:12.5px;background:var(--canvas);border:1px solid var(--rule);border-radius:9px;overflow:hidden}' +
+      '.ow-crit th{font-family:var(--ff-mono);font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--ash);text-align:left;padding:7px 9px;background:var(--paper-2);border-bottom:1px solid var(--rule)}' +
+      '.ow-crit td{padding:8px 9px;border-bottom:1px solid var(--rule-hair);vertical-align:middle}' +
+      '.ow-crit .r{text-align:right;font-variant-numeric:tabular-nums}' +
+      '.ow-bar{height:7px;border-radius:4px;background:var(--rule-soft);overflow:hidden;min-width:70px}' +
+      '.ow-bar>i{display:block;height:100%;border-radius:4px}' +
+      '.erp-modal:has(.ow-wide){width:min(880px,95vw)!important;max-width:880px!important}' +
+      '.ow-mrow{display:grid;grid-template-columns:1fr 1fr;gap:12px}' +
+      '.ow-mrow label{display:block}' +
+      '.ow-mrow label>span{display:block;font-size:11.5px;font-weight:600;color:var(--ash);margin-bottom:4px}';
+    document.head.appendChild(s);
+  }
+
+  var stack = [];
+  function chipCls(st) {
+    st = String(st || '').toLowerCase();
+    if (/đã nhập|đã duyệt|đã trả|hoàn thành|đạt/.test(st)) return 'ok';
+    if (/chờ|đã đặt|đang giao|soạn/.test(st)) return 'warn';
+    if (/từ chối|huỷ|hủy|trễ|quá hạn/.test(st)) return 'bad';
+    return '';
+  }
+  /* groups: [{title, icon, fields:[{key,label,val,wide,edit,type,options}]}] */
+  function openDrawer(o) {
+    ensureCss();
+    var ov = document.createElement('div');
+    ov.className = 'ow-ov';
+    ov.style.zIndex = 900 + stack.length * 10;
+    var tabsHtml = '', panes = '';
+    if (o.tabs && o.tabs.length) {
+      tabsHtml = '<div class="ow-dtabs">' + o.tabs.map(function (t, i) {
+        return '<button class="ow-dtab' + (i === 0 ? ' on' : '') + '" data-owdt="' + i + '" data-no-interact="true">' + esc(t.label) + '</button>';
+      }).join('') + '</div>';
+      panes = o.tabs.map(function (t, i) {
+        return '<div data-owdp="' + i + '"' + (i ? ' style="display:none"' : '') + '>' + (t.html || '') + '</div>';
+      }).join('');
+    } else {
+      panes = groupsHtml(o.groups) + (o.itemsHtml || '') + (o.extraHtml || '');
+    }
+    ov.innerHTML = '<div class="ow-dr" role="dialog" aria-modal="true">' +
+      '<div class="ow-dh" style="position:relative">' +
+        '<div class="cat">' + esc(o.cat || 'Bản ghi') + '</div>' +
+        '<div class="acts">' +
+          (o.editable === false ? '' : '<button class="ow-hb" data-ow="edit" data-no-interact="true"><i data-lucide="pencil" style="width:12px;height:12px"></i> Sửa</button>') +
+          (o.onPrint ? '<button class="ow-hb" data-ow="print" data-no-interact="true"><i data-lucide="printer" style="width:12px;height:12px"></i> In</button>' : '') +
+          '<button class="ow-hb" data-ow="close" data-no-interact="true"><i data-lucide="x" style="width:12px;height:12px"></i></button>' +
+        '</div>' +
+        '<div class="idr"><b>' + esc(o.id || '') + '</b>' +
+          (o.status ? '<span class="ow-chip ' + chipCls(o.status) + '">' + esc(o.status) + '</span>' : '') + '</div>' +
+        (o.sub ? '<div class="sub">' + o.sub + '</div>' : '') +
+      '</div>' + tabsHtml +
+      '<div class="ow-db">' + panes + '</div>' +
+      (o.actionsHtml ? '<div class="ow-df">' + o.actionsHtml + '</div>' : '') +
+    '</div>';
+    document.body.appendChild(ov);
+    stack.push(ov);
+    if (g.lucide) try { g.lucide.createIcons(); } catch (e) {}
+
+    ov.addEventListener('click', function (e) {
+      var t;
+      if (e.target === ov || e.target.closest('[data-ow="close"]')) { e.stopPropagation(); return closeTop(); }
+      if ((t = e.target.closest('[data-owdt]'))) {
+        var i = t.getAttribute('data-owdt');
+        ov.querySelectorAll('.ow-dtab').forEach(function (x) { x.classList.toggle('on', x === t); });
+        ov.querySelectorAll('[data-owdp]').forEach(function (p) { p.style.display = (p.getAttribute('data-owdp') === i) ? '' : 'none'; });
+        ov.querySelector('.ow-db').scrollTop = 0;
+        if (g.lucide) try { g.lucide.createIcons(); } catch (er) {}
+        return;
+      }
+      if (e.target.closest('[data-ow="print"]')) { e.stopPropagation(); if (o.onPrint) o.onPrint(); return; }
+      if (e.target.closest('[data-ow="edit"]')) { e.stopPropagation(); return setEdit(ov, o, true); }
+      if (e.target.closest('[data-ow="cancel"]')) { e.stopPropagation(); return setEdit(ov, o, false); }
+      if (e.target.closest('[data-ow="save"]')) {
+        e.stopPropagation();
+        var vals = {};
+        ov.querySelectorAll('[data-owk]').forEach(function (inp) { vals[inp.getAttribute('data-owk')] = inp.value; });
+        if (o.onSave) o.onSave(vals);
+        return;
+      }
+    });
+    return ov;
+  }
+  function groupsHtml(groups) {
+    return (groups || []).map(function (gr) {
+      return '<div class="ow-gh"><i data-lucide="' + (gr.icon || 'file-text') + '" style="width:12px;height:12px"></i> ' + esc(gr.title) + '</div>' +
+        '<div class="ow-grid">' + (gr.fields || []).filter(function (f) { return f; }).map(function (f) {
+          var meta = f.edit ? encodeURIComponent(JSON.stringify({
+            key: f.key, type: f.type || 'text', options: f.options || [],
+            raw: f.raw != null ? f.raw : String(f.val == null ? '' : f.val).replace(/<[^>]*>/g, '')
+          })) : '';
+          return '<div class="ow-f' + (f.wide ? ' wide' : '') + '" data-owf="' + esc(f.key || '') + '"' +
+            (meta ? ' data-owedit="' + meta + '"' : '') + '>' +
+            '<label>' + esc(f.label) + '</label>' +
+            '<b>' + (f.val == null ? '—' : f.val) + '</b>' +
+          '</div>';
+        }).join('') + '</div>';
+    }).join('');
+  }
+  function setEdit(ov, o, on) {
+    ov.querySelectorAll('[data-owf]').forEach(function (cell) {
+      var raw = cell.getAttribute('data-owedit');
+      if (!raw) return;
+      var meta = JSON.parse(decodeURIComponent(raw));
+      var b = cell.querySelector('b'), inp = cell.querySelector('[data-owk]');
+      if (on) {
+        if (inp) return;
+        b.style.display = 'none';
+        var el;
+        if (meta.type === 'select') {
+          el = document.createElement('select');
+          el.innerHTML = (meta.options || []).map(function (op) {
+            var v = (typeof op === 'string') ? op : op.v, t = (typeof op === 'string') ? op : op.t;
+            return '<option value="' + esc(v) + '"' + (String(v) === String(meta.raw) ? ' selected' : '') + '>' + esc(t) + '</option>';
+          }).join('');
+        } else if (meta.type === 'textarea') {
+          el = document.createElement('textarea'); el.rows = 2; el.value = meta.raw;
+        } else {
+          el = document.createElement('input');
+          el.type = meta.type === 'number' ? 'number' : 'text';
+          el.value = meta.raw;
+        }
+        el.setAttribute('data-owk', meta.key);
+        el.setAttribute('data-no-interact', 'true');
+        cell.appendChild(el);
+      } else {
+        if (b) b.style.display = '';
+        if (inp) inp.remove();
+      }
+    });
+    var foot = ov.querySelector('.ow-df');
+    if (foot) {
+      if (on) {
+        if (!foot.getAttribute('data-saved-html')) foot.setAttribute('data-saved-html', foot.innerHTML);
+        foot.innerHTML = '<button class="btn btn-secondary" data-ow="cancel" data-no-interact="true">Huỷ</button>' +
+          '<button class="btn btn-primary" data-ow="save" data-no-interact="true"><i data-lucide="check" style="width:14px;height:14px"></i> Lưu thay đổi</button>';
+      } else if (foot.getAttribute('data-saved-html')) {
+        foot.innerHTML = foot.getAttribute('data-saved-html');
+      }
+    }
+    var eb = ov.querySelector('[data-ow="edit"]');
+    if (eb) eb.style.display = on ? 'none' : '';
+    if (g.lucide) try { g.lucide.createIcons(); } catch (e) {}
+  }
+  function closeTop() {
+    var ov = stack.pop();
+    if (!ov) return;
+    ov.classList.add('leaving');
+    setTimeout(function () { ov.remove(); }, 200);
+  }
+  function closeAll() { while (stack.length) closeTop(); }
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Escape' || !stack.length) return;
+    if (document.querySelector('.erp-print-overlay') || document.querySelector('.erp-modal-overlay')) return;
+    closeTop();
+  });
+
+  /* Bắt link .lnk ở tầng window (capture) — chạy TRƯỚC ERPPeek của layout.js,
+     để các mã bản ghi của module Thu mua mở đúng drawer dữ liệu của trang này. */
+  function bindLnk(rules) {
+    g.addEventListener('click', function (e) {
+      if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+      var a = e.target && e.target.closest ? e.target.closest('a.lnk[href]') : null;
+      if (!a) return;
+      var h = a.getAttribute('href') || '';
+      for (var i = 0; i < rules.length; i++) {
+        var m = rules[i].re.exec(h);
+        if (m) { e.preventDefault(); e.stopPropagation(); rules[i].fn(decodeURIComponent(m[1])); return; }
+      }
+    }, true);
+  }
+
+  /* Điều hướng thẳng sang trang khác của module Thu mua (kèm tham số bản ghi) */
+  function goTo(page, key) {
+    return function (id) { g.location.href = page + '?' + key + '=' + encodeURIComponent(id); };
+  }
+
+  /* Drawer phiếu nhập kho (đọc thẳng sổ kho ERPInv) */
+  function openPNK(id) {
+    var t = (g.ERPInv && g.ERPInv.getTxn) ? g.ERPInv.getTxn(id) : null;
+    if (!t) { toast('Không tìm thấy phiếu nhập kho <b>' + esc(id) + '</b>', 'warning'); return; }
+    openDrawer({
+      cat: 'Phiếu nhập kho', id: t.id, status: t.typeLabel || 'Đã ghi sổ', editable: false,
+      sub: esc(t.partner || '') + ' · ' + esc(t.date || '') + ' · <b>' + vnd(t.total || 0) + '</b>',
+      groups: [{ title: 'Thông tin phiếu', icon: 'package-check', fields: [
+        { key: 'date', label: 'Ngày nhập', val: esc(t.date) },
+        { key: 'partner', label: 'Đối tượng giao hàng', val: esc(t.partner || '—') },
+        { key: 'ref', label: 'Chứng từ gốc', val: t.ref ? '<a href="13-mua-hang.html?po=' + encodeURIComponent(t.ref) + '" class="lnk">' + esc(t.ref) + '</a>' : '—' },
+        { key: 'total', label: 'Tổng giá trị', val: '<span style="color:var(--rust)">' + vnd(t.total || 0) + '</span>' },
+        { key: 'note', label: 'Diễn giải', val: esc(t.note || '—'), wide: true }
+      ] }],
+      itemsHtml: '<div class="ow-gh"><i data-lucide="list" style="width:12px;height:12px"></i> Dòng vật tư nhập kho</div>' +
+        '<table class="ow-it"><thead><tr><th>Mã NVL</th><th>Tên vật tư</th><th>ĐVT</th><th class="r">SL nhập</th><th>Số lô</th><th class="r">Đơn giá</th><th class="r">Thành tiền</th></tr></thead><tbody>' +
+        (t.lines || []).map(function (l) {
+          return '<tr><td><b>' + esc(l.code) + '</b></td><td>' + esc(l.name) + '</td><td>' + esc(l.unit || '') + '</td>' +
+            '<td class="r">' + num2(l.qty) + '</td><td>' + esc(l.lot || '—') + '</td>' +
+            '<td class="r">' + vnd(l.price) + '</td><td class="r"><b>' + vnd(l.amount) + '</b></td></tr>';
+        }).join('') + '</tbody></table>',
+      actionsHtml: '<a class="btn btn-secondary" href="05-kho.html?pnk=' + encodeURIComponent(t.id) + '" data-pk-nav="1"><i data-lucide="external-link" style="width:14px;height:14px"></i> Mở tại màn Kho</a>'
+    });
+  }
+
+  function toast(html, type, ms) {
+    if (g.ERPInteract && g.ERPInteract.showToast) g.ERPInteract.showToast(html, type || 'success', ms || 5200);
+  }
+  function qp(name) {
+    var m = new RegExp('[?&]' + name + '=([^&#]*)').exec(g.location.search);
+    return m ? decodeURIComponent(m[1].replace(/\+/g, ' ')) : '';
+  }
+  function tile(l, v, s) {
+    return '<div class="ow-tile"><div class="l">' + l + '</div><div class="v">' + v + '</div><div class="s">' + (s || '') + '</div></div>';
+  }
+  function sign(l, r) {
+    return '<div class="pdoc-sign"><div><b>' + l + '</b><i>(Ký, ghi rõ họ tên)</i><div class="sp"></div></div>' +
+      '<div><b>' + r + '</b><i>(Ký, ghi rõ họ tên)</i><div class="sp"></div></div></div>';
+  }
+  function preview(title, bodyHtml) {
+    if (g.ERPPrint && g.ERPPrint.preview) {
+      var ov = g.ERPPrint.preview({ title: title, printTitle: title, bodyHtml: bodyHtml });
+      var el = document.querySelector('.erp-print-overlay');
+      if (el) el.style.zIndex = '9000';
+      return ov;
+    }
+  }
+  function docHead() {
+    return (g.ERPPrint && g.ERPPrint.docHead) ? g.ERPPrint.docHead() : '';
+  }
+  function words(n) { return (g.ERPCash && g.ERPCash.toWords) ? g.ERPCash.toWords(n) : fmt(n) + ' đồng'; }
+
+  g.OwinCore = {
+    TODAY: TODAY, THIS_MONTH: THIS_MONTH, RED: RED, GREEN: GREEN, AMBER: AMBER, STEEL: STEEL,
+    esc: esc, fmt: fmt, vnd: vnd, num2: num2, gon: gon, dk: dk, dstr: dstr, toDate: toDate,
+    addDays: addDays, daysLeft: daysLeft, monthOf: monthOf,
+    warnRed: warnRed, warnGreen: warnGreen, DASH: DASH,
+    CRIT: CRIT, NCC: NCC, ncc: ncc, nccName: nccName, score: score, rank: rank, rankColor: rankColor, rankChip: rankChip,
+    MAT: MAT, mat: mat, onHand: onHand, minStock: minStock,
+    allPO: allPO, getPO: getPO, nextPO: nextPO, createPO: createPO, receivePO: receivePO, payPO: payPO,
+    paidOf: paidOf, debtOf: debtOf, lateDays: lateDays, penalty: penalty, payOverdue: payOverdue,
+    interest: interest, debtByNcc: debtByNcc, savePO: psave,
+    allDXM: allDXM, getDXM: getDXM, setDXM: setDXM, autoRows: autoRows,
+    openDrawer: openDrawer, closeDrawer: closeTop, closeAllDrawers: closeAll, ensureCss: ensureCss,
+    toast: toast, qp: qp, tile: tile, sign: sign, preview: preview, docHead: docHead, words: words,
+    bindLnk: bindLnk, openPNK: openPNK, goTo: goTo
+  };
+  ensureCss();
+})(window);
+
+</script>
+<script>
+/* ===== 13-mua-hang.html — PO mua hàng (2 màn: đã đặt / đã nhập) ===== */
+(function () {
+  'use strict';
+  var C = window.OwinCore;
+  var esc = C.esc, fmt = C.fmt, vnd = C.vnd, gon = C.gon, num2 = C.num2;
+
+  var VIEW = 'dat';
+  var Q = '';
+
+  function nccLink(key) {
+    return '<a href="21-nha-cung-cap.html?ncc=' + encodeURIComponent(key) + '" class="lnk">' + esc(C.nccName(key)) + '</a>';
+  }
+  function poLink(id) { return '<a href="13-mua-hang.html?po=' + encodeURIComponent(id) + '" class="lnk">' + esc(id) + '</a>'; }
+  function pnkLink(id) { return id ? '<a href="05-kho.html?pnk=' + encodeURIComponent(id) + '" class="lnk">' + esc(id) + '</a>' : C.DASH; }
+  function pcLink(id) { return '<a href="15-ke-toan.html?pc=' + encodeURIComponent(id) + '" class="lnk">' + esc(id) + '</a>'; }
+
+  function statusBadge(p) {
+    var s = p.status;
+    var cls = s === 'đã nhập' ? 'success' : s === 'đang giao' ? 'blue' : (C.lateDays(p) > 0 ? 'danger' : 'yellow');
+    var txt = s === 'đã nhập' ? 'Đã nhập kho' : s === 'đang giao' ? 'Đang trên đường' : 'Chờ giao';
+    return '<span class="badge badge-' + cls + '">' + txt + '</span>';
+  }
+  /* Cột cảnh báo — chỉ tô màu các dòng thực sự lệch chuẩn */
+  function warnDat(p) {
+    var d = C.lateDays(p);
+    if (d > 0) return C.warnRed('Trễ giao ' + d + ' ngày · phạt ' + gon(C.penalty(p)));
+    var left = C.daysLeft(p.due);
+    if (p.status === 'đang giao' || left >= 12) return C.warnGreen('Còn ' + left + ' ngày · NCC xác nhận đúng hẹn');
+    return C.DASH;
+  }
+  function warnNhap(p) {
+    var d = C.lateDays(p);
+    var ok = p.lines.every(function (l) { return (l.recvQty || 0) >= l.qty; });
+    if (d > 0) return C.warnRed('Nhận trễ ' + d + ' ngày · phạt ' + gon(C.penalty(p)));
+    if (d < 0 && ok) return C.warnGreen('Giao sớm ' + (-d) + ' ngày · đủ 100%');
+    if (!ok) return C.warnRed('Thiếu ' + num2(p.lines.reduce(function (s, l) { return s + (l.qty - (l.recvQty || 0)); }, 0)) + ' ' + p.lines[0].unit + ' · đã lập biên bản');
+    return C.DASH;
+  }
+
+  function listOf(view) {
+    var all = C.allPO().filter(function (p) { return view === 'nhap' ? p.status === 'đã nhập' : p.status !== 'đã nhập'; });
+    if (Q) {
+      var q = Q.toLowerCase();
+      all = all.filter(function (p) {
+        return (p.id + ' ' + p.content + ' ' + C.nccName(p.nccKey)).toLowerCase().indexOf(q) >= 0;
+      });
+    }
+    return all.sort(function (a, b) { return C.dk(b.date) - C.dk(a.date); });
+  }
+
+  /* ---------- KPI ---------- */
+  function renderKpi() {
+    var pend = C.allPO().filter(function (p) { return p.status !== 'đã nhập'; });
+    var recv = C.allPO().filter(function (p) { return p.status === 'đã nhập'; });
+    var late = pend.filter(function (p) { return C.lateDays(p) > 0; });
+    var thang = recv.filter(function (p) { return C.monthOf(p.recvDate) === C.THIS_MONTH; });
+    var no = recv.reduce(function (s, p) { return s + C.debtOf(p); }, 0);
+    document.getElementById('poStrip').innerHTML =
+      C.tile('PO đang chờ giao', pend.length, gon(pend.reduce(function (s, p) { return s + p.total; }, 0)) + ' giá trị') +
+      C.tile('PO trễ hẹn giao', '<span style="color:' + C.RED + '">' + late.length + '</span>', 'phạt ước ' + gon(late.reduce(function (s, p) { return s + C.penalty(p); }, 0))) +
+      C.tile('PO nhập tháng ' + C.THIS_MONTH, thang.length, gon(thang.reduce(function (s, p) { return s + p.total; }, 0))) +
+      C.tile('Còn nợ nhà cung cấp', '<span style="color:' + C.RED + '">' + gon(no) + '</span>', recv.filter(function (p) { return C.debtOf(p) > 0; }).length + ' PO chưa tất toán');
+    document.getElementById('poSub').textContent =
+      pend.length + ' PO chờ giao · ' + late.length + ' PO trễ hẹn · còn nợ NCC ' + gon(no);
+  }
+
+  /* ---------- Bảng ---------- */
+  function renderTabs() {
+    var nd = C.allPO().filter(function (p) { return p.status !== 'đã nhập'; }).length;
+    var nn = C.allPO().filter(function (p) { return p.status === 'đã nhập'; }).length;
+    document.getElementById('poTabs').innerHTML =
+      '<button class="ow-vtab' + (VIEW === 'dat' ? ' on' : '') + '" data-poview="dat" data-no-interact="true">' +
+        '<i data-lucide="send" style="width:15px;height:15px"></i> PO đã đặt <span class="n">' + nd + '</span></button>' +
+      '<button class="ow-vtab' + (VIEW === 'nhap' ? ' on' : '') + '" data-poview="nhap" data-no-interact="true">' +
+        '<i data-lucide="package-check" style="width:15px;height:15px"></i> PO đã nhập <span class="n">' + nn + '</span></button>';
+  }
+
+  function renderTable() {
+    var rows = listOf(VIEW), html;
+    if (VIEW === 'dat') {
+      document.getElementById('poThead').innerHTML =
+        '<tr><th>Mã PO</th><th>Ngày đặt</th><th>Nhà cung cấp</th><th>Nội dung</th><th class="num">Giá trị</th>' +
+        '<th>Ngày hẹn giao</th><th>Trễ giao</th><th>Trạng thái</th><th style="width:200px">Thao tác</th></tr>';
+      html = rows.map(function (p) {
+        return '<tr class="ow-row" data-po="' + esc(p.id) + '">' +
+          '<td>' + poLink(p.id) + '</td>' +
+          '<td>' + esc(p.date) + '</td>' +
+          '<td>' + nccLink(p.nccKey) + '</td>' +
+          '<td class="ow-ell" title="' + esc(p.content) + '">' + esc(p.content) + '</td>' +
+          '<td class="num"><b>' + vnd(p.total) + '</b></td>' +
+          '<td>' + esc(p.due) + '</td>' +
+          '<td>' + warnDat(p) + '</td>' +
+          '<td>' + statusBadge(p) + '</td>' +
+          '<td><div style="display:flex;gap:5px;flex-wrap:wrap">' +
+            '<button class="ow-btn-sm" data-act="view" data-no-interact="true">Xem</button>' +
+            '<button class="ow-btn-sm pri" data-act="recv" data-no-interact="true"><i data-lucide="package-plus" style="width:12px;height:12px"></i> Nhận hàng</button>' +
+            '<button class="ow-btn-sm" data-act="print" data-no-interact="true"><i data-lucide="printer" style="width:12px;height:12px"></i> In PO</button>' +
+          '</div></td></tr>';
+      }).join('');
+    } else {
+      document.getElementById('poThead').innerHTML =
+        '<tr><th>Mã PO</th><th>Nhà cung cấp</th><th>Nội dung</th><th class="num">Giá trị</th><th>Ngày nhận</th>' +
+        '<th class="num">SL nhận/đặt</th><th>Phiếu nhập</th><th class="num">Đã trả / Còn nợ</th><th>Giao nhận</th><th style="width:210px">Thao tác</th></tr>';
+      html = rows.map(function (p) {
+        var recv = p.lines.reduce(function (s, l) { return s + (l.recvQty || 0); }, 0);
+        var order = p.lines.reduce(function (s, l) { return s + l.qty; }, 0);
+        var paid = C.paidOf(p), debt = C.debtOf(p);
+        return '<tr class="ow-row" data-po="' + esc(p.id) + '">' +
+          '<td>' + poLink(p.id) + '</td>' +
+          '<td>' + nccLink(p.nccKey) + '</td>' +
+          '<td class="ow-ell" title="' + esc(p.content) + '">' + esc(p.content) + '</td>' +
+          '<td class="num"><b>' + vnd(p.total) + '</b></td>' +
+          '<td>' + esc(p.recvDate || '—') + '</td>' +
+          '<td class="num">' + num2(recv) + ' / ' + num2(order) + ' ' + esc(p.lines[0].unit) + '</td>' +
+          '<td>' + pnkLink(p.pnkId) + '</td>' +
+          '<td class="num">' + gon(paid) + ' / <b style="color:' + (debt > 0 ? C.RED : C.GREEN) + '">' + (debt > 0 ? gon(debt) : 'Đã tất toán') + '</b></td>' +
+          '<td>' + warnNhap(p) + '</td>' +
+          '<td><div style="display:flex;gap:5px;flex-wrap:wrap">' +
+            '<button class="ow-btn-sm" data-act="view" data-no-interact="true">Xem</button>' +
+            (debt > 0
+              ? '<button class="ow-btn-sm ok" data-act="pay" data-no-interact="true"><i data-lucide="banknote" style="width:12px;height:12px"></i> Trả tiền cho nhà cung cấp</button>'
+              : '<button class="ow-btn-sm" data-act="print" data-no-interact="true"><i data-lucide="printer" style="width:12px;height:12px"></i> In PO</button>') +
+          '</div></td></tr>';
+      }).join('');
+    }
+    document.getElementById('poBody').innerHTML = html ||
+      '<tr><td colspan="10" style="text-align:center;padding:26px;color:var(--ash)">Không có PO nào khớp bộ lọc.</td></tr>';
+    if (window.lucide) lucide.createIcons();
+  }
+
+  function renderAll() { renderKpi(); renderTabs(); renderTable(); }
+
+  /* ---------- Drawer bản ghi PO ---------- */
+  function itemsTable(p, showRecv) {
+    return '<div class="ow-gh"><i data-lucide="list" style="width:12px;height:12px"></i> Dòng hàng</div>' +
+      '<table class="ow-it"><thead><tr><th>Mã NVL</th><th>Tên vật tư</th><th>ĐVT</th><th class="r">SL đặt</th>' +
+      (showRecv ? '<th class="r">SL nhận</th><th>Số lô</th>' : '') +
+      '<th class="r">Đơn giá</th><th class="r">Thành tiền</th></tr></thead><tbody>' +
+      p.lines.map(function (l) {
+        return '<tr><td><b>' + esc(l.code) + '</b></td><td>' + esc(l.name) + '</td><td>' + esc(l.unit) + '</td>' +
+          '<td class="r">' + num2(l.qty) + '</td>' +
+          (showRecv ? '<td class="r"' + ((l.recvQty || 0) < l.qty ? ' style="color:' + C.RED + ';font-weight:700"' : '') + '>' + num2(l.recvQty || 0) + '</td><td>' + esc(l.lot || '—') + '</td>' : '') +
+          '<td class="r">' + vnd(l.price) + '</td><td class="r"><b>' + vnd(l.amount) + '</b></td></tr>';
+      }).join('') +
+      '<tr><td colspan="' + (showRecv ? 7 : 5) + '" class="r"><b>TỔNG GIÁ TRỊ PO</b></td><td class="r"><b style="color:var(--rust)">' + vnd(p.total) + '</b></td></tr>' +
+      '</tbody></table>';
+  }
+  function payTable(p) {
+    if (!p.payments.length) return '';
+    return '<div class="ow-gh"><i data-lucide="receipt" style="width:12px;height:12px"></i> Phiếu chi đã lập</div>' +
+      '<table class="ow-it"><thead><tr><th>Số phiếu</th><th>Ngày chi</th><th>Hình thức</th><th>Tài khoản</th><th class="r">Số tiền</th><th></th></tr></thead><tbody>' +
+      p.payments.map(function (x) {
+        return '<tr><td>' + pcLink(x.id) + '</td><td>' + esc(x.date) + '</td>' +
+          '<td>' + (x.method === 'tm' ? 'Tiền mặt' : 'Chuyển khoản') + '</td><td>' + esc(x.account || '—') + '</td>' +
+          '<td class="r"><b>' + vnd(x.amount) + '</b></td>' +
+          '<td><button class="ow-btn-sm" data-pcprev="' + esc(x.id) + '" data-po="' + esc(p.id) + '" data-no-interact="true">Xem trước phiếu chi</button></td></tr>';
+      }).join('') + '</tbody></table>';
+  }
+
+  function openPO(id) {
+    var p = C.getPO(id);
+    if (!p) { C.toast('Không tìm thấy PO <b>' + esc(id) + '</b>', 'warning'); return; }
+    var n = C.ncc(p.nccKey) || {};
+    var recvd = p.status === 'đã nhập';
+    var paid = C.paidOf(p), debt = C.debtOf(p), late = C.lateDays(p);
+    var groups = [
+      { title: 'Thông tin chung', icon: 'file-text', fields: [
+        { key: 'date', label: 'Ngày đặt hàng', val: p.date, edit: true },
+        { key: 'ncc', label: 'Nhà cung cấp', val: nccLink(p.nccKey) },
+        { key: 'content', label: 'Nội dung mua', val: esc(p.content), edit: true, wide: true },
+        { key: 'src', label: 'Nguồn đề xuất', val: esc(p.src || '—') },
+        { key: 'status', label: 'Trạng thái', val: statusBadge(p) },
+        { key: 'note', label: 'Ghi chú', val: esc(p.note || '—'), edit: true, type: 'textarea', wide: true, raw: p.note || '' }
+      ] },
+      { title: 'Thương mại & thanh toán', icon: 'wallet', fields: [
+        { key: 'total', label: 'Giá trị PO', val: '<span style="color:var(--rust)">' + vnd(p.total) + '</span>' },
+        { key: 'payTerm', label: 'Điều khoản thanh toán', val: esc(p.payTerm), edit: true },
+        { key: 'payDue', label: 'Hạn thanh toán', val: recvd ? esc(p.payDue) : 'Sau khi nhận hàng' },
+        { key: 'paid', label: 'Đã trả', val: vnd(paid) },
+        { key: 'debt', label: 'Còn nợ', val: debt > 0 ? '<span style="color:' + C.RED + '">' + vnd(debt) + '</span>' : '<span style="color:' + C.GREEN + '">Đã tất toán</span>' },
+        { key: 'lai', label: 'Lãi chậm trả ước', val: C.interest(p) > 0 ? '<span style="color:' + C.RED + '">' + vnd(C.interest(p)) + ' · quá hạn ' + C.payOverdue(p) + ' ngày</span>' : '—' }
+      ] },
+      { title: 'Tiến độ giao nhận', icon: 'truck', fields: [
+        { key: 'due', label: 'Ngày hẹn giao', val: esc(p.due), edit: true },
+        { key: 'recvDate', label: 'Ngày nhận thực tế', val: esc(p.recvDate || 'Chưa nhận') },
+        { key: 'late', label: late > 0 ? 'Trễ giao' : 'Chênh lệch hẹn giao', val: late > 0 ? '<span style="color:' + C.RED + '">Trễ ' + late + ' ngày · phạt ' + vnd(C.penalty(p)) + '</span>' : (recvd ? '<span style="color:' + C.GREEN + '">Sớm ' + (-late) + ' ngày</span>' : 'Còn ' + C.daysLeft(p.due) + ' ngày') },
+        { key: 'pnk', label: 'Phiếu nhập kho', val: pnkLink(p.pnkId) },
+        { key: 'lead', label: 'Thời gian giao TB của NCC', val: esc(n.lead || '—') },
+        { key: 'lh', label: 'Người liên hệ NCC', val: esc((n.lh || '—') + ' · ' + (n.sdt || '')) }
+      ] }
+    ];
+    var acts = '';
+    if (!recvd) acts += '<button class="btn btn-primary" data-dact="recv" data-no-interact="true"><i data-lucide="package-plus" style="width:14px;height:14px"></i> Nhận hàng</button>';
+    if (recvd && debt > 0) acts += '<button class="btn btn-primary" data-dact="pay" data-no-interact="true"><i data-lucide="banknote" style="width:14px;height:14px"></i> + Trả tiền cho nhà cung cấp</button>';
+    acts += '<button class="btn btn-secondary" data-dact="prev" data-no-interact="true"><i data-lucide="eye" style="width:14px;height:14px"></i> Xem trước</button>';
+    acts += '<button class="btn btn-secondary" data-dact="print" data-no-interact="true"><i data-lucide="printer" style="width:14px;height:14px"></i> In PO</button>';
+
+    var ov = C.openDrawer({
+      cat: 'Đơn đặt hàng mua — PO', id: p.id, status: recvd ? 'Đã nhập kho' : (late > 0 ? 'Trễ giao ' + late + ' ngày' : 'Chờ giao'),
+      sub: esc(C.nccName(p.nccKey)) + ' · ' + esc(p.content) + ' · <b>' + vnd(p.total) + '</b>',
+      groups: groups,
+      itemsHtml: itemsTable(p, recvd) + payTable(p),
+      actionsHtml: acts,
+      onPrint: function () { printPO(p.id); },
+      onSave: function (v) {
+        p.date = v.date || p.date;
+        p.content = v.content || p.content;
+        p.note = v.note != null ? v.note : p.note;
+        p.payTerm = v.payTerm || p.payTerm;
+        p.due = v.due || p.due;
+        C.savePO();
+        C.closeDrawer();
+        renderAll();
+        C.toast('Đã lưu thay đổi cho ' + poLink(p.id), 'success');
+        setTimeout(function () { openPO(p.id); }, 220);
+      }
+    });
+    ov.addEventListener('click', function (e) {
+      var t = e.target.closest('[data-dact]');
+      if (t) {
+        e.stopPropagation();
+        var a = t.getAttribute('data-dact');
+        if (a === 'recv') return openReceive(p.id);
+        if (a === 'pay') return openPay(p.id);
+        if (a === 'prev' || a === 'print') return printPO(p.id);
+      }
+      var pc = e.target.closest('[data-pcprev]');
+      if (pc) { e.stopPropagation(); printPC(p.id, pc.getAttribute('data-pcprev')); }
+    });
+  }
+
+  /* ---------- Bản in PO chuẩn ---------- */
+  function printPO(id) {
+    var p = C.getPO(id); if (!p) return;
+    var n = C.ncc(p.nccKey) || {};
+    var vat = Math.round(p.total * 0.08);
+    var body = C.docHead() +
+      '<div class="pdoc"><div class="pdoc-title">ĐƠN ĐẶT HÀNG</div>' +
+      '<div class="pdoc-sub">Số: ' + esc(p.id) + ' · Purchase Order · Ngày ' + esc(p.date) + '</div>' +
+      '<table class="pdoc-rows">' +
+        '<tr><td>Bên mua</td><td><b>CÔNG TY CỔ PHẦN THƯƠNG MẠI OWIN</b> — MST 0109541582<br/>Nhà máy: Số 8 Giá Ngự, Xâm Xuyên, Thường Tín, TP Hà Nội</td></tr>' +
+        '<tr><td>Bên bán (nhà cung cấp)</td><td><b>' + esc(n.ten || '') + '</b> — MST ' + esc(n.mst || '') + '<br/>' + esc(n.dc || '') + '</td></tr>' +
+        '<tr><td>Người liên hệ</td><td>' + esc(n.lh || '') + ' · ' + esc(n.sdt || '') + ' · ' + esc(n.mail || '') + '</td></tr>' +
+        '<tr><td>Nội dung mua</td><td>' + esc(p.content) + '</td></tr>' +
+        '<tr><td>Ngày hẹn giao</td><td><b>' + esc(p.due) + '</b></td></tr>' +
+        '<tr><td>Điều khoản thanh toán</td><td>' + esc(p.payTerm) + '</td></tr>' +
+      '</table>' +
+      '<table class="pdoc-items"><thead><tr><th>TT</th><th>Mã vật tư</th><th>Tên vật tư — quy cách</th><th>ĐVT</th><th class="r">Số lượng</th><th class="r">Đơn giá</th><th class="r">Thành tiền</th></tr></thead><tbody>' +
+      p.lines.map(function (l, i) {
+        return '<tr><td class="c">' + (i + 1) + '</td><td>' + esc(l.code) + '</td><td>' + esc(l.name) + '</td><td class="c">' + esc(l.unit) + '</td>' +
+          '<td class="r">' + num2(l.qty) + '</td><td class="r">' + fmt(l.price) + '</td><td class="r">' + fmt(l.amount) + '</td></tr>';
+      }).join('') +
+      '<tr><td colspan="6" class="r"><b>Cộng tiền hàng</b></td><td class="r"><b>' + fmt(p.total) + '</b></td></tr>' +
+      '<tr><td colspan="6" class="r">Thuế GTGT 8%</td><td class="r">' + fmt(vat) + '</td></tr>' +
+      '<tr><td colspan="6" class="r"><b>TỔNG THANH TOÁN</b></td><td class="r"><b>' + fmt(p.total + vat) + '</b></td></tr>' +
+      '</tbody></table>' +
+      '<div class="pdoc-tot">Bằng chữ: <b>' + C.words(p.total + vat) + '</b></div>' +
+      '<div class="pdoc-note"><b>ĐIỀU KHOẢN GIAO NHẬN.</b> Bên bán giao hàng tại nhà máy Owin (Số 8 Giá Ngự, Xâm Xuyên, Thường Tín) trước ' +
+        esc(p.due) + '. Hàng phải có phiếu giao kèm số lô. Chậm giao mỗi ngày chịu phạt 0,135% giá trị đơn, tối đa 8%.<br/>' +
+        '<b>ĐIỀU KHOẢN THANH TOÁN.</b> ' + esc(p.payTerm) + '. Thanh toán bằng chuyển khoản; bên bán xuất hoá đơn GTGT ngay khi giao hàng.<br/>' +
+        '<b>ĐIỀU KHOẢN CHẤT LƯỢNG.</b> Nhôm thanh phải kèm CO/CQ 6063-T5; sai lệch kích thước ≤2mm, độ dày lớp anod ≥15µm, độ phẳng ≤1,5mm/m. ' +
+        'Kính phải có chứng nhận kính an toàn theo QCVN 16:2023/BXD. Hàng không đạt KCS nhôm kính được trả lại, chi phí vận chuyển do bên bán chịu.</div>' +
+      C.sign('ĐẠI DIỆN BÊN MUA', 'ĐẠI DIỆN BÊN BÁN') +
+      '</div>';
+    C.preview('Đơn đặt hàng ' + p.id, body);
+  }
+
+  /* ---------- Bản in Phiếu chi 02-TT ---------- */
+  function printPC(poId, pcId, draft) {
+    var p = C.getPO(poId); if (!p) return;
+    var n = C.ncc(p.nccKey) || {};
+    var pay = draft || (p.payments || []).filter(function (x) { return x.id === pcId; })[0];
+    if (!pay) return;
+    var body = C.docHead() +
+      '<div class="pdoc">' +
+      '<div style="text-align:right;font-size:11px;color:#55524a">Mẫu số 02-TT<br/>(Ban hành theo Thông tư 200/2014/TT-BTC)</div>' +
+      '<div class="pdoc-title">PHIẾU CHI</div>' +
+      '<div class="pdoc-sub">Số: ' + esc(pay.id) + ' · Ngày ' + esc(pay.date) + '</div>' +
+      '<table class="pdoc-rows">' +
+        '<tr><td>Họ tên người nhận tiền</td><td><b>' + esc(n.ten || '') + '</b> (' + esc(n.lh || '') + ')</td></tr>' +
+        '<tr><td>Địa chỉ</td><td>' + esc(n.dc || '') + ' — MST ' + esc(n.mst || '') + '</td></tr>' +
+        '<tr><td>Lý do chi</td><td>Thanh toán đơn đặt hàng <b>' + esc(p.id) + '</b> — ' + esc(p.content) + '</td></tr>' +
+        '<tr><td>Số tiền</td><td><b>' + fmt(pay.amount) + ' ₫</b></td></tr>' +
+        '<tr><td>Bằng chữ</td><td><b>' + C.words(pay.amount) + '</b></td></tr>' +
+        '<tr><td>Hình thức thanh toán</td><td>' + (pay.method === 'tm' ? 'Tiền mặt' : 'Chuyển khoản') + (pay.account ? ' · ' + esc(pay.account) : '') + '</td></tr>' +
+        '<tr><td>Kèm theo</td><td>01 đơn đặt hàng ' + esc(p.id) + ' · 01 phiếu nhập kho ' + esc(p.pnkId || '—') + ' · hoá đơn GTGT của nhà cung cấp</td></tr>' +
+      '</table>' +
+      '<div class="pdoc-note">Đã nhận đủ số tiền (viết bằng chữ): ' + C.words(pay.amount) + '</div>' +
+      '<div class="pdoc-sign">' +
+        '<div><b>GIÁM ĐỐC</b><i>(Ký, họ tên, đóng dấu)</i><div class="sp"></div></div>' +
+        '<div><b>KẾ TOÁN TRƯỞNG</b><i>(Ký, họ tên)</i><div class="sp"></div></div>' +
+        '<div><b>THỦ QUỸ</b><i>(Ký, họ tên)</i><div class="sp"></div></div>' +
+        '<div><b>NGƯỜI NHẬN TIỀN</b><i>(Ký, họ tên)</i><div class="sp"></div></div>' +
+      '</div></div>';
+    C.preview('Phiếu chi ' + pay.id, body);
+  }
+
+  /* ---------- Modal nhận hàng ---------- */
+  function openReceive(id) {
+    var p = C.getPO(id); if (!p) return;
+    var body = '<div class="ow-wide">' +
+      '<div class="t-caption mb-3">Nhập <b>số lượng thực nhận</b> và <b>số lô</b> cho từng dòng hàng. Khi lưu, hệ thống ghi <b>phiếu nhập kho</b> và <b>tăng tồn NVL</b> tương ứng.</div>' +
+      '<div class="ow-mrow mb-3">' +
+        '<label><span>Ngày nhận hàng</span><input class="input" id="rcDate" value="' + esc(C.TODAY) + '"></label>' +
+        '<label><span>Người giao / xe</span><input class="input" id="rcNote" placeholder="VD: Xe 29H-123.45 — A. Hùng"></label>' +
+      '</div>' +
+      '<table class="ow-it"><thead><tr><th>Mã NVL</th><th>Tên vật tư</th><th class="r">SL đặt</th><th class="r" style="width:120px">SL thực nhận</th><th style="width:150px">Số lô</th></tr></thead><tbody>' +
+      p.lines.map(function (l, i) {
+        return '<tr><td><b>' + esc(l.code) + '</b></td><td>' + esc(l.name) + '</td>' +
+          '<td class="r">' + num2(l.qty) + ' ' + esc(l.unit) + '</td>' +
+          '<td class="r"><input class="input" type="number" min="0" step="0.01" value="' + l.qty + '" data-rc="' + i + '" data-no-interact="true" style="text-align:right;padding:5px 8px"></td>' +
+          '<td><input class="input" value="LO-' + esc(p.nccKey.slice(0, 2).toUpperCase()) + '-' + esc(C.TODAY.slice(0, 2) + C.TODAY.slice(3, 5)) + '" data-rclot="' + i + '" data-no-interact="true" style="padding:5px 8px"></td></tr>';
+      }).join('') + '</tbody></table></div>';
+    window.ERPInteract.showModal({
+      title: 'Nhận hàng — ' + p.id + ' · ' + C.nccName(p.nccKey),
+      body: body, primaryText: 'Ghi phiếu nhập kho', secondaryText: 'Huỷ',
+      onPrimary: function () {
+        var lines = p.lines.map(function (l, i) {
+          var q = document.querySelector('[data-rc="' + i + '"]');
+          var lot = document.querySelector('[data-rclot="' + i + '"]');
+          return { code: l.code, recvQty: q ? Number(q.value) : l.qty, lot: lot ? lot.value : '' };
+        });
+        var d = (document.getElementById('rcDate') || {}).value || C.TODAY;
+        var nt = (document.getElementById('rcNote') || {}).value || '';
+        var res = C.receivePO(p.id, { lines: lines, date: d, note: nt });
+        if (!res.ok) {
+          C.toast(res.message || 'Không ghi được phiếu nhập kho', 'warning');
+          return false;
+        }
+        C.closeAllDrawers();
+        VIEW = 'nhap';
+        renderAll();
+        C.toast('Đã nhập kho ' + poLink(p.id) + ' — phiếu nhập <a href="05-kho.html?pnk=' + encodeURIComponent(res.pnk.id) + '" class="lnk">' + esc(res.pnk.id) + '</a> · tồn NVL đã tăng', 'success', 6500);
+        return true;
+      }
+    });
+    if (window.lucide) lucide.createIcons();
+  }
+
+  /* ---------- Modal trả tiền NCC ---------- */
+  function openPay(id) {
+    var p = C.getPO(id); if (!p) return;
+    var debt = C.debtOf(p);
+    var body = '<div class="ow-wide">' +
+      '<div class="t-caption mb-3">PO <b>' + esc(p.id) + '</b> · ' + esc(C.nccName(p.nccKey)) + ' · giá trị <b>' + vnd(p.total) + '</b> · đã trả <b>' + vnd(C.paidOf(p)) + '</b> · ' +
+        'còn nợ <b style="color:' + C.RED + '">' + vnd(debt) + '</b>' + (C.payOverdue(p) > 0 ? ' · <span style="color:' + C.RED + '">quá hạn ' + C.payOverdue(p) + ' ngày</span>' : '') + '</div>' +
+      '<div class="ow-mrow mb-3">' +
+        '<label><span>Số tiền trả (₫)</span><input class="input" type="number" id="pyAmt" value="' + debt + '" min="0" max="' + debt + '"></label>' +
+        '<label><span>Ngày chi</span><input class="input" id="pyDate" value="' + esc(C.TODAY) + '"></label>' +
+        '<label><span>Hình thức</span><select class="input" id="pyMethod"><option value="ck">Chuyển khoản</option><option value="tm">Tiền mặt</option></select></label>' +
+        '<label><span>Tài khoản chi</span><select class="input" id="pyAcc">' +
+          '<option>MB 0988837389 — CTCP TM OWIN</option>' +
+          '<option>Vietcombank 0561000123456 — CTCP TM OWIN</option>' +
+          '<option>Quỹ tiền mặt nhà máy</option></select></label>' +
+      '</div>' +
+      '<button class="btn btn-secondary" id="pyPrev" data-no-interact="true" style="min-height:36px"><i data-lucide="eye" style="width:14px;height:14px"></i> Xem trước phiếu chi (mẫu 02-TT)</button>' +
+      '</div>';
+    window.ERPInteract.showModal({
+      title: '+ Trả tiền cho nhà cung cấp — ' + p.id,
+      body: body, primaryText: 'Tạo phiếu chi', secondaryText: 'Huỷ',
+      onPrimary: function () {
+        var res = C.payPO(p.id, {
+          amount: (document.getElementById('pyAmt') || {}).value,
+          date: (document.getElementById('pyDate') || {}).value,
+          method: (document.getElementById('pyMethod') || {}).value,
+          account: (document.getElementById('pyAcc') || {}).value
+        });
+        if (!res.ok) { C.toast(res.message, 'warning'); return false; }
+        C.closeAllDrawers();
+        renderAll();
+        C.toast('Đã tạo phiếu chi ' + pcLink(res.pay.id) + ' · ' + vnd(res.pay.amount) + ' trả ' + esc(C.nccName(p.nccKey)) + ' — bấm để mở', 'success', 6500);
+        return true;
+      }
+    });
+    var btn = document.getElementById('pyPrev');
+    if (btn) btn.addEventListener('click', function (e) {
+      e.preventDefault(); e.stopPropagation();
+      printPC(p.id, null, {
+        id: 'PC-' + (new Date()).getFullYear() + '-XXX (dự thảo)',
+        date: (document.getElementById('pyDate') || {}).value || C.TODAY,
+        amount: Number((document.getElementById('pyAmt') || {}).value) || 0,
+        method: (document.getElementById('pyMethod') || {}).value,
+        account: (document.getElementById('pyAcc') || {}).value
+      });
+    });
+    if (window.lucide) lucide.createIcons();
+  }
+
+  /* ---------- Tạo PO thủ công ---------- */
+  window.owOpenCreatePO = function () {
+    var body = '<div class="ow-wide"><div class="ow-mrow mb-3">' +
+      '<label><span>Nhà cung cấp</span><select class="input" id="cpNcc">' +
+        C.NCC.map(function (n) { return '<option value="' + esc(n.key) + '">' + esc(n.ten) + '</option>'; }).join('') + '</select></label>' +
+      '<label><span>Vật tư</span><select class="input" id="cpMat">' +
+        C.MAT.map(function (m) { return '<option value="' + esc(m.code) + '">' + esc(m.name) + ' (' + esc(m.unit) + ')</option>'; }).join('') + '</select></label>' +
+      '<label><span>Số lượng</span><input class="input" type="number" id="cpQty" value="1000" min="1"></label>' +
+      '<label><span>Ngày hẹn giao</span><input class="input" id="cpDue" value="' + esc(C.addDays(C.TODAY, 10)) + '"></label>' +
+      '<label style="grid-column:1/-1"><span>Ghi chú</span><input class="input" id="cpNote" placeholder="VD: Bù phôi cho LSX-0340"></label>' +
+      '</div></div>';
+    window.ERPInteract.showModal({
+      title: 'Tạo đơn đặt hàng mua (PO)', body: body, primaryText: 'Tạo PO', secondaryText: 'Huỷ',
+      onPrimary: function () {
+        var code = (document.getElementById('cpMat') || {}).value;
+        var m = C.mat(code);
+        var qty = Number((document.getElementById('cpQty') || {}).value) || 0;
+        if (qty <= 0) { C.toast('Số lượng phải lớn hơn 0', 'warning'); return false; }
+        var rec = C.createPO({
+          nccKey: (document.getElementById('cpNcc') || {}).value,
+          content: m.name, due: (document.getElementById('cpDue') || {}).value,
+          note: (document.getElementById('cpNote') || {}).value, src: 'Tạo thủ công tại màn Mua hàng',
+          lines: [{ code: m.code, name: m.name, unit: m.unit, qty: qty, price: m.price }]
+        });
+        VIEW = 'dat';
+        renderAll();
+        C.toast('Đã tạo ' + poLink(rec.id) + ' · ' + vnd(rec.total) + ' — bấm để mở', 'success', 6000);
+        return true;
+      }
+    });
+    if (window.lucide) lucide.createIcons();
+  };
+
+  /* ---------- Sự kiện ---------- */
+  document.addEventListener('erp:ready', function () {
+    renderAll();
+
+    document.getElementById('poTabs').addEventListener('click', function (e) {
+      var t = e.target.closest('[data-poview]');
+      if (!t) return;
+      e.preventDefault(); e.stopPropagation();
+      VIEW = t.getAttribute('data-poview');
+      renderTabs(); renderTable();
+      if (window.lucide) lucide.createIcons();
+    });
+
+    var s = document.getElementById('poSearch');
+    if (s) s.addEventListener('input', function () { Q = s.value.trim(); renderTable(); });
+
+    document.getElementById('poBody').addEventListener('click', function (e) {
+      var tr = e.target.closest('tr[data-po]');
+      if (!tr) return;
+      var id = tr.getAttribute('data-po');
+      var b = e.target.closest('[data-act]');
+      if (b) {
+        e.preventDefault(); e.stopPropagation();
+        var a = b.getAttribute('data-act');
+        if (a === 'recv') return openReceive(id);
+        if (a === 'pay') return openPay(id);
+        if (a === 'print') return printPO(id);
+        return openPO(id);
+      }
+      if (e.target.closest('a.lnk')) return;
+      openPO(id);
+    });
+
+    /* mã bản ghi trong trang → mở đúng drawer dữ liệu (chạy trước ERPPeek) */
+    C.bindLnk([
+      { re: /13-mua-hang\.html\?po=([^&#]+)/, fn: openPO },
+      { re: /05-kho\.html\?pnk=([^&#]+)/, fn: C.openPNK },
+      { re: /21-nha-cung-cap\.html\?ncc=([^&#]+)/, fn: C.goTo('21-nha-cung-cap.html', 'ncc') }
+    ]);
+
+    var q = C.qp('po');
+    if (q && C.getPO(q)) { VIEW = C.getPO(q).status === 'đã nhập' ? 'nhap' : 'dat'; renderAll(); setTimeout(function () { openPO(q); }, 260); }
+    if (C.qp('poview') === 'nhap') { VIEW = 'nhap'; renderAll(); }
+  });
+})();
+
+</script>
+</body>
+</html>

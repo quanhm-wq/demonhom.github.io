@@ -1,0 +1,863 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kho thành phẩm — ERP NHÔM OWIN</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/css/style.css" />
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+  <style>
+    /* Tab chính */
+    .kho-mainnav { display: flex; gap: 4px; border-bottom: 2px solid var(--rule); }
+    .kho-mtab { display: inline-flex; align-items: center; gap: 7px; padding: 11px 18px; font-size: 14px; font-weight: 500; color: var(--ash); background: transparent; border: 0; border-bottom: 2px solid transparent; margin-bottom: -2px; cursor: pointer; }
+    .kho-mtab:hover { color: var(--ink); }
+    .kho-mtab.active { color: var(--ink); border-bottom-color: var(--rust); font-weight: 600; }
+    .kho-mtab-badge { background: var(--signal); color: #fff; font-size: 11px; font-weight: 600; padding: 1px 7px; border-radius: 9999px; line-height: 1.5; }
+    .wh-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+    .wh-toolbar .wh-title { font-size: 14px; font-weight: 600; color: var(--ink); display: flex; align-items: center; gap: 8px; }
+    .wh-toolbar .wh-title i { width: 16px; height: 16px; color: var(--steel); }
+    .wh-toolbar .wh-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+    /* Drawer chi tiết */
+    .mat-overlay { position: fixed; inset: 0; background: rgba(20,19,15,.42); backdrop-filter: blur(2px); z-index: 950; opacity: 0; animation: matov-in 180ms ease forwards; }
+    @keyframes matov-in { to { opacity: 1; } }
+    .mat-overlay.leaving { animation: matov-out 200ms ease forwards; }
+    @keyframes matov-out { to { opacity: 0; } }
+    .mat-drawer { position: fixed; top: 0; right: 0; height: 100%; width: 720px; max-width: 96vw; background: var(--paper); display: flex; flex-direction: column; box-shadow: -16px 0 48px rgba(20,19,15,.22); transform: translateX(100%); animation: matdr-in 260ms cubic-bezier(.2,.8,.2,1) forwards; }
+    @keyframes matdr-in { to { transform: translateX(0); } }
+    .mat-overlay.leaving .mat-drawer { animation: matdr-out 200ms ease forwards; }
+    @keyframes matdr-out { to { transform: translateX(100%); } }
+    .mat-head { background: var(--ink); color: var(--paper); padding: 20px 22px; position: relative; flex-shrink: 0; }
+    .mat-head .mat-cat { font-family: var(--ff-mono); font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--rust-2); }
+    .mat-head h3 { font-size: 19px; font-weight: 600; color: var(--paper); margin-top: 6px; }
+    .mat-head .mat-code { font-family: var(--ff-mono); font-size: 12px; color: rgba(245,241,232,.6); margin-top: 5px; }
+    .mat-head .mat-close { position: absolute; top: 14px; right: 14px; width: 30px; height: 30px; border: 0; border-radius: 6px; background: rgba(245,241,232,.1); color: var(--paper); display: inline-flex; align-items: center; justify-content: center; cursor: pointer; }
+    .mat-body { flex: 1; overflow-y: auto; padding: 18px 22px; }
+    .mat-sec { margin-bottom: 18px; }
+    .mat-sec-h { font-family: var(--ff-mono); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--ash); margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+    .mat-kv { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 11px 16px; }
+    .mat-kv .mk-l { font-size: 11px; color: var(--ash); }
+    .mat-kv .mk-v { font-size: 13.5px; color: var(--ink); font-weight: 600; margin-top: 2px; }
+    .mat-foot { padding: 14px 22px; border-top: 1px solid var(--rule); background: var(--canvas); display: flex; gap: 8px; flex-shrink: 0; }
+    .mat-foot .btn { flex: 1; justify-content: center; }
+    .spec-tbl { width: 100%; border-collapse: collapse; }
+    .spec-tbl td { border: 1px solid var(--rule-soft); padding: 8px 11px; font-size: 12.5px; }
+    .spec-tbl .sl { background: var(--canvas); color: var(--ash); width: 128px; font-weight: 500; white-space: nowrap; }
+    .spec-tbl .sv { color: var(--ink); font-weight: 600; }
+    table.tbl tbody tr.wh-row { cursor: pointer; }
+    table.tbl tbody tr.wh-row:hover { background: var(--canvas); }
+
+    /* Modal phiếu / form */
+    .slip-ov { position: fixed; inset: 0; background: rgba(20,19,15,.5); backdrop-filter: blur(2px); z-index: 980; display: flex; align-items: flex-start; justify-content: center; padding: 48px 16px; overflow-y: auto; opacity: 0; animation: matov-in 160ms ease forwards; }
+    .slip-ov.leaving { animation: matov-out 180ms ease forwards; }
+    .slip-modal { background: var(--paper); width: 560px; max-width: 96vw; border-radius: 14px; box-shadow: 0 26px 64px rgba(20,19,15,.32); overflow: hidden; transform: translateY(14px); animation: slip-in 220ms cubic-bezier(.2,.8,.2,1) forwards; }
+    @keyframes slip-in { to { transform: translateY(0); } }
+    .slip-mhead { background: var(--ink); color: var(--paper); padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; }
+    .slip-mhead h3 { font-size: 16px; font-weight: 600; color: var(--paper); margin-top: 3px; }
+    .slip-mhead .mat-cat { font-family: var(--ff-mono); font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--rust-2); }
+    .slip-mhead .mat-close { width: 30px; height: 30px; border: 0; border-radius: 6px; background: rgba(245,241,232,.1); color: var(--paper); display: inline-flex; align-items: center; justify-content: center; cursor: pointer; }
+    .slip-mbody { padding: 18px 20px; max-height: 74vh; overflow-y: auto; }
+    .slip-foot { padding: 14px 20px; border-top: 1px solid var(--rule); background: var(--canvas); display: flex; gap: 8px; justify-content: flex-end; }
+    .pr-form { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .pr-field { display: flex; flex-direction: column; gap: 5px; }
+    .pr-field > span { font-size: 11px; color: var(--ash); font-weight: 500; }
+
+    /* Phiếu in thành phẩm */
+    .tpfx-doc { background: #fff; color: #14130f; padding: 24px 26px; }
+    .tpfx-head { width: 100%; border-collapse: collapse; }
+    .tpfx-head td { padding: 6px 10px; vertical-align: middle; }
+    .tpfx-title { text-align: center; font-size: 21px; font-weight: 800; margin: 18px 0 14px; }
+    .tpfx-tbl { width: 100%; border-collapse: collapse; }
+    .tpfx-tbl th, .tpfx-tbl td { border: 1px solid #555; padding: 5px 7px; font-size: 12px; }
+    .tpfx-tbl th { background: #e8e3d3; text-align: center; font-weight: 700; }
+    .tpfx-tbl td.c { text-align: center; } .tpfx-tbl td.r { text-align: right; }
+    .tpfx-sign { display: flex; justify-content: space-around; margin-top: 20px; }
+    .tpfx-sign > div { font-size: 12px; font-weight: 600; text-align: center; }
+    .tpfx-sign > div::after { content: '(Ký, ghi rõ họ tên)'; display: block; font-weight: 400; font-style: italic; font-size: 10px; color: #888; margin-top: 2px; }
+    @media print {
+      body * { visibility: hidden !important; }
+      #slipDoc, #slipDoc * { visibility: visible !important; }
+      #slipDoc { position: fixed; left: 0; top: 0; width: 100%; padding: 8mm 10mm; }
+      .slip-ov { background: none !important; padding: 0 !important; }
+    }
+
+    /* Báo cáo — card nổi bật trên nền */
+    .rep-period { display: inline-flex; gap: 2px; background: var(--paper-2); border-radius: 8px; padding: 3px; }
+    .rep-pbtn { padding: 7px 14px; font-size: 12.5px; font-weight: 500; color: var(--ash); background: transparent; border: 0; border-radius: 6px; cursor: pointer; }
+    .rep-pbtn.active { background: #fff; color: var(--ink); font-weight: 600; box-shadow: 0 1px 3px rgba(20,19,15,.12); }
+    .rep-kpis { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 14px; }
+    .rep-tile { background: #fff; border: 1px solid var(--rule); border-radius: 14px; padding: 16px 18px; box-shadow: 0 1px 2px rgba(20,19,15,.05), 0 6px 18px rgba(20,19,15,.05); }
+    .rep-tile .rt-l { font-family: var(--ff-mono); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--ash); }
+    .rep-tile .rt-v { font-size: 25px; font-weight: 600; color: var(--ink); margin-top: 6px; line-height: 1.1; }
+    .rep-tile .rt-s { font-size: 11px; color: var(--ash); margin-top: 4px; }
+    .rep-charts { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 18px; }
+    .rep-card { background: #fff; border: 1px solid var(--rule); border-radius: 16px; padding: 18px 20px; box-shadow: 0 1px 2px rgba(20,19,15,.05), 0 8px 22px rgba(20,19,15,.05); }
+    .rep-card h4 { font-size: 13.5px; font-weight: 600; color: var(--ink); margin: 0; }
+    .rep-card .rc-sub { font-size: 11px; color: var(--ash); margin: 2px 0 12px; }
+    .rep-legend { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-top: 12px; }
+    .rep-legend span { font-size: 11.5px; color: var(--steel); display: inline-flex; align-items: center; gap: 6px; }
+    .rep-legend i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; flex-shrink: 0; }
+    /* modal chuyển kho rộng hơn mặc định */
+    .erp-modal-overlay:has(#ckMa) .erp-modal { max-width: 680px; }
+    @media (max-width: 900px) { .rep-charts { grid-template-columns: 1fr; } .rep-kpis { grid-template-columns: repeat(2, 1fr); } .pr-form { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+
+<div id="app-shell" data-active="kho-tp" data-title="Kho thành phẩm" data-crumb="<b>Kho thành phẩm</b> · Cửa nhôm hệ · nhôm thanh">
+
+  <div class="page-header">
+    <div>
+      <h1>Kho thành phẩm</h1>
+      <p id="tpSubHead">Bộ cửa nhôm hoàn thiện · tách <b>Kho lưu</b> và <b>Kho bán hàng</b> · nhập từ lệnh SX, xuất giao theo đề xuất kinh doanh</p>
+    </div>
+    <div class="actions">
+      <button class="btn btn-secondary" data-no-interact="true" onclick="ERPPurchase.openSuggestPopup({from:'Kho thành phẩm'})"><i data-lucide="shopping-basket" style="width:14px;height:14px"></i> Đề nghị mua vật tư</button>
+      <button class="btn btn-secondary" data-no-interact="true" onclick="openTpFxForm('out')"><i data-lucide="package-minus" style="width:14px;height:14px"></i> Phiếu xuất kho</button>
+      <button class="btn btn-primary" data-no-interact="true" onclick="openTpFxForm('in')"><i data-lucide="package-plus" style="width:14px;height:14px"></i> Phiếu nhập kho</button>
+    </div>
+  </div>
+
+  <!-- Tab chính -->
+  <div class="kho-mainnav mb-4">
+    <button class="kho-mtab active" data-mainview="ton" data-no-interact="true"><i data-lucide="package-check" style="width:15px;height:15px"></i> Tồn kho thành phẩm</button>
+    <button class="kho-mtab" data-mainview="giao" data-no-interact="true"><i data-lucide="send" style="width:15px;height:15px"></i> Đề xuất giao hàng <span class="kho-mtab-badge" id="mainGiaoBadge">0</span></button>
+    <button class="kho-mtab" data-mainview="baocao" data-no-interact="true"><i data-lucide="bar-chart-3" style="width:15px;height:15px"></i> Báo cáo kho</button>
+  </div>
+
+  <!-- ===== VIEW: Tồn kho ===== -->
+  <div data-view="ton">
+    <div class="wh-toolbar">
+      <div class="wh-title"><i data-lucide="tag"></i> Kho thành phẩm cửa nhôm · bộ cửa &amp; nhôm thanh hoàn thiện</div>
+      <div class="wh-actions">
+        <button class="btn btn-secondary btn-sm" id="btnQrTem" data-no-interact="true"><i data-lucide="qr-code" style="width:13px;height:13px"></i> In tem QR</button>
+        <button class="btn btn-primary btn-sm" id="btnChuyenKho" data-no-interact="true"><i data-lucide="arrow-left-right" style="width:13px;height:13px"></i> Chuyển kho lưu → kho bán</button>
+      </div>
+    </div>
+    <div class="card mb-4" style="padding:12px 14px;display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+      <div class="rep-period" id="ktViewTabs">
+        <button class="rep-pbtn active" data-ktview="luu" data-no-interact="true">Kho lưu</button>
+        <button class="rep-pbtn" data-ktview="ban" data-no-interact="true">Kho bán hàng</button>
+      </div>
+      <div style="flex:1;min-width:200px"><input class="input input-search" id="tpSearch" placeholder="Tìm mã TP / tên / hệ nhôm / khách hàng..." /></div>
+      <select class="input" id="tpHeFilter" style="max-width:220px"><option value="">Mọi hệ nhôm</option></select>
+    </div>
+    <div class="tabs mb-4">
+      <button class="tab tab-active" data-tpftab="ton" data-no-interact="true">Tồn kho thành phẩm</button>
+      <button class="tab" data-tpftab="hist" data-no-interact="true">Lịch sử nhập / xuất kho</button>
+      <button class="tab" data-tpftab="in" data-no-interact="true">Nhập kho (từ lệnh SX) <span class="badge badge-yellow" id="tpfxInCount" style="margin-left:4px">0</span></button>
+      <button class="tab" data-tpftab="out" data-no-interact="true">Xuất kho <span class="badge badge-yellow" id="tpfxOutCount" style="margin-left:4px">0</span></button>
+    </div>
+    <div data-tpfpane="ton">
+      <div class="table-wrap"><table class="tbl" style="white-space:nowrap">
+        <thead><tr><th>Mã TP</th><th>Tên thành phẩm</th><th>Hệ nhôm</th><th>ĐVT</th><th class="num">Tồn kho lưu</th><th class="num">Tồn kho bán</th><th class="num">Tổng</th><th class="num">Giá vốn (₫)</th><th class="num">Giá trị tồn (₫)</th><th>LSX nguồn</th><th>Vị trí</th><th>Cảnh báo tồn</th></tr></thead>
+        <tbody id="tpFxTonBody"></tbody>
+      </table></div>
+    </div>
+    <div data-tpfpane="hist" style="display:none">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px 24px;flex-wrap:wrap;margin-bottom:14px">
+        <div style="display:flex;gap:12px 24px;flex-wrap:wrap;align-items:center">
+          <div style="display:flex;gap:8px;align-items:center">
+            <span class="t-micro-u" style="color:var(--ash)">Loại</span>
+            <div class="rep-period">
+              <button class="rep-pbtn active" data-tpk="all" data-no-interact="true">Tất cả</button>
+              <button class="rep-pbtn" data-tpk="in" data-no-interact="true">Nhập</button>
+              <button class="rep-pbtn" data-tpk="out" data-no-interact="true">Xuất</button>
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <span class="t-micro-u" style="color:var(--ash)">Thời gian</span>
+            <div class="rep-period">
+              <button class="rep-pbtn" data-tphp="today" data-no-interact="true">Hôm nay</button>
+              <button class="rep-pbtn" data-tphp="week" data-no-interact="true">Tuần này</button>
+              <button class="rep-pbtn" data-tphp="month" data-no-interact="true">Tháng này</button>
+              <button class="rep-pbtn" data-tphp="quarter" data-no-interact="true">Quý này</button>
+              <button class="rep-pbtn active" data-tphp="all" data-no-interact="true">Tất cả</button>
+            </div>
+          </div>
+        </div>
+        <div id="tpHistSum" style="display:flex;gap:8px"></div>
+      </div>
+      <div class="table-wrap"><table class="tbl" style="white-space:nowrap">
+        <thead><tr><th>Ngày</th><th>Loại</th><th>Số phiếu</th><th>Mã TP</th><th>Tên thành phẩm</th><th>KH</th><th class="num">Số lượng</th><th>Nguồn</th><th>LSX / Ghi chú</th><th>Người tạo phiếu</th><th>Người xác nhận</th><th class="center">Trạng thái</th><th class="center">Phiếu</th></tr></thead>
+        <tbody id="tpHistBody"></tbody>
+      </table></div>
+    </div>
+    <div data-tpfpane="in" style="display:none">
+      <div class="table-wrap"><table class="tbl" style="white-space:nowrap">
+        <thead><tr><th>STT</th><th>KH</th><th>Mã TP</th><th>Tên thành phẩm</th><th>Quy cách</th><th class="num">SL nhập</th><th>ĐVT</th><th>Ngày nhập</th><th>Nguồn</th><th>Mã LSX</th><th>Mã PNK</th><th>User</th><th>Phiếu</th><th>Trạng thái</th><th class="center">Thao tác</th></tr></thead>
+        <tbody id="tpFxInBody"></tbody>
+      </table></div>
+    </div>
+    <div data-tpfpane="out" style="display:none">
+      <div class="table-wrap"><table class="tbl" style="white-space:nowrap">
+        <thead><tr><th>STT</th><th>KH</th><th>Mã TP</th><th>Tên thành phẩm</th><th>Quy cách</th><th class="num">SL xuất</th><th>ĐVT</th><th>Ngày xuất</th><th>Nguồn</th><th>Mã PXK</th><th>Ghi chú</th><th>User</th><th>Phiếu</th><th>Trạng thái</th><th class="center">Thao tác</th></tr></thead>
+        <tbody id="tpFxOutBody"></tbody>
+      </table></div>
+    </div>
+  </div>
+
+  <!-- ===== VIEW: Đề xuất giao hàng ===== -->
+  <div data-view="giao" style="display:none">
+    <div class="card-feature-coral mb-4" style="padding:16px;border-radius:var(--r-xl);display:flex;align-items:center;gap:16px">
+      <i data-lucide="send" style="width:24px;height:24px;color:var(--coral-dark)"></i>
+      <div style="flex:1;color:var(--coral-dark)"><b>Đề xuất giao hàng từ phòng kinh doanh</b> · KD chốt lịch giao với khách → kho TP soạn hàng &amp; xuất giao (cho phép giao từng phần)</div>
+    </div>
+    <div class="card">
+      <div class="flex-between mb-3"><div class="t-h5">Đề xuất giao hàng</div><span class="t-caption">Đơn hàng có thể giao nhiều đợt — vd đơn 10.000 chỉ giao 3.000 đợt này</span></div>
+      <div class="table-wrap" style="border:none"><table class="tbl" style="white-space:nowrap">
+        <thead><tr><th>Mã ĐX</th><th>Đơn hàng</th><th>Khách hàng</th><th>Mã TP / Tên</th><th class="num">SL đơn</th><th class="num">Giao đợt này</th><th class="num">Đã giao</th><th class="num">Còn lại</th><th>Ngày giao chốt</th><th>Địa chỉ giao</th><th>Người gửi</th><th>Trạng thái</th><th class="center">Thao tác</th></tr></thead>
+        <tbody id="giaoBody"></tbody>
+      </table></div>
+    </div>
+  </div>
+
+  <!-- ===== VIEW: Báo cáo kho ===== -->
+  <div data-view="baocao" style="display:none">
+    <div class="card mb-4" style="padding:14px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;background:#fff;border:1px solid var(--rule);box-shadow:0 1px 2px rgba(20,19,15,.05)">
+      <div class="rep-period">
+        <button class="rep-pbtn active" data-rep="today" data-no-interact="true">Hôm nay</button>
+        <button class="rep-pbtn" data-rep="week" data-no-interact="true">Tuần</button>
+        <button class="rep-pbtn" data-rep="month" data-no-interact="true">Tháng</button>
+        <button class="rep-pbtn" data-rep="quarter" data-no-interact="true">Quý</button>
+        <button class="rep-pbtn" data-rep="year" data-no-interact="true">Năm</button>
+      </div>
+      <span class="t-caption" id="repDate" style="font-weight:600;color:var(--ink)">Hôm nay · 20/06/2026</span>
+      <div style="margin-left:auto;display:flex;gap:8px">
+        <button class="btn btn-secondary" data-no-interact="true" data-toast-msg="Đang xuất <b>báo cáo kho thành phẩm</b>…" data-toast-type="info"><i data-lucide="file-spreadsheet" style="width:14px;height:14px"></i> Xuất Excel</button>
+      </div>
+    </div>
+
+    <div class="grid grid-4 mb-4">
+      <div class="card-feature-blue"><div class="t-micro-u" style="color:var(--brand-blue)">TỔNG MÃ TP TỒN</div><div class="t-h3 mt-2" id="kpiTong">—</div><div class="t-caption" style="color:var(--brand-blue)">Đang lưu kho</div></div>
+      <div class="card-feature-yellow"><div class="t-micro-u" style="color:var(--yellow-dark)">CHỜ XÁC NHẬN</div><div class="t-h3 mt-2" id="kpiChoXN">—</div><div class="t-caption" style="color:var(--yellow-dark)">Phiếu nhập/xuất</div></div>
+      <div class="card-feature-coral"><div class="t-micro-u" style="color:var(--coral-dark)">ĐỀ XUẤT GIAO HÀNG</div><div class="t-h3 mt-2" id="kpiGiao">—</div><div class="t-caption" style="color:var(--coral-dark)">Từ kinh doanh · chờ xuất</div></div>
+      <div class="card-feature-teal"><div class="t-micro-u" style="color:var(--moss-dark)">GIAO 1 PHẦN</div><div class="t-h3 mt-2" id="kpiPhan">—</div><div class="t-caption" style="color:var(--moss-dark)">Đơn còn lại chưa giao đủ</div></div>
+    </div>
+
+    <div class="rep-kpis mb-4">
+      <div class="rep-tile"><div class="rt-l">Tồn thành phẩm (tổng 2 kho)</div><div class="rt-v" id="rTon">—</div><div class="rt-s">Cuối kỳ</div></div>
+      <div class="rep-tile"><div class="rt-l">Nhập từ SX trong kỳ</div><div class="rt-v" style="color:var(--moss)" id="rNhap">—</div><div class="rt-s">Theo lệnh sản xuất</div></div>
+      <div class="rep-tile"><div class="rt-l">Xuất giao trong kỳ</div><div class="rt-v" style="color:var(--rust)" id="rXuat">—</div><div class="rt-s">Theo đề xuất KD</div></div>
+      <div class="rep-tile"><div class="rt-l">Tỷ lệ giao đúng hạn</div><div class="rt-v" id="rOntime">—</div><div class="rt-s">Theo lịch KD chốt</div></div>
+    </div>
+
+    <div class="rep-charts mb-4">
+      <div class="rep-card"><h4>Nhập từ SX / Xuất giao theo thời gian</h4><div class="rc-sub">Số lượng (bộ · m² · kg quy đổi)</div><div id="cFlow"></div>
+        <div class="rep-legend"><span><i style="background:#2f5d3a"></i> Nhập từ SX</span><span><i style="background:#c5400a"></i> Xuất giao</span></div></div>
+      <div class="rep-card"><h4>Cơ cấu tồn theo trạng thái</h4><div class="rc-sub">Số mã SP</div><div id="cStatus"></div>
+        <div class="rep-legend"><span><i style="background:#2f5d3a"></i> Còn hàng</span><span><i style="background:#9c7714"></i> Sắp hết</span><span><i style="background:#8a1f1f"></i> Hết hàng</span></div></div>
+      <div class="rep-card"><h4>Tồn theo khách hàng / đại lý</h4><div class="rc-sub">% theo số mã thành phẩm</div><div id="cCust"></div>
+        <div class="rep-legend" id="lCust"></div></div>
+      <div class="rep-card"><h4>Top SP xuất giao nhiều nhất</h4><div class="rc-sub">Số lượng xuất</div><div id="cTop"></div></div>
+    </div>
+  </div>
+
+</div>
+
+<script src="../assets/js/layout.js"></script>
+<script src="../assets/js/pricing-engine.js"></script>
+<script src="../assets/js/quote-data.js"></script>
+<script src="../assets/js/loss-data.js"></script>
+<script src="../assets/js/loss-ui.js"></script>
+<script src="../assets/js/accounting.js"></script>
+<script src="../assets/js/stock-data.js"></script>
+<script src="../assets/js/bom-data.js"></script>
+<script src="../assets/js/inventory.js"></script>
+<script src="../assets/js/purchase-data.js"></script>
+<script>
+  const MAP_CO = { name: 'CÔNG TY CỔ PHẦN THƯƠNG MẠI OWIN', addr: 'Nhà máy SX: Số 8 Giá Ngự, Xâm Xuyên, Thường Tín, TP Hà Nội', mst: 'MST: 0109541582', sdt: 'Hotline: 056.386.9999 - 0988.837.389' };
+  /* Thành phẩm cửa nhôm — tách TỒN KHO LƯU và TỒN KHO BÁN HÀNG */
+  const TP_FLEXO = {
+    'TP-TL120-2C':  { kh: 'VINHOMES OCEAN PARK',   ten: 'Cửa thuỷ lực hệ 120 · 2 cánh vân gỗ trắc', he: 'Hệ thuỷ lực 120', kt: '3,6 m²/bộ · kính hộp 5-9-5', dvt: 'bộ', ke: 'K1', thung: 'Giá A1', tonLuu: 14, tonBan: 6,  giaVon: 11400000, lsx: 'LSX-0319' },
+    'TP-TL180-4C':  { kh: 'SUN GROUP HẠ LONG',     ten: 'Cửa thuỷ lực hệ 180 · 4 cánh vân gỗ hương', he: 'Hệ thuỷ lực 180', kt: '7,2 m²/bộ · kính hộp 5-9-5', dvt: 'bộ', ke: 'K1', thung: 'Giá A2', tonLuu: 5,  tonBan: 0,  giaVon: 19800000, lsx: 'LSX-0322' },
+    'TP-TQ93-4C':   { kh: 'ECOPARK',               ten: 'Cửa trượt quay 93 · 4 cánh ghi xám',        he: 'Hệ trượt quay 93', kt: '5,4 m²/bộ · kính CL 8mm', dvt: 'bộ', ke: 'K2', thung: 'Giá B1', tonLuu: 9,  tonBan: 12, giaVon: 9900000,  lsx: 'LSX-0331' },
+    'TP-TQ93-6C':   { kh: 'NHÔM KÍNH NAM TIẾN',    ten: 'Cửa trượt quay 93 · 6 cánh vân gỗ trắc',    he: 'Hệ trượt quay 93', kt: '8,1 m²/bộ · kính CL 8mm', dvt: 'bộ', ke: 'K2', thung: 'Giá B2', tonLuu: 3,  tonBan: 1,  giaVon: 14200000, lsx: 'LSX-0333' },
+    'TP-LUX121-M2': { kh: 'NHÔM KÍNH MINH AN',     ten: 'Cửa sổ mở quay Luxanode 121 · 2 cánh',      he: 'Luxanode 121',     kt: 'Tính theo m² · anod ≥15µm', dvt: 'm²', ke: 'K3', thung: 'Giá C1', tonLuu: 186, tonBan: 74, giaVon: 1520000,  lsx: 'LSX-0335' },
+    'TP-LUX76-M2':  { kh: 'ĐL OWIN HẢI DƯƠNG',     ten: 'Cửa sổ mở lùa 76 Luxanode · 2 cánh',        he: 'Luxanode 76',      kt: 'Tính theo m²',             dvt: 'm²', ke: 'K3', thung: 'Giá C2', tonLuu: 92,  tonBan: 0,  giaVon: 1380000,  lsx: 'LSX-0340' },
+    'TP-VOM120':    { kh: 'NT XÂY DỰNG HOÀNG GIA', ten: 'Cửa vòm nhôm uốn hệ 120 · 2 cánh',          he: 'Hệ 120 uốn vòm',   kt: '4,1 m²/bộ · kính hộp uốn', dvt: 'bộ', ke: 'K4', thung: 'Giá A3', tonLuu: 4,  tonBan: 2,  giaVon: 15100000, lsx: 'LSX-0341' },
+    'TP-VACH-LUX':  { kh: 'NHÔM KÍNH PHƯƠNG TRANG',ten: 'Vách kính khung nhôm Luxanode',             he: 'Luxanode 121',     kt: 'Tính theo m²',             dvt: 'm²', ke: 'K4', thung: 'Giá C3', tonLuu: 128, tonBan: 46, giaVon: 1340000,  lsx: 'LSX-0350' },
+    'TP-TUBEP-LUX': { kh: 'ĐL OWIN HƯNG YÊN',      ten: 'Tủ bếp nhôm nội thất Owin Luxury (bộ 3,2m)',he: 'Nhôm nội thất',    kt: 'Bộ 3,2m · vân gỗ hương',   dvt: 'bộ', ke: 'K5', thung: 'Giá D1', tonLuu: 2,  tonBan: 3,  giaVon: 21300000, lsx: 'LSX-0360' },
+    'TP-THANH120':  { kh: 'ĐL OWIN NGHỆ AN',       ten: 'Nhôm thanh hệ 120 (bán xá theo kg)',        he: 'Nhôm thanh 6063-T5', kt: 'Cây 5,8m · bó 200kg',    dvt: 'kg', ke: 'K6', thung: 'Rack R1', tonLuu: 8600, tonBan: 4200, giaVon: 86000, lsx: 'LSX-0361' },
+    'TP-CS-PHAO':   { kh: 'NHÔM KÍNH ĐẠI PHÚC',    ten: 'Hệ chấn song kết hợp phào Owin',            he: 'Chấn song + phào', kt: 'Tính theo mét dài',        dvt: 'md', ke: 'K6', thung: 'Rack R2', tonLuu: 240, tonBan: 60, giaVon: 980000,   lsx: 'LSX-0362' }
+  };
+  /* tồn tổng = kho lưu + kho bán (giữ trường `ton` cho các hàm cũ) */
+  function syncTon(m) { m.ton = (Number(m.tonLuu) || 0) + (Number(m.tonBan) || 0); return m.ton; }
+  Object.keys(TP_FLEXO).forEach(k => syncTon(TP_FLEXO[k]));
+
+  const TP_FX_IN = [
+    { kh: 'VINHOMES OCEAN PARK', masp: 'TP-TL120-2C', ten: 'Cửa thuỷ lực hệ 120 · 2 cánh vân gỗ trắc', kt: '3,6 m²/bộ', sl: '8', dvt: 'bộ', ngay: '20/06/2026', nguon: 'LỆNH SX', lsx: 'LSX-0319', ma: 'PNK000001-20062026', gc: 'Nhập kho lưu', kho: 'luu', user: 'kho@owin.vn', link: '#', tt: 'CHỜ XN', ngayxn: '' },
+    { kh: 'ECOPARK', masp: 'TP-TQ93-4C', ten: 'Cửa trượt quay 93 · 4 cánh ghi xám', kt: '5,4 m²/bộ', sl: '6', dvt: 'bộ', ngay: '20/06/2026', nguon: 'LỆNH SX', lsx: 'LSX-0331', ma: 'PNK000001-20062026', gc: 'Nhập kho bán hàng', kho: 'ban', user: 'kho@owin.vn', link: '#', tt: 'CHỜ XN', ngayxn: '' },
+    { kh: 'NHÔM KÍNH MINH AN', masp: 'TP-LUX121-M2', ten: 'Cửa sổ mở quay Luxanode 121 · 2 cánh', kt: 'theo m²', sl: '74', dvt: 'm²', ngay: '19/06/2026', nguon: 'LỆNH SX', lsx: 'LSX-0335', ma: 'PNK000002-19062026', gc: 'Nhập kho lưu', kho: 'luu', user: 'kho@owin.vn', link: '#', tt: 'ĐÃ XN', ngayxn: '19/06/2026' },
+    { kh: 'NT XÂY DỰNG HOÀNG GIA', masp: 'TP-VOM120', ten: 'Cửa vòm nhôm uốn hệ 120 · 2 cánh', kt: '4,1 m²/bộ', sl: '4', dvt: 'bộ', ngay: '18/06/2026', nguon: 'LỆNH SX', lsx: 'LSX-0341', ma: 'PNK000003-18062026', gc: 'Hao uốn vòm 11% — đã đối chiếu BOM', kho: 'luu', user: 'kho@owin.vn', link: '#', tt: 'ĐÃ XN', ngayxn: '18/06/2026' },
+    { kh: 'ĐL OWIN NGHỆ AN', masp: 'TP-THANH120', ten: 'Nhôm thanh hệ 120 (bán xá theo kg)', kt: 'Cây 5,8m', sl: '4.200', dvt: 'kg', ngay: '18/06/2026', nguon: 'LỆNH SX', lsx: 'LSX-0361', ma: 'PNK000003-18062026', gc: 'Nhập kho bán hàng', kho: 'ban', user: 'kho@owin.vn', link: '#', tt: 'ĐÃ XN', ngayxn: '18/06/2026' }
+  ];
+  const TP_FX_OUT = [
+    { kh: 'VINHOMES OCEAN PARK', masp: 'TP-TL120-2C', ten: 'Cửa thuỷ lực hệ 120 · 2 cánh vân gỗ trắc', kt: '3,6 m²/bộ', sl: '2', dvt: 'bộ', ngay: '19/06/2026', nguon: 'PXK', ma: 'PXK000001-19062026', gc: 'Giao công trình toà S1', kho: 'ban', user: 'kho@owin.vn', link: '#', tt: 'CHỜ XN', ngayxn: '' },
+    { kh: 'NHÔM KÍNH NAM TIẾN', masp: 'TP-TQ93-6C', ten: 'Cửa trượt quay 93 · 6 cánh vân gỗ trắc', kt: '8,1 m²/bộ', sl: '1', dvt: 'bộ', ngay: '17/06/2026', nguon: 'PXK', ma: 'PXK000002-17062026', gc: 'Đổi màu vân gỗ theo yêu cầu KH', kho: 'ban', user: 'kho@owin.vn', link: '#', tt: 'CHỜ XN', ngayxn: '' },
+    { kh: 'NHÔM KÍNH PHƯƠNG TRANG', masp: 'TP-VACH-LUX', ten: 'Vách kính khung nhôm Luxanode', kt: 'theo m²', sl: '46', dvt: 'm²', ngay: '16/06/2026', nguon: 'PXK', ma: 'PXK000003-16062026', gc: '', kho: 'ban', user: 'kho@owin.vn', link: '#', tt: 'ĐÃ XN', ngayxn: '16/06/2026' },
+    { kh: 'ĐL OWIN NGHỆ AN', masp: 'TP-THANH120', ten: 'Nhôm thanh hệ 120 (bán xá theo kg)', kt: 'Cây 5,8m', sl: '1.800', dvt: 'kg', ngay: '15/06/2026', nguon: 'PXK', ma: 'PXK000004-15062026', gc: 'Bán xá cho đại lý', kho: 'ban', user: 'kho@owin.vn', link: '#', tt: 'ĐÃ XN', ngayxn: '15/06/2026' }
+  ];
+  /* Đề xuất giao hàng từ kinh doanh — cho phép giao từng phần */
+  const GIAOHANG = [
+    { id: 'DXGH-0051', dh: 'DH-0319', kh: 'VINHOMES OCEAN PARK', masp: 'TP-TL120-2C', ten: 'Cửa thuỷ lực hệ 120 · 2 cánh vân gỗ trắc', slDon: 24, slDot: 6, daGiao: 2, ngay: '22/06/2026', diachi: 'KĐT Ocean Park, Gia Lâm, Hà Nội', nguoi: 'KD · Trần B', tt: 'phan' },
+    { id: 'DXGH-0050', dh: 'DH-0331', kh: 'ECOPARK', masp: 'TP-TQ93-4C', ten: 'Cửa trượt quay 93 · 4 cánh ghi xám', slDon: 12, slDot: 12, daGiao: 0, ngay: '21/06/2026', diachi: 'KĐT Ecopark, Văn Giang, Hưng Yên', nguoi: 'KD · Lê C', tt: 'cho' },
+    { id: 'DXGH-0048', dh: 'DH-0361', kh: 'ĐL OWIN NGHỆ AN', masp: 'TP-THANH120', ten: 'Nhôm thanh hệ 120 (bán xá theo kg)', slDon: 6000, slDot: 2000, daGiao: 1800, ngay: '18/06/2026', diachi: 'TP Vinh, Nghệ An', nguoi: 'KD · Trần B', tt: 'phan' },
+    { id: 'DXGH-0045', dh: 'DH-0350', kh: 'NHÔM KÍNH PHƯƠNG TRANG', masp: 'TP-VACH-LUX', ten: 'Vách kính khung nhôm Luxanode', slDon: 46, slDot: 46, daGiao: 46, ngay: '15/06/2026', diachi: 'Thanh Trì, Hà Nội', nguoi: 'KD · Lê C', tt: 'du' }
+  ];
+
+  const _pn = s => parseInt(String(s).replace(/[^\d]/g, '')) || 0;
+  const fmt = n => Number(n).toLocaleString('vi-VN');
+  function specTable(pairs) {
+    let h = '<table class="spec-tbl">';
+    for (let i = 0; i < pairs.length; i += 2) {
+      const a = pairs[i], b = pairs[i + 1];
+      const cell = p => `<td class="sl">${p[0]}</td><td class="sv">${(p[1] != null && p[1] !== '') ? p[1] : '—'}</td>`;
+      h += '<tr>' + cell(a) + (b ? cell(b) : '<td class="sl"></td><td class="sv"></td>') + '</tr>';
+    }
+    return h + '</table>';
+  }
+
+  /* ===== Tồn kho thành phẩm ===== */
+  function tpFxBadge(tt) { return tt === 'ĐÃ XN' ? '<span class="badge badge-success">Đã XN</span>' : '<span class="badge badge-yellow">Chờ XN</span>'; }
+  function tpFxTonBadge(t) { return t <= 0 ? '<span class="badge badge-danger">Hết hàng</span>' : t <= 50 ? '<span class="badge badge-yellow">Sắp hết</span>' : '<span class="badge badge-success">Còn hàng</span>'; }
+  function tpFxAgg(ma) {
+    const ins = TP_FX_IN.filter(r => r.masp === ma), outs = TP_FX_OUT.filter(r => r.masp === ma);
+    const dk = d => { const p = String(d).split('/'); return (p[2] || '') + (p[1] || '') + (p[0] || ''); };
+    const nw = a => a.length ? a.reduce((x, y) => dk(y.ngay) > dk(x.ngay) ? y : x) : null;
+    const li = nw(ins), lo = nw(outs);
+    return { tongNhap: ins.reduce((s, r) => s + _pn(r.sl), 0), tongXuat: outs.reduce((s, r) => s + _pn(r.sl), 0), lsx: li ? li.lsx : '', lastIn: li ? li.ngay : '', lastOut: lo ? lo.ngay : '' };
+  }
+  function tpLsxLink(id) { return id ? `<a href="06-lsx-phieu-cong-nghe.html?id=${encodeURIComponent(id)}" class="lnk">${id}</a>` : '—'; }
+  /* Cảnh báo tồn CHỌN LỌC: đỏ khi kho bán hết/thiếu, xanh khi đủ giao ngay, còn lại "—" */
+  function tpTonFlag(m) {
+    const ban = Number(m.tonBan) || 0, luu = Number(m.tonLuu) || 0;
+    if (ban <= 0) return '<span style="color:#8a1f1f;font-weight:700">Hết hàng kho bán</span>';
+    if (ban > 0 && ban <= 2 && m.dvt === 'bộ') return '<span style="color:#8a1f1f;font-weight:700">Kho bán dưới mức</span>';
+    if (ban >= luu && ban > 0) return '<span style="color:#1f6b3a;font-weight:700">Đủ hàng giao ngay</span>';
+    return '<span style="color:var(--ash-3)">—</span>';
+  }
+  let _ktView = 'luu';
+  function renderTpFlexo() {
+    const tb = document.getElementById('tpFxTonBody');
+    if (tb) {
+      const q = ((document.getElementById('tpSearch') || {}).value || '').toLowerCase().trim();
+      const he = (document.getElementById('tpHeFilter') || {}).value || '';
+      const keys = Object.keys(TP_FLEXO).filter(ma => {
+        const m = TP_FLEXO[ma];
+        if (he && m.he !== he) return false;
+        if (q && !(ma + ' ' + m.ten + ' ' + m.he + ' ' + m.kh).toLowerCase().includes(q)) return false;
+        if (_ktView === 'luu' && (Number(m.tonLuu) || 0) <= 0) return false;
+        if (_ktView === 'ban' && (Number(m.tonBan) || 0) <= 0) return false;
+        return true;
+      });
+      tb.innerHTML = keys.map(ma => {
+        const m = TP_FLEXO[ma];
+        syncTon(m);
+        const giaTri = m.ton * m.giaVon;
+        const hlLuu = _ktView === 'luu' ? 'font-weight:700;color:var(--ink)' : 'color:var(--ash)';
+        const hlBan = _ktView === 'ban' ? 'font-weight:700;color:var(--ink)' : 'color:var(--ash)';
+        return `<tr data-tpfx="${ma}" style="cursor:pointer"><td><b>${ma}</b></td><td>${m.ten}<div class="t-caption">${m.kh}</div></td><td><span class="badge badge-steel">${m.he}</span></td><td>${m.dvt}</td><td class="num" style="${hlLuu}">${fmt(m.tonLuu)}</td><td class="num" style="${hlBan}">${fmt(m.tonBan)}</td><td class="num"><b>${fmt(m.ton)}</b></td><td class="num">${fmt(m.giaVon)}</td><td class="num">${fmt(giaTri)}</td><td>${tpLsxLink(m.lsx)}</td><td><span class="t-caption">Kệ ${m.ke} · ${m.thung}</span></td><td>${tpTonFlag(m)}</td></tr>`;
+      }).join('') || '<tr><td colspan="12" style="text-align:center;color:var(--ash);padding:22px">Không có mã thành phẩm nào trong kho này.</td></tr>';
+      tb.querySelectorAll('[data-tpfx]').forEach(tr => tr.addEventListener('click', e => { if (e.target.closest('button, a, input')) return; openTpFxDetail(tr.dataset.tpfx); }));
+    }
+    renderTpFxLog('in'); renderTpFxLog('out');
+    renderTpHist();
+    if (window.lucide) lucide.createIcons();
+  }
+
+  /* ===== Chuyển hàng từ KHO LƯU sang KHO BÁN HÀNG ===== */
+  function openChuyenKho() {
+    const opts = Object.keys(TP_FLEXO).filter(ma => (Number(TP_FLEXO[ma].tonLuu) || 0) > 0)
+      .map(ma => `<option value="${ma}">${ma} — ${TP_FLEXO[ma].ten} (kho lưu: ${fmt(TP_FLEXO[ma].tonLuu)} ${TP_FLEXO[ma].dvt})</option>`).join('');
+    if (!opts) { ERPInteract.showToast('Kho lưu không còn hàng để chuyển', 'warning'); return; }
+    ERPInteract.showModal({
+      title: 'Chuyển kho lưu → kho bán hàng',
+      body: `<div class="pr-form">
+          <label class="pr-field" style="grid-column:1/-1"><span>Mã hàng</span><select class="input" id="ckMa">${opts}</select></label>
+          <label class="pr-field"><span>Số lượng chuyển</span><input class="input" id="ckSl" type="number" min="1" value="1"></label>
+          <label class="pr-field"><span>Ngày chuyển</span><input class="input" id="ckDate" value="20/06/2026"></label>
+          <label class="pr-field" style="grid-column:1/-1"><span>Ghi chú</span><input class="input" id="ckNote" placeholder="VD: bổ sung hàng bán showroom"></label>
+        </div>
+        <div class="t-caption mt-2">Phiếu chuyển kho nội bộ sẽ được ghi nhận vào lịch sử nhập / xuất của kho thành phẩm.</div>`,
+      primaryText: 'Chuyển kho', secondaryText: 'Huỷ',
+      onPrimary: function () {
+        const ma = (document.getElementById('ckMa') || {}).value;
+        const sl = parseInt((document.getElementById('ckSl') || {}).value) || 0;
+        const date = (document.getElementById('ckDate') || {}).value || '20/06/2026';
+        const note = (document.getElementById('ckNote') || {}).value || '';
+        const m = TP_FLEXO[ma];
+        if (!m) return false;
+        if (sl <= 0) { ERPInteract.showToast('Nhập số lượng cần chuyển', 'danger'); return false; }
+        if (sl > m.tonLuu) { ERPInteract.showToast(`Kho lưu chỉ còn <b>${fmt(m.tonLuu)} ${m.dvt}</b>`, 'danger'); return false; }
+        m.tonLuu -= sl; m.tonBan += sl; syncTon(m);
+        _tpfxSeq.PCK = (_tpfxSeq.PCK || 12) + 1;
+        const no = 'PCK' + String(_tpfxSeq.PCK).padStart(6, '0') + '-' + date.replace(/\//g, '');
+        TP_FX_OUT.unshift({ kh: m.kh, masp: ma, ten: m.ten, kt: m.kt, sl: fmt(sl), dvt: m.dvt, ngay: date, nguon: 'CHUYỂN KHO', ma: no, gc: `Chuyển kho lưu → kho bán${note ? ' · ' + note : ''}`, kho: 'ban', user: 'kho@owin.vn', link: '#', tt: 'ĐÃ XN', ngayxn: date });
+        TP_FX_IN.unshift({ kh: m.kh, masp: ma, ten: m.ten, kt: m.kt, sl: fmt(sl), dvt: m.dvt, ngay: date, nguon: 'CHUYỂN KHO', lsx: m.lsx, ma: no, gc: 'Nhận vào kho bán hàng', kho: 'ban', user: 'kho@owin.vn', link: '#', tt: 'ĐÃ XN', ngayxn: date });
+        renderTpFlexo();
+        ERPInteract.showToast(`Đã chuyển <b>${fmt(sl)} ${m.dvt}</b> ${ma} sang kho bán hàng · phiếu <b>${no}</b>`, 'success', 3000);
+        return true;
+      }
+    });
+  }
+
+  /* ===== In tem QR dán thành phẩm ===== */
+  function qrBlock(text, label) {
+    if (!window.ERPQR) return '';
+    return ERPQR.block(text, label, 96);
+  }
+  function openTemQR() {
+    const keys = Object.keys(TP_FLEXO);
+    const tem = keys.map(ma => {
+      const m = TP_FLEXO[ma];
+      return `<div style="border:1px solid #555;border-radius:6px;padding:10px;display:flex;gap:10px;align-items:center;page-break-inside:avoid">
+        <div>${qrBlock(ma + '|' + m.lsx + '|' + m.he, ma)}</div>
+        <div style="font-size:12px;line-height:1.5">
+          <div style="font-weight:700;font-size:13px">${m.ten}</div>
+          <div>Mã TP: <b>${ma}</b> · ĐVT: ${m.dvt}</div>
+          <div>Hệ nhôm: ${m.he} · ${m.kt}</div>
+          <div>LSX nguồn: <b>${m.lsx}</b> · Kệ ${m.ke} · ${m.thung}</div>
+        </div></div>`;
+    }).join('');
+    const body = ERPPrint.docHead() +
+      '<div class="pdoc"><div class="pdoc-title">TEM QR THÀNH PHẨM CỬA NHÔM</div>' +
+      '<div class="pdoc-sub">' + MAP_CO.name + ' · in ngày 20/06/2026</div>' +
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px">' + tem + '</div>' +
+      '<div class="pdoc-note">Quét tem QR để tra cứu lệnh sản xuất nguồn, hệ nhôm và vị trí lưu kho.</div></div>';
+    ERPPrint.preview({ title: 'Tem QR thành phẩm — xem trước', printTitle: 'Tem QR thành phẩm', bodyHtml: body });
+  }
+
+  /* ===== Lịch sử nhập / xuất kho gộp — lọc theo loại + thời gian ===== */
+  const TP_TODAY = '20/06/2026';
+  function _tpDate(s) { const p = String(s).split('/'); return { d: +p[0], m: +p[1], y: +p[2] }; }
+  function tpfxInPeriod(dateStr, p) {
+    if (p === 'all') return true;
+    const a = _tpDate(dateStr), t = _tpDate(TP_TODAY);
+    if (p === 'year') return a.y === t.y;
+    if (p === 'month') return a.y === t.y && a.m === t.m;
+    if (p === 'quarter') { const q = x => Math.floor((x - 1) / 3); return a.y === t.y && q(a.m) === q(t.m); }
+    if (p === 'today') return String(dateStr).slice(0, 10) === TP_TODAY;
+    if (p === 'week') return a.y === t.y && a.m === t.m && (t.d - a.d) >= 0 && (t.d - a.d) <= 6;
+    return true;
+  }
+  let _tpHistK = 'all', _tpHistP = 'all';
+  function tpHistRows() {
+    const all = TP_FX_IN.map(r => Object.assign({ kind: 'in' }, r)).concat(TP_FX_OUT.map(r => Object.assign({ kind: 'out' }, r)));
+    const dk = d => { const p = String(d).split('/'); return (p[2] || '') + (p[1] || '').padStart(2, '0') + (p[0] || '').padStart(2, '0'); };
+    all.sort((x, y) => dk(y.ngay).localeCompare(dk(x.ngay)));
+    return all;
+  }
+  function renderTpHist() {
+    const tb = document.getElementById('tpHistBody'); if (!tb) return;
+    const base = tpHistRows().filter(r => tpfxInPeriod(r.ngay, _tpHistP));
+    const rows = base.filter(r => _tpHistK === 'all' ? true : r.kind === _tpHistK);
+    tb.innerHTML = rows.length ? rows.map(r => {
+      const isIn = r.kind === 'in';
+      const xn = r.tt === 'ĐÃ XN' ? `Thủ kho TP · ${r.ngayxn || ''}` : '<span class="t-caption">Chưa xác nhận</span>';
+      const badge = r.tt === 'ĐÃ XN' ? '<span class="badge badge-success">Đã xác nhận</span>' : '<span class="badge badge-yellow">Chờ xác nhận</span>';
+      const note = isIn ? (r.lsx || '—') : (r.gc || '—');
+      return `<tr class="wh-row" data-tphrow data-kind="${r.kind}" data-masp="${r.masp}" data-ma="${r.ma}">
+        <td>${r.ngay}</td>
+        <td><span class="badge badge-${isIn ? 'success' : 'coral'}">${isIn ? 'Nhập' : 'Xuất'}</span></td>
+        <td><b>${r.ma}</b></td>
+        <td><b>${r.masp}</b></td>
+        <td>${r.ten}</td>
+        <td>${r.kh}</td>
+        <td class="num" style="color:${isIn ? 'var(--moss)' : 'var(--signal)'};font-weight:600">${isIn ? '+' : '−'}${r.sl} ${r.dvt}</td>
+        <td>${r.nguon}</td>
+        <td><span class="t-caption">${isIn && r.lsx ? tpLsxLink(r.lsx) : note}</span></td>
+        <td>${r.user}</td>
+        <td>${xn}</td>
+        <td class="center">${badge}</td>
+        <td class="center"><a class="btn-link" data-no-interact="true" onclick="viewTpFxPhieu('${r.kind}','${r.ma}')"><i data-lucide="file-text" style="width:13px;height:13px;vertical-align:-2px"></i> Xem</a></td>
+      </tr>`;
+    }).join('') : '<tr><td colspan="13" style="text-align:center;color:var(--ash);padding:24px">Không có giao dịch khớp bộ lọc đã chọn.</td></tr>';
+    tb.querySelectorAll('[data-tphrow]').forEach(tr => tr.addEventListener('click', e => { if (e.target.closest('button, a, input')) return; openTpFxRecord(tr.dataset.kind, tr.dataset.masp, tr.dataset.ma); }));
+    const nIn = base.filter(r => r.kind === 'in').length, nOut = base.length - nIn, nPend = base.filter(r => r.tt !== 'ĐÃ XN').length;
+    const sum = document.getElementById('tpHistSum');
+    if (sum) sum.innerHTML = `<span class="badge badge-success">${nIn} phiếu nhập</span><span class="badge badge-coral">${nOut} phiếu xuất</span>${nPend ? `<span class="badge badge-yellow">${nPend} chờ xác nhận</span>` : ''}`;
+    if (window.lucide) lucide.createIcons();
+  }
+  function wireTpHistFilters() {
+    document.querySelectorAll('[data-tpk]').forEach(b => b.addEventListener('click', e => {
+      e.preventDefault(); e.stopPropagation();
+      document.querySelectorAll('[data-tpk]').forEach(x => x.classList.remove('active'));
+      b.classList.add('active'); _tpHistK = b.dataset.tpk; renderTpHist();
+    }));
+    document.querySelectorAll('[data-tphp]').forEach(b => b.addEventListener('click', e => {
+      e.preventDefault(); e.stopPropagation();
+      document.querySelectorAll('[data-tphp]').forEach(x => x.classList.remove('active'));
+      b.classList.add('active'); _tpHistP = b.dataset.tphp; renderTpHist();
+    }));
+  }
+  function updateTpFxCounts() {
+    const ci = TP_FX_IN.filter(r => r.tt !== 'ĐÃ XN').length, co = TP_FX_OUT.filter(r => r.tt !== 'ĐÃ XN').length;
+    const ei = document.getElementById('tpfxInCount'); if (ei) { ei.textContent = ci; ei.style.display = ci ? '' : 'none'; }
+    const eo = document.getElementById('tpfxOutCount'); if (eo) { eo.textContent = co; eo.style.display = co ? '' : 'none'; }
+    const k = document.getElementById('kpiChoXN'); if (k) k.textContent = (ci + co) + ' phiếu';
+  }
+  function renderTpFxLog(kind) {
+    const isIn = kind === 'in', arr = isIn ? TP_FX_IN : TP_FX_OUT;
+    const tb = document.getElementById(isIn ? 'tpFxInBody' : 'tpFxOutBody');
+    if (tb) {
+      tb.innerHTML = arr.map((r, i) => {
+        const maCell = `<a class="btn-link" data-no-interact="true" onclick="viewTpFxPhieu('${kind}','${r.ma}')">${r.ma}</a>`;
+        const phieu = `<a class="btn-link" data-no-interact="true" onclick="viewTpFxPhieu('${kind}','${r.ma}')"><i data-lucide="file-text" style="width:13px;height:13px;vertical-align:-2px"></i> Xem</a>`;
+        const act = r.tt !== 'ĐÃ XN' ? `<button class="btn btn-secondary btn-sm" data-no-interact="true" onclick="confirmTpFx('${kind}',${i})">Xác nhận</button>` : `<span class="t-caption">✓ ${r.ngayxn || ''}</span>`;
+        const common = `<td>${i + 1}</td><td>${r.kh}</td><td><b>${r.masp}</b></td><td>${r.ten}</td><td>${r.kt}</td><td class="num"><b>${r.sl}</b></td><td>${r.dvt}</td><td>${r.ngay}</td><td>${r.nguon}</td>`;
+        const tail = `<td>${r.user}</td><td>${phieu}</td><td>${tpFxBadge(r.tt)}</td><td class="center">${act}</td>`;
+        const tr = `<tr class="wh-row" data-fxrow data-kind="${kind}" data-masp="${r.masp}" data-ma="${r.ma}">`;
+        return isIn ? `${tr}${common}<td><span class="t-caption">${tpLsxLink(r.lsx)}</span></td><td>${maCell}</td>${tail}</tr>` : `${tr}${common}<td>${maCell}</td><td>${r.gc || '—'}</td>${tail}</tr>`;
+      }).join('');
+      tb.querySelectorAll('[data-fxrow]').forEach(tr => tr.addEventListener('click', e => { if (e.target.closest('button, a, input')) return; openTpFxRecord(tr.dataset.kind, tr.dataset.masp, tr.dataset.ma); }));
+      if (window.lucide) lucide.createIcons();
+    }
+    updateTpFxCounts();
+  }
+  function confirmTpFx(kind, idx) {
+    const arr = kind === 'in' ? TP_FX_IN : TP_FX_OUT;
+    if (arr[idx]) { arr[idx].tt = 'ĐÃ XN'; arr[idx].ngayxn = '20/06/2026'; }
+    renderTpFxLog(kind);
+    renderTpHist();
+    window.ERPInteract && ERPInteract.showToast(`Đã xác nhận phiếu <b>${arr[idx] ? arr[idx].ma : ''}</b>`, 'success');
+  }
+  function viewTpFxPhieu(kind, no) {
+    const arr = kind === 'in' ? TP_FX_IN : TP_FX_OUT;
+    const rows = arr.filter(r => r.ma === no);
+    if (!rows.length) return;
+    printTpFxPhieu(kind, no, rows[0].ngay, rows.map(r => ({ masp: r.masp, ten: r.ten, kt: r.kt, sl: r.sl, dvt: r.dvt, lsx: r.lsx || '', gc: r.gc || '', kh: r.kh })));
+  }
+  function openTpFxDetail(ma) {
+    const m = TP_FLEXO[ma]; if (!m) return;
+    const a = tpFxAgg(ma);
+    const ins = TP_FX_IN.filter(r => r.masp === ma), outs = TP_FX_OUT.filter(r => r.masp === ma);
+    const ioRows = (arr, k) => arr.map(r => `<tr><td>${r.ngay}</td><td><span class="badge badge-${k === 'in' ? 'success' : 'coral'}">${k === 'in' ? 'Nhập' : 'Xuất'}</span></td><td><b>${r.ma}</b></td><td class="num">${r.sl} ${r.dvt}</td><td>${k === 'in' ? tpLsxLink(r.lsx) : (r.gc || '—')}</td></tr>`).join('');
+    const ov = document.createElement('div'); ov.className = 'mat-overlay';
+    ov.innerHTML = `<div class="mat-drawer" role="dialog" aria-modal="true">
+      <div class="mat-head"><div class="mat-cat">Thành phẩm cửa nhôm · ${m.kh}</div><h3>${m.ten}</h3><div class="mat-code">${ma} · ${m.he} · ${m.kt}</div>
+        <button class="mat-close" data-mat-close data-no-interact="true"><i data-lucide="x" style="width:18px;height:18px"></i></button></div>
+      <div class="mat-body">
+        <div class="mat-sec"><div class="mat-sec-h"><i data-lucide="info" style="width:13px;height:13px"></i> Thông tin sản phẩm</div>
+          ${specTable([['Khách hàng / dự án', m.kh], ['Mã TP', ma], ['Hệ nhôm', m.he], ['Quy cách', m.kt], ['Đơn vị tính', m.dvt], ['Tồn kho lưu', `<b>${fmt(m.tonLuu)}</b> ${m.dvt}`], ['Tồn kho bán hàng', `<b>${fmt(m.tonBan)}</b> ${m.dvt}`], ['Tổng tồn', `${fmt(m.ton)} ${m.dvt} ${tpFxTonBadge(m.ton)}`], ['Giá vốn', `${fmt(m.giaVon)} ₫/${m.dvt}`], ['Giá trị tồn', `<b>${fmt(m.ton * m.giaVon)} ₫</b>`], ['Vị trí', `Kệ ${m.ke} · ${m.thung}`], ['LSX nguồn', tpLsxLink(m.lsx)], ['Cảnh báo tồn', tpTonFlag(m)], ['Tổng đã nhập', `<span style="color:var(--moss)">${fmt(a.tongNhap)} ${m.dvt}</span>`], ['Tổng đã xuất', `<span style="color:var(--signal)">${fmt(a.tongXuat)} ${m.dvt}</span>`]])}
+        </div>
+        <div class="mat-sec"><div class="mat-sec-h"><i data-lucide="arrow-left-right" style="width:13px;height:13px"></i> Lịch sử nhập / xuất</div>
+          <div class="table-wrap" style="border:none"><table class="tbl" style="min-width:0">
+            <thead><tr><th>Ngày</th><th>Loại</th><th>Mã phiếu</th><th class="num">SL</th><th>LSX / Ghi chú</th></tr></thead>
+            <tbody>${(ioRows(ins, 'in') + ioRows(outs, 'out')) || '<tr><td colspan="5" style="text-align:center;color:var(--ash)">Chưa có giao dịch.</td></tr>'}</tbody>
+          </table></div>
+        </div>
+      </div>
+      <div class="mat-foot">
+        <button class="btn btn-secondary" data-no-interact="true" onclick="openTemQR()"><i data-lucide="qr-code" style="width:14px;height:14px"></i> In tem QR</button>
+        <button class="btn btn-secondary" data-no-interact="true" onclick="openChuyenKho()"><i data-lucide="arrow-left-right" style="width:14px;height:14px"></i> Chuyển kho lưu → bán</button>
+        <button class="btn btn-primary" data-no-interact="true" onclick="openTpFxForm('in')"><i data-lucide="package-plus" style="width:14px;height:14px"></i> Phiếu nhập</button>
+      </div>
+    </div>`;
+    document.body.appendChild(ov);
+    if (window.lucide) lucide.createIcons();
+    function close() { ov.classList.add('leaving'); setTimeout(() => ov.remove(), 220); }
+    ov.addEventListener('click', e => { if (e.target === ov || e.target.closest('[data-mat-close]')) close(); });
+  }
+
+  /* ===== Chi tiết 1 bản ghi nhập/xuất (click vào dòng) ===== */
+  function confirmTpFxByMa(kind, ma) {
+    const arr = kind === 'in' ? TP_FX_IN : TP_FX_OUT;
+    arr.forEach(r => { if (r.ma === ma) { r.tt = 'ĐÃ XN'; r.ngayxn = '20/06/2026'; } });
+    renderTpFxLog(kind); renderTpHist();
+    window.ERPInteract && ERPInteract.showToast(`Đã xác nhận phiếu <b>${ma}</b>`, 'success');
+    document.querySelectorAll('.mat-overlay').forEach(ov => { ov.classList.add('leaving'); setTimeout(() => ov.remove(), 220); });
+  }
+  function openTpFxRecord(kind, masp, ma) {
+    const arr = kind === 'in' ? TP_FX_IN : TP_FX_OUT;
+    const r = arr.find(x => x.masp === masp && x.ma === ma) || arr.find(x => x.ma === ma);
+    if (!r) return;
+    const isIn = kind === 'in';
+    const done = r.tt === 'ĐÃ XN';
+    const sib = arr.filter(x => x.ma === ma);
+    const sibRows = sib.map(s => `<tr${s.masp === masp ? ' style="background:var(--canvas)"' : ''}><td><b>${s.masp}</b></td><td>${s.ten}</td><td>${s.kt}</td><td class="num"><b>${s.sl}</b></td><td>${s.dvt}</td><td>${isIn ? (s.lsx || '—') : (s.gc || '—')}</td></tr>`).join('');
+    const hasStock = !!TP_FLEXO[masp];
+    const ov = document.createElement('div'); ov.className = 'mat-overlay';
+    ov.innerHTML = `<div class="mat-drawer" role="dialog" aria-modal="true">
+      <div class="mat-head"><div class="mat-cat">${isIn ? 'Phiếu nhập kho TP' : 'Phiếu xuất kho TP'} · ${r.nguon}</div><h3>${r.ma}</h3><div class="mat-code">${masp} · ${r.ten}</div>
+        <button class="mat-close" data-mat-close data-no-interact="true"><i data-lucide="x" style="width:18px;height:18px"></i></button></div>
+      <div class="mat-body">
+        <div class="mat-sec"><div class="mat-sec-h"><i data-lucide="receipt" style="width:13px;height:13px"></i> Thông tin giao dịch</div>
+          ${specTable([['Loại giao dịch', isIn ? '<span class="badge badge-success">Nhập kho</span>' : '<span class="badge badge-coral">Xuất kho</span>'], ['Mã phiếu', r.ma], [isIn ? 'Ngày nhập' : 'Ngày xuất', r.ngay], ['Nguồn', r.nguon], ['Khách hàng', r.kh], [isIn ? 'Mã LSX' : 'Ghi chú', isIn ? (r.lsx || '—') : (r.gc || '—')], ['Người lập phiếu', r.user], ['Trạng thái', done ? '<span class="badge badge-success">Đã xác nhận</span>' : '<span class="badge badge-yellow">Chờ xác nhận</span>'], ['Người xác nhận', done ? ('Thủ kho TP · ' + (r.ngayxn || '')) : 'Chưa xác nhận']])}
+        </div>
+        <div class="mat-sec"><div class="mat-sec-h"><i data-lucide="package" style="width:13px;height:13px"></i> Sản phẩm trong phiếu${sib.length > 1 ? ` (${sib.length} dòng)` : ''}</div>
+          <div class="table-wrap" style="border:none"><table class="tbl" style="min-width:0">
+            <thead><tr><th>Mã SP</th><th>Tên SP</th><th>Quy cách</th><th class="num">SL</th><th>ĐVT</th><th>${isIn ? 'LSX' : 'Ghi chú'}</th></tr></thead>
+            <tbody>${sibRows}</tbody>
+          </table></div>
+        </div>
+      </div>
+      <div class="mat-foot">
+        ${done ? '' : `<button class="btn btn-secondary" data-no-interact="true" onclick="confirmTpFxByMa('${kind}','${r.ma}')"><i data-lucide="check" style="width:14px;height:14px"></i> Xác nhận phiếu</button>`}
+        ${hasStock ? `<button class="btn btn-secondary" data-no-interact="true" onclick="openTpFxDetail('${masp}')"><i data-lucide="box" style="width:14px;height:14px"></i> Tồn kho SP</button>` : ''}
+        <button class="btn btn-primary" data-no-interact="true" onclick="viewTpFxPhieu('${kind}','${r.ma}')"><i data-lucide="printer" style="width:14px;height:14px"></i> Xem phiếu in</button>
+      </div>
+    </div>`;
+    document.body.appendChild(ov);
+    if (window.lucide) lucide.createIcons();
+    function close() { ov.classList.add('leaving'); setTimeout(() => ov.remove(), 220); }
+    ov.addEventListener('click', e => { if (e.target === ov || e.target.closest('[data-mat-close]')) close(); });
+  }
+  window.openTpFxRecord = openTpFxRecord; window.confirmTpFxByMa = confirmTpFxByMa;
+
+  /* ===== Phiếu nhập/xuất thành phẩm (nhiều dòng) ===== */
+  let _tpfxLineSeq = 0, _tpfxSeq = { PXK: 5, PNK: 153 };
+  function openTpFxForm(kind) {
+    const isIn = kind === 'in';
+    const ov = document.createElement('div'); ov.className = 'slip-ov'; ov.id = 'tpfxFormOv'; ov._kind = kind;
+    ov.innerHTML = `<div class="slip-modal" style="width:940px">
+      <div class="slip-mhead"><div><div class="mat-cat">Kho thành phẩm cửa nhôm</div><h3>${isIn ? 'Phiếu nhập kho thành phẩm' : 'Phiếu xuất kho thành phẩm'}</h3></div>
+        <button class="mat-close" data-slip-close data-no-interact="true"><i data-lucide="x" style="width:18px;height:18px"></i></button></div>
+      <div class="slip-mbody">
+        <div class="pr-form" style="margin-bottom:14px">
+          <label class="pr-field"><span>Khách hàng / dự án</span><input id="tpfxKh" class="input" placeholder="VD: VINHOMES OCEAN PARK"></label>
+          <label class="pr-field"><span>Ngày ${isIn ? 'nhập' : 'xuất'}</span><input id="tpfxDate" class="input" value="20/06/2026"></label>
+          <label class="pr-field"><span>Nguồn</span><input id="tpfxNguon" class="input" value="${isIn ? 'LỆNH SX' : 'PXK'}"></label>
+          <label class="pr-field"><span>Kho</span><select id="tpfxKho" class="input"><option value="luu">Kho lưu</option><option value="ban">Kho bán hàng</option></select></label>
+          <label class="pr-field"><span>Người lập (User)</span><input id="tpfxUser" class="input" value="kho@owin.vn"></label>
+        </div>
+        <div class="mat-sec-h" style="margin-bottom:8px;display:flex;justify-content:space-between;align-items:center"><span><i data-lucide="list" style="width:13px;height:13px;vertical-align:-2px"></i> Danh sách sản phẩm (mỗi dòng = 1 SP)</span><button class="btn btn-secondary btn-sm" data-no-interact="true" onclick="addTpFxLine()"><i data-lucide="plus" style="width:12px;height:12px"></i> Thêm dòng</button></div>
+        <div class="table-wrap" style="border:none"><table class="tbl" style="min-width:0">
+          <thead><tr><th style="width:30px">STT</th><th>Mã SP</th><th>Tên SP</th><th style="width:110px">Quy cách</th><th style="width:80px" class="num">SL</th><th style="width:70px">ĐVT</th>${isIn ? '<th style="width:150px">Mã LSX</th>' : ''}<th>Ghi chú</th><th style="width:30px"></th></tr></thead>
+          <tbody id="tpfxLines"></tbody>
+        </table></div>
+      </div>
+      <div class="slip-foot"><button class="btn btn-secondary" data-slip-close data-no-interact="true">Huỷ</button>
+        <button class="btn btn-primary" data-no-interact="true" onclick="submitTpFxForm('${kind}')"><i data-lucide="printer" style="width:14px;height:14px"></i> Lưu &amp; In phiếu</button></div>
+    </div>`;
+    document.body.appendChild(ov);
+    if (window.lucide) lucide.createIcons();
+    function close() { ov.classList.add('leaving'); setTimeout(() => ov.remove(), 180); }
+    ov.addEventListener('click', e => { if (e.target === ov || e.target.closest('[data-slip-close]')) close(); });
+    ov._close = close;
+    addTpFxLine();
+  }
+  function addTpFxLine() {
+    const tb = document.getElementById('tpfxLines'); if (!tb) return;
+    const isIn = document.getElementById('tpfxFormOv')._kind === 'in';
+    _tpfxLineSeq++;
+    const opts = '<option value="">— chọn mã —</option>' + Object.keys(TP_FLEXO).map(ma => `<option value="${ma}">${ma}</option>`).join('');
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td class="lnum"></td><td><select class="input tpfx-ma" onchange="tpFxLineFill(this)" style="min-width:120px">${opts}</select></td><td><input class="input tpfx-ten" placeholder="Tên SP"></td><td><input class="input tpfx-kt"></td><td><input class="input tpfx-sl" type="number" value="0"></td><td><input class="input tpfx-dvt" value="bộ"></td>${isIn ? '<td><input class="input tpfx-lsx" placeholder="LSX-...."></td>' : ''}<td><input class="input tpfx-gc"></td><td class="center"><button class="btn-icon" data-no-interact="true" onclick="this.closest('tr').remove();renumTpFx()" style="width:26px;height:26px"><i data-lucide="trash-2" style="width:13px;height:13px"></i></button></td>`;
+    tb.appendChild(tr); renumTpFx(); if (window.lucide) lucide.createIcons();
+  }
+  function renumTpFx() { document.querySelectorAll('#tpfxLines tr').forEach((tr, i) => { const c = tr.querySelector('.lnum'); if (c) c.textContent = i + 1; }); }
+  function tpFxLineFill(sel) {
+    const m = TP_FLEXO[sel.value]; if (!m) return;
+    const tr = sel.closest('tr');
+    tr.querySelector('.tpfx-ten').value = m.ten; tr.querySelector('.tpfx-kt').value = m.kt; tr.querySelector('.tpfx-dvt').value = m.dvt;
+    const kh = document.getElementById('tpfxKh'); if (kh && !kh.value) kh.value = m.kh;
+  }
+  function submitTpFxForm(kind) {
+    const isIn = kind === 'in';
+    const g = id => (document.getElementById(id) || {}).value || '';
+    const kh = g('tpfxKh').trim(), date = g('tpfxDate').trim(), nguon = g('tpfxNguon').trim(), user = g('tpfxUser').trim();
+    const kho = g('tpfxKho') || 'luu';
+    const lines = [];
+    document.querySelectorAll('#tpfxLines tr').forEach(tr => {
+      const ma = (tr.querySelector('.tpfx-ma') || {}).value || '', ten = (tr.querySelector('.tpfx-ten') || {}).value || '';
+      if (!ma && !ten) return;
+      lines.push({ masp: ma, ten: ten, kt: (tr.querySelector('.tpfx-kt') || {}).value || '', sl: (tr.querySelector('.tpfx-sl') || {}).value || '', dvt: (tr.querySelector('.tpfx-dvt') || {}).value || '', lsx: (tr.querySelector('.tpfx-lsx') || {}).value || '', gc: (tr.querySelector('.tpfx-gc') || {}).value || '', kh: kh });
+    });
+    if (!lines.length) { window.ERPInteract && ERPInteract.showToast('Thêm ít nhất 1 dòng sản phẩm', 'danger'); return; }
+    const prefix = isIn ? 'PNK' : 'PXK';
+    _tpfxSeq[prefix]++;
+    const no = prefix + String(_tpfxSeq[prefix]).padStart(6, '0') + '-' + date.replace(/\//g, '');
+    const arr = isIn ? TP_FX_IN : TP_FX_OUT;
+    lines.forEach(l => {
+      arr.unshift({ kh: l.kh || kh, masp: l.masp, ten: l.ten, kt: l.kt, sl: l.sl, dvt: l.dvt, ngay: date, nguon: nguon, lsx: l.lsx, ma: no, gc: l.gc, kho: kho, user: user, link: '#', tt: 'CHỜ XN', ngayxn: '' });
+      const m = TP_FLEXO[l.masp];
+      if (m) {
+        const n = parseInt(String(l.sl).replace(/[^\d]/g, '')) || 0;
+        if (isIn) { if (kho === 'ban') m.tonBan += n; else m.tonLuu += n; }
+        else { if (kho === 'ban') m.tonBan = Math.max(0, m.tonBan - n); else m.tonLuu = Math.max(0, m.tonLuu - n); }
+        syncTon(m);
+      }
+    });
+    renderTpFlexo();
+    const fov = document.getElementById('tpfxFormOv'); if (fov && fov._close) fov._close();
+    window.ERPInteract && ERPInteract.showToast(`Đã lưu <b>${no}</b> · ${lines.length} dòng SP — chờ xác nhận`, 'success', 2800);
+    printTpFxPhieu(kind, no, date, lines);
+  }
+  function printTpFxPhieu(kind, no, date, lines) {
+    const isIn = kind === 'in';
+    const rows = [];
+    for (let i = 0; i < Math.max(15, lines.length); i++) {
+      const l = lines[i];
+      rows.push(`<tr><td class="c">${i + 1}</td><td>${l ? l.kh : ''}</td><td>${l ? l.masp : ''}</td><td>${l ? l.ten : ''}</td><td class="c">${l ? l.kt : ''}</td><td class="r">${l ? l.sl : ''}</td><td class="c">${l ? l.dvt : ''}</td>${isIn ? `<td>${l ? l.lsx : ''}</td>` : ''}<td>${l ? l.gc : ''}</td></tr>`);
+    }
+    const ov = document.createElement('div'); ov.className = 'slip-ov'; ov.id = 'tpfxPrintOv';
+    ov.innerHTML = `<div class="slip-modal" style="width:920px">
+      <div class="slip-mhead no-print"><div><div class="mat-cat">Xem trước · In phiếu</div><h3>${isIn ? 'Phiếu nhập kho thành phẩm' : 'Phiếu xuất kho thành phẩm'} · ${no}</h3></div>
+        <button class="mat-close" data-slip-close data-no-interact="true"><i data-lucide="x" style="width:18px;height:18px"></i></button></div>
+      <div class="slip-mbody" style="padding:0;max-height:80vh">
+        <div id="slipDoc" class="slip-doc tpfx-doc">
+          <table class="tpfx-head"><tr>
+            <td style="width:120px;text-align:center">${qrBlock(no, no) || '<div style="width:84px;height:84px;display:flex;align-items:center;justify-content:center;margin:0 auto;background:#14130f;color:#fff;font-weight:800;border-radius:10px;font-size:30px">TP</div>'}</td>
+            <td style="text-align:center"><div style="font-size:17px;font-weight:700">${MAP_CO.name}</div><div style="font-size:11px">${MAP_CO.addr}</div><div style="font-size:11px">${MAP_CO.mst} &nbsp; ${MAP_CO.sdt}</div></td>
+            <td style="width:230px;font-size:11.5px"><div>Ký hiệu: <b>MAP-${isIn ? 'PNK' : 'PXK'}</b></div><div style="margin-top:3px">Mã số phiếu: <b>${no}</b></div><div style="margin-top:3px">Ngày: <b>${date}</b></div></td>
+          </tr></table>
+          <div class="tpfx-title" style="color:${isIn ? '#2f5d3a' : '#c5400a'}">${isIn ? 'PHIẾU NHẬP KHO THÀNH PHẨM' : 'PHIẾU XUẤT KHO THÀNH PHẨM'}</div>
+          <table class="tpfx-tbl">
+            <thead><tr><th style="width:32px">STT</th><th style="width:70px">KH</th><th style="width:104px">MÃ TP</th><th>TÊN THÀNH PHẨM</th><th style="width:88px">QUY CÁCH</th><th style="width:66px">SỐ LƯỢNG</th><th style="width:52px">ĐVT</th>${isIn ? '<th style="width:130px">MÃ LSX</th>' : ''}<th style="width:120px">GHI CHÚ</th></tr></thead>
+            <tbody>${rows.join('')}</tbody>
+          </table>
+          <div class="tpfx-sign"><div>Người lập phiếu</div><div>Thủ kho</div><div>${isIn ? 'Người giao hàng' : 'Người nhận hàng'}</div></div>
+        </div>
+      </div>
+      <div class="slip-foot no-print"><button class="btn btn-secondary" data-slip-close data-no-interact="true">Đóng</button>
+        <button class="btn btn-primary" data-no-interact="true" onclick="window.print()"><i data-lucide="printer" style="width:14px;height:14px"></i> In / Lưu PDF</button></div>
+    </div>`;
+    document.body.appendChild(ov);
+    if (window.lucide) lucide.createIcons();
+    function close() { ov.classList.add('leaving'); setTimeout(() => ov.remove(), 180); }
+    ov.addEventListener('click', e => { if (e.target === ov || e.target.closest('[data-slip-close]')) close(); });
+  }
+
+  /* ===== Đề xuất giao hàng (giao từng phần) ===== */
+  function giaoBadge(tt) { return tt === 'du' ? '<span class="badge badge-success">Đã giao đủ</span>' : tt === 'phan' ? '<span class="badge badge-teal">Giao 1 phần</span>' : '<span class="badge badge-yellow">Chờ xuất</span>'; }
+  function renderGiaoHang() {
+    const tb = document.getElementById('giaoBody');
+    if (tb) tb.innerHTML = GIAOHANG.map(r => {
+      const conLai = r.slDon - r.daGiao;
+      const act = r.tt === 'du' ? '<span class="t-caption">✓ Hoàn tất</span>' : `<button class="btn btn-primary btn-sm" data-no-interact="true" onclick="openGiao('${r.id}')"><i data-lucide="truck" style="width:12px;height:12px"></i> Xuất kho giao</button>`;
+      return `<tr data-giao="${r.id}"><td><b>${r.id}</b></td><td><a href="03-don-hang.html?order=${encodeURIComponent(r.dh)}" class="lnk">${r.dh}</a></td><td>${r.kh}</td><td><b>${r.masp}</b><br><span class="t-caption">${r.ten}</span></td><td class="num">${fmt(r.slDon)}</td><td class="num"><b style="color:var(--rust)">${fmt(r.slDot)}</b></td><td class="num">${fmt(r.daGiao)}</td><td class="num">${fmt(conLai)}</td><td>${r.ngay}</td><td><span class="t-caption">${r.diachi}</span></td><td><span class="t-caption">${r.nguoi}</span></td><td data-gstt>${giaoBadge(r.tt)}</td><td class="center" data-gact>${act}</td></tr>`;
+    }).join('');
+    const cnt = GIAOHANG.filter(r => r.tt !== 'du').length;
+    const mb = document.getElementById('mainGiaoBadge'); if (mb) { mb.textContent = cnt; mb.style.display = cnt ? '' : 'none'; }
+    const kg = document.getElementById('kpiGiao'); if (kg) kg.textContent = GIAOHANG.filter(r => r.tt === 'cho').length + ' đề xuất';
+    const kp = document.getElementById('kpiPhan'); if (kp) kp.textContent = GIAOHANG.filter(r => r.tt === 'phan').length + ' đơn';
+    if (window.lucide) lucide.createIcons();
+  }
+  function openGiao(id) {
+    const r = GIAOHANG.find(x => x.id === id); if (!r) return;
+    const conLai = r.slDon - r.daGiao;
+    const ov = document.createElement('div'); ov.className = 'slip-ov'; ov.id = 'giaoOv';
+    ov.innerHTML = `<div class="slip-modal" style="width:560px">
+      <div class="slip-mhead"><div><div class="mat-cat">Xuất kho giao hàng · ${r.id}</div><h3>${r.ten}</h3></div>
+        <button class="mat-close" data-slip-close data-no-interact="true"><i data-lucide="x" style="width:18px;height:18px"></i></button></div>
+      <div class="slip-mbody">
+        <div class="card" style="background:var(--canvas);padding:12px 14px;margin-bottom:14px">
+          <div class="mat-kv"><div><div class="mk-l" style="font-size:11px;color:var(--ash)">Đơn hàng</div><div style="font-weight:600">${r.dh} · ${r.kh}</div></div>
+            <div><div class="mk-l" style="font-size:11px;color:var(--ash)">Mã SP</div><div style="font-weight:600">${r.masp}</div></div>
+            <div><div class="mk-l" style="font-size:11px;color:var(--ash)">SL đơn hàng</div><div style="font-weight:600">${fmt(r.slDon)}</div></div>
+            <div><div class="mk-l" style="font-size:11px;color:var(--ash)">Đã giao</div><div style="font-weight:600">${fmt(r.daGiao)} · còn ${fmt(conLai)}</div></div>
+            <div><div class="mk-l" style="font-size:11px;color:var(--ash)">Ngày giao chốt</div><div style="font-weight:600">${r.ngay}</div></div>
+            <div><div class="mk-l" style="font-size:11px;color:var(--ash)">Địa chỉ giao</div><div style="font-weight:600">${r.diachi}</div></div>
+          </div>
+        </div>
+        <div class="pr-form">
+          <label class="pr-field"><span>SL xuất giao đợt này (tối đa ${fmt(conLai)})</span><input id="giaoSl" class="input" type="number" min="0" max="${conLai}" value="${Math.min(r.slDot, conLai)}"></label>
+          <label class="pr-field"><span>Ngày xuất</span><input id="giaoDate" class="input" value="20/06/2026"></label>
+          <label class="pr-field" style="grid-column:1/-1"><span>Ghi chú</span><textarea id="giaoNote" class="input" rows="2" placeholder="Giao từng phần / yêu cầu thêm…"></textarea></label>
+        </div>
+      </div>
+      <div class="slip-foot"><button class="btn btn-secondary" data-slip-close data-no-interact="true">Huỷ</button>
+        <button class="btn btn-primary" data-no-interact="true" onclick="submitGiao('${id}')"><i data-lucide="printer" style="width:14px;height:14px"></i> Xuất kho &amp; In phiếu</button></div>
+    </div>`;
+    document.body.appendChild(ov);
+    if (window.lucide) lucide.createIcons();
+    function close() { ov.classList.add('leaving'); setTimeout(() => ov.remove(), 180); }
+    ov.addEventListener('click', e => { if (e.target === ov || e.target.closest('[data-slip-close]')) close(); });
+    ov._close = close;
+  }
+  function submitGiao(id) {
+    const r = GIAOHANG.find(x => x.id === id); if (!r) return;
+    const conLai = r.slDon - r.daGiao;
+    const sl = Math.min(parseInt((document.getElementById('giaoSl') || {}).value) || 0, conLai);
+    const date = (document.getElementById('giaoDate') || {}).value || '20/06/2026';
+    const note = (document.getElementById('giaoNote') || {}).value || '';
+    if (sl <= 0) { window.ERPInteract && ERPInteract.showToast('Nhập số lượng xuất giao', 'danger'); return; }
+    r.daGiao += sl;
+    r.tt = r.daGiao >= r.slDon ? 'du' : 'phan';
+    _tpfxSeq.PXK++;
+    const no = 'PXK' + String(_tpfxSeq.PXK).padStart(6, '0') + '-' + date.replace(/\//g, '');
+    const m = TP_FLEXO[r.masp] || {};
+    TP_FX_OUT.unshift({ kh: r.kh, masp: r.masp, ten: r.ten, kt: m.kt || '', sl: fmt(sl), dvt: m.dvt || 'bộ', ngay: date, nguon: 'GIAO HÀNG', ma: no, gc: `Giao theo ${r.id} (${r.dh})${r.daGiao < r.slDon ? ' · giao 1 phần' : ''}${note ? ' · ' + note : ''}`, kho: 'ban', user: 'kho@owin.vn', link: '#', tt: 'CHỜ XN', ngayxn: '' });
+    if (m.tonBan !== undefined) { m.tonBan = Math.max(0, m.tonBan - sl); syncTon(m); }
+    const fov = document.getElementById('giaoOv'); if (fov && fov._close) fov._close();
+    renderGiaoHang(); renderTpFlexo();
+    window.ERPInteract && ERPInteract.showToast(`Đã xuất giao <b>${fmt(sl)}</b> ${m.dvt || ''} · ${r.tt === 'du' ? 'giao đủ' : 'giao 1 phần (còn ' + fmt(r.slDon - r.daGiao) + ')'} · phiếu ${no}`, 'success', 3200);
+    printTpFxPhieu('out', no, date, [{ masp: r.masp, ten: r.ten, kt: m.kt || '', sl: fmt(sl), dvt: m.dvt || 'bộ', gc: `Giao theo ${r.id} · đơn ${r.dh}`, kh: r.kh }]);
+  }
+
+  /* ===== Báo cáo kho TP ===== */
+  const REP_TP = {
+    today: { date: 'Hôm nay · 20/06/2026', lbl: ['8h', '10h', '12h', '14h', '16h', '18h'], nhap: [0, 8, 0, 6, 0, 0], xuat: [0, 0, 2, 0, 1, 0], kpi: { ton: '9.361 đv', nhap: '14 bộ', xuat: '3 bộ', ontime: '95%' } },
+    week: { date: 'Tuần này · 16–22/06', lbl: ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'], nhap: [6, 0, 8, 14, 4, 0, 0], xuat: [2, 1, 0, 3, 2, 0, 0], kpi: { ton: '9.361 đv', nhap: '32 bộ', xuat: '8 bộ', ontime: '93%' } },
+    month: { date: 'Tháng 06/2026', lbl: ['T1', 'T2', 'T3', 'T4'], nhap: [28, 34, 41, 32], xuat: [12, 15, 11, 9], kpi: { ton: '9.361 đv', nhap: '135 bộ', xuat: '47 bộ', ontime: '94%' } },
+    quarter: { date: 'Quý II/2026', lbl: ['Th4', 'Th5', 'Th6'], nhap: [118, 126, 135], xuat: [42, 51, 47], kpi: { ton: '9.361 đv', nhap: '379 bộ', xuat: '140 bộ', ontime: '94%' } },
+    year: { date: 'Năm 2026 (YTD)', lbl: ['Q1', 'Q2*'], nhap: [342, 379], xuat: [128, 140], kpi: { ton: '9.361 đv', nhap: '721 bộ', xuat: '268 bộ', ontime: '95%' } },
+  };
+  let _repPeriod = 'today';
+  function renderReport(period) {
+    if (period) _repPeriod = period;
+    const d = REP_TP[_repPeriod]; if (!d || !window.ERPCharts) return;
+    const set = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = v; };
+    set('repDate', d.date); set('rTon', d.kpi.ton); set('rNhap', d.kpi.nhap); set('rXuat', d.kpi.xuat); set('rOntime', d.kpi.ontime);
+    ERPCharts.groupedBar('cFlow', { labels: d.lbl, datasets: [{ name: 'Nhập từ SX', values: d.nhap, color: '#2f5d3a' }, { name: 'Xuất giao', values: d.xuat, color: '#c5400a' }] }, { height: 240, unit: ' đv' });
+    const vals = Object.values(TP_FLEXO);
+    const con = vals.filter(m => m.ton > 50).length, sap = vals.filter(m => m.ton > 0 && m.ton <= 50).length, het = vals.filter(m => m.ton <= 0).length;
+    ERPCharts.donut('cStatus', { labels: ['Còn hàng', 'Sắp hết', 'Hết hàng'], values: [con, sap, het || 0.001], colors: ['#2f5d3a', '#9c7714', '#8a1f1f'] }, { size: 220, centerLabel: 'Tổng mã', centerValue: String(vals.length) });
+    const byKh = {}; vals.forEach(m => byKh[m.kh] = (byKh[m.kh] || 0) + 1);
+    const khs = Object.keys(byKh), kc = ['#14130f', '#c5400a', '#2f5d3a', '#9c7714', '#4a5560'];
+    ERPCharts.donut('cCust', { labels: khs, values: khs.map(k => byKh[k]), colors: kc }, { size: 220, centerLabel: 'Khách', centerValue: String(khs.length) });
+    const lg = document.getElementById('lCust'); if (lg) lg.innerHTML = khs.map((k, i) => `<span><i style="background:${kc[i % kc.length]}"></i> ${k} · ${byKh[k]} mã</span>`).join('');
+    ERPCharts.bar('cTop', { labels: ['Nhôm thanh 120', 'Vách kính Luxanode', 'Cửa sổ Lux 121', 'Cửa trượt quay 93', 'Cửa thuỷ lực 120'], values: [1800, 46, 32, 12, 2] }, { height: 220, color: '#4a5560' });
+  }
+
+  document.addEventListener('erp:ready', function () {
+    // bộ lọc hệ nhôm
+    const heSel = document.getElementById('tpHeFilter');
+    if (heSel) {
+      const hes = [...new Set(Object.keys(TP_FLEXO).map(k => TP_FLEXO[k].he))].sort();
+      heSel.innerHTML = '<option value="">Mọi hệ nhôm</option>' + hes.map(h => `<option>${h}</option>`).join('');
+      heSel.addEventListener('change', renderTpFlexo);
+    }
+    document.getElementById('tpSearch')?.addEventListener('input', renderTpFlexo);
+    document.querySelectorAll('[data-ktview]').forEach(b => b.addEventListener('click', e => {
+      e.preventDefault(); e.stopPropagation();
+      document.querySelectorAll('[data-ktview]').forEach(x => x.classList.remove('active'));
+      b.classList.add('active'); _ktView = b.dataset.ktview; renderTpFlexo();
+    }));
+    document.getElementById('btnChuyenKho')?.addEventListener('click', openChuyenKho);
+    document.getElementById('btnQrTem')?.addEventListener('click', openTemQR);
+
+    renderTpFlexo();
+    renderGiaoHang();
+    wireTpHistFilters();
+    document.getElementById('kpiTong').textContent = Object.keys(TP_FLEXO).length + ' mã';
+
+    document.querySelectorAll('.kho-mtab').forEach(t => t.addEventListener('click', (e) => {
+      e.preventDefault(); e.stopPropagation();
+      document.querySelectorAll('.kho-mtab').forEach(x => x.classList.remove('active'));
+      t.classList.add('active');
+      const v = t.dataset.mainview;
+      document.querySelectorAll('[data-view]').forEach(p => { p.style.display = (p.dataset.view === v) ? '' : 'none'; });
+      if (v === 'baocao') renderReport();
+      if (window.lucide) lucide.createIcons();
+    }));
+    document.querySelectorAll('.tab[data-tpftab]').forEach(t => t.addEventListener('click', (e) => {
+      e.preventDefault(); e.stopPropagation();
+      document.querySelectorAll('.tab[data-tpftab]').forEach(x => x.classList.remove('tab-active'));
+      t.classList.add('tab-active');
+      const v = t.dataset.tpftab;
+      document.querySelectorAll('[data-tpfpane]').forEach(p => { p.style.display = (p.dataset.tpfpane === v) ? '' : 'none'; });
+      if (window.lucide) lucide.createIcons();
+    }));
+    document.querySelectorAll('.rep-pbtn[data-rep]').forEach(b => b.addEventListener('click', (e) => {
+      e.preventDefault(); e.stopPropagation();
+      document.querySelectorAll('.rep-pbtn[data-rep]').forEach(x => x.classList.remove('active'));
+      b.classList.add('active');
+      renderReport(b.dataset.rep);
+    }));
+  });
+</script>
+</body>
+</html>

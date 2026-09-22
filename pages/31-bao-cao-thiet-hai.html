@@ -1,0 +1,699 @@
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     BÁO CÁO THIỆT HẠI — mẫu dùng chung cho MỌI ngành sản xuất.
+     Trang này đọc 100% từ window.LossStore nên KHÔNG phụ thuộc ngành.
+     Chuyển ngành chỉ cần đổi <title> ngay bên dưới. Đừng sửa gì khác.
+     Yêu cầu: layout.js → loss-data.js → loss-ui.js → pricing-engine.js → quote-data.js
+     ═══════════════════════════════════════════════════════════════════════════ -->
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Báo cáo thiệt hại — ERP NHÔM OWIN</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/css/style.css" />
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+  <style>
+    /* ---- Khối riêng của BÁO CÁO THIỆT HẠI (bám design system sẵn có) ---- */
+    .dm-sec { display:flex; align-items:center; gap:9px; margin:0 0 12px;
+      font-family: var(--ff-mono); font-size:10px; font-weight:600; letter-spacing:.15em;
+      text-transform:uppercase; color:var(--ink); }
+    .dm-sec i { color:#8a1f1f; width:14px; height:14px; }
+    .dm-sec .sp { flex:1; height:1px; background:var(--rule); }
+    .dm-sec .rt { font-family:var(--ff-sans); font-size:11px; font-weight:500; letter-spacing:0;
+      text-transform:none; color:var(--ash); }
+
+    .dm-kpi { display:grid; grid-template-columns:repeat(6,1fr); gap:11px; }
+    @media(max-width:1280px){ .dm-kpi{ grid-template-columns:repeat(3,1fr) } }
+    @media(max-width:720px){ .dm-kpi{ grid-template-columns:repeat(2,1fr) } }
+    .dm-k { position:relative; text-align:left; width:100%; font-family:inherit; cursor:pointer;
+      background:var(--canvas); border:1px solid var(--rule-soft); border-left:3px solid #8a1f1f;
+      border-radius:12px; padding:13px 14px 12px;
+      transition:transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease; }
+    .dm-k:hover { transform:translateY(-1px); box-shadow:0 5px 18px rgba(20,19,15,.10); border-color:#c5400a; }
+    .dm-k .l { display:flex; align-items:center; gap:5px; font-family:var(--ff-mono); font-size:8.8px;
+      font-weight:600; letter-spacing:.13em; text-transform:uppercase; color:var(--ash); margin-bottom:6px; }
+    .dm-k .v { font-size:23px; font-weight:600; color:#8a1f1f; letter-spacing:-.02em; line-height:1.08;
+      font-variant-numeric:tabular-nums; }
+    .dm-k .v .u { font-size:12px; font-weight:500; color:var(--ash); margin-left:2px; }
+    .dm-k .d { font-size:10.6px; color:var(--ash); margin-top:6px; line-height:1.4; }
+    .dm-k .d b { color:var(--ink); }
+    .dm-k .go { position:absolute; top:11px; right:11px; opacity:0; color:#c5400a; transition:opacity 120ms ease; }
+    .dm-k:hover .go { opacity:1; }
+    .dm-k.big { grid-column:span 1; }
+    .dm-k.tot { background:linear-gradient(150deg,#5d1414,#8a1f1f); border-color:#5d1414; border-left-color:#efd5d5; }
+    .dm-k.tot .l { color:#f0c8c8; } .dm-k.tot .v { color:#fff; } .dm-k.tot .v .u { color:#e7c3c3; }
+    .dm-k.tot .d { color:#e7c3c3; } .dm-k.tot .d b { color:#fff; } .dm-k.tot .go { color:#f0c8c8; }
+
+    .dm-delta { display:inline-flex; align-items:center; gap:3px; font-weight:600; }
+    .dm-up { color:#8a1f1f; } .dm-dn { color:#2f5d3a; }
+    .dm-k.tot .dm-up { color:#ffd9d9; } .dm-k.tot .dm-dn { color:#cfe6cf; }
+
+    .dm-bar { height:6px; border-radius:9999px; background:#ece7d7; overflow:hidden; min-width:64px; }
+    .dm-bar > i { display:block; height:100%; background:#8a1f1f; border-radius:9999px; }
+    .dm-bar.soft > i { background:#c5400a; }
+
+    .dm-rk { display:flex; flex-direction:column; gap:7px; }
+    .dm-rw { background:var(--paper); border:1px solid var(--rule-soft); border-radius:9px; padding:9px 12px;
+      transition:border-color 120ms ease, background 120ms ease; }
+    .dm-rw:hover { border-color:#8a1f1f; background:var(--canvas); }
+    .dm-rw .hd { display:flex; align-items:baseline; gap:9px; cursor:pointer; }
+    .dm-rw .no { font-family:var(--ff-mono); font-size:10px; color:var(--ash); width:15px; flex:none; }
+    .dm-rw .nm { flex:1; font-size:12.4px; font-weight:500; color:var(--ink);
+      overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .dm-rw .cs { font-size:12.6px; font-weight:600; color:#8a1f1f; font-variant-numeric:tabular-nums; flex:none; }
+    .dm-rw .bar { margin-top:6px; cursor:pointer; }
+    .dm-rw .mt { display:flex; flex-wrap:wrap; align-items:center; gap:4px 10px; margin-top:6px;
+      font-size:10.5px; color:var(--ash); }
+
+    .dm-pill { display:inline-flex; align-items:center; gap:4px; padding:1px 7px; border-radius:9999px;
+      background:var(--paper-2); font-size:10px; font-weight:500; color:var(--ash); white-space:nowrap; }
+    .dm-pill.red { background:#efd5d5; color:#8a1f1f; }
+
+    .tbl tr.dm-clk { cursor:pointer; }
+    .tbl tr.dm-hot { background:#fdf4f2; }
+    .tbl tr.dm-hot:hover { background:#f9e8e4; }
+    .tbl td.dm-money { background:#efd5d5; color:#8a1f1f; font-weight:600; text-align:right;
+      font-variant-numeric:tabular-nums; white-space:nowrap; }
+    .tbl tfoot td { background:var(--paper-2); font-weight:600; border-top:1px solid var(--rule);
+      color:var(--ink); padding:11px 14px; }
+    .tbl tfoot td.dm-money { background:#e6c4c4; }
+    .dm-code { font-family:var(--ff-mono); font-size:10.5px; letter-spacing:.04em; color:var(--ash); }
+    .dm-sub { font-size:10.6px; color:var(--ash); margin-top:2px; }
+
+    .dm-reco { display:flex; flex-direction:column; gap:10px; }
+    .dm-ri { display:grid; grid-template-columns:26px 1fr auto; gap:3px 12px; align-items:start;
+      background:var(--paper); border:1px solid var(--rule-soft); border-left:3px solid #8a1f1f;
+      border-radius:10px; padding:11px 14px; }
+    .dm-ri .rno { grid-row:1/4; display:flex; align-items:center; justify-content:center; width:26px; height:26px;
+      border-radius:50%; background:#8a1f1f; color:#f5f1e8; font-family:var(--ff-mono); font-size:11px; font-weight:600; }
+    .dm-ri .rt1 { font-size:13px; font-weight:600; color:var(--ink); line-height:1.4; }
+    .dm-ri .rt2 { grid-column:2; font-size:11.6px; color:var(--ash); line-height:1.55; }
+    .dm-ri .rt2 b { color:#8a1f1f; }
+    .dm-ri .rfx { grid-column:2; margin-top:5px; font-size:11.6px; color:#1f4127; background:#dde8d8;
+      border:1px solid rgba(47,93,58,.22); border-radius:7px; padding:6px 10px; line-height:1.5; }
+    .dm-ri .rbt { grid-row:1/4; grid-column:3; align-self:center; }
+    .dm-btn-red { display:inline-flex; align-items:center; gap:5px; padding:6px 12px; font-size:11.5px;
+      font-weight:600; font-family:inherit; color:#f5f1e8; background:#8a1f1f; border:0; border-radius:9999px;
+      cursor:pointer; white-space:nowrap; }
+    .dm-btn-red:hover { background:#6d1717; }
+
+    .dm-legend { display:flex; flex-direction:column; gap:7px; margin-top:12px; }
+    .dm-lg { display:grid; grid-template-columns:11px 1fr auto; align-items:center; gap:9px;
+      font-size:11.8px; cursor:pointer; padding:3px 5px; border-radius:6px; }
+    .dm-lg:hover { background:var(--paper-2); }
+    .dm-lg .sw { width:11px; height:11px; border-radius:3px; }
+    .dm-lg .lv { font-weight:600; color:#8a1f1f; font-variant-numeric:tabular-nums; }
+    .dm-pill-row { display:flex; flex-wrap:wrap; gap:6px; align-items:center; }
+  </style>
+</head>
+<body>
+
+<div id="app-shell" data-active="bao-cao-thiet-hai" data-title="Báo cáo thiệt hại"
+     data-crumb="<b>Báo cáo thiệt hại</b> · Lỗi hỏng &amp; lãng phí toàn nhà máy">
+
+  <div class="page-header">
+    <div>
+      <h1>Báo cáo thiệt hại do lỗi hỏng &amp; lãng phí</h1>
+      <p id="dmSubtitle">Sổ cái thất thoát toàn nhà máy · vật chất · thời gian · tài chính</p>
+    </div>
+    <div class="actions">
+      <div class="dm-pill-row" id="dmPeriod">
+        <button class="filter-pill" data-days="7" data-no-interact="true">7 ngày</button>
+        <button class="filter-pill" data-days="30" data-no-interact="true">30 ngày</button>
+        <button class="filter-pill" data-days="56" data-no-interact="true">56 ngày</button>
+      </div>
+      <button class="btn btn-secondary" id="dmPrint" data-no-interact="true">
+        <i data-lucide="printer" style="width:14px;height:14px"></i> In báo cáo</button>
+      <button class="btn btn-primary" id="dmExcel" data-no-interact="true">
+        <i data-lucide="download" style="width:14px;height:14px"></i> Xuất Excel</button>
+    </div>
+  </div>
+
+  <!-- a) Banner cảnh báo tổng + b) dải KPI -->
+  <div id="dmBanner" class="mb-4"></div>
+  <div id="dmKpi" class="dm-kpi mb-6"></div>
+
+  <!-- c) Bảng cân đối thiệt hại -->
+  <div class="card mb-6">
+    <div class="dm-sec"><i data-lucide="scale"></i> Bảng cân đối thiệt hại — theo loại thất thoát
+      <span class="sp"></span><span class="rt" id="dmBalanceNote"></span></div>
+    <div class="table-wrap" id="dmBalance"></div>
+  </div>
+
+  <!-- d) Xu hướng + cơ cấu nguyên nhân -->
+  <div class="grid grid-2 mb-6">
+    <div class="card">
+      <div class="dm-sec"><i data-lucide="trending-down"></i> Xu hướng thiệt hại theo ngày
+        <span class="sp"></span><span class="rt" id="dmTrendNote"></span></div>
+      <div id="dmChartTrend"></div>
+      <div class="t-caption" style="margin-top:8px;color:var(--ash)">Đơn vị: triệu đồng thiệt hại quy tiền / ngày</div>
+    </div>
+    <div class="card">
+      <div class="dm-sec"><i data-lucide="pie-chart"></i> Cơ cấu theo nhóm nguyên nhân 4M1E<span class="sp"></span></div>
+      <div id="dmChartCause"></div>
+      <div class="dm-legend" id="dmCauseLegend"></div>
+    </div>
+  </div>
+
+  <!-- e) Pareto nguyên nhân gốc -->
+  <div class="card mb-6">
+    <div class="dm-sec"><i data-lucide="bar-chart-big"></i> Pareto nguyên nhân gốc
+      <span class="sp"></span><span class="rt" id="dmParetoNote"></span></div>
+    <div id="dmParetoChart" class="mb-4"></div>
+    <div class="table-wrap" id="dmPareto"></div>
+  </div>
+
+  <!-- f) Xếp hạng -->
+  <div class="grid grid-2 mb-6">
+    <div class="card">
+      <div class="dm-sec"><i data-lucide="clipboard-list"></i> Top lệnh sản xuất thiệt hại nhất<span class="sp"></span></div>
+      <div class="dm-rk" id="dmRankLsx"></div>
+    </div>
+    <div class="card">
+      <div class="dm-sec"><i data-lucide="cog"></i> Top máy / thiết bị tổn thất nhất<span class="sp"></span></div>
+      <div class="dm-rk" id="dmRankMachine"></div>
+    </div>
+    <div class="card">
+      <div class="dm-sec"><i data-lucide="workflow"></i> Top công đoạn tổn thất nhất<span class="sp"></span></div>
+      <div class="dm-rk" id="dmRankStep"></div>
+    </div>
+    <div class="card">
+      <div class="dm-sec"><i data-lucide="box"></i> Top sản phẩm tổn thất nhất<span class="sp"></span></div>
+      <div class="dm-rk" id="dmRankProduct"></div>
+    </div>
+    <div class="card">
+      <div class="dm-sec"><i data-lucide="users"></i> Thiệt hại theo bộ phận chịu trách nhiệm<span class="sp"></span></div>
+      <div class="dm-rk" id="dmRankDept"></div>
+    </div>
+    <div class="card">
+      <div class="dm-sec"><i data-lucide="clock"></i> Thiệt hại theo ca sản xuất<span class="sp"></span></div>
+      <div class="dm-rk" id="dmRankShift"></div>
+    </div>
+  </div>
+
+  <!-- g) Theo phân hệ -->
+  <div class="card mb-6">
+    <div class="dm-sec"><i data-lucide="layout-grid"></i> Thiệt hại theo phân hệ
+      <span class="sp"></span><span class="rt">Mở thẳng phân hệ để xử lý tại nguồn</span></div>
+    <div class="table-wrap" id="dmModule"></div>
+  </div>
+
+  <!-- h) Theo bán thành phẩm -->
+  <div class="card mb-6">
+    <div class="dm-sec"><i data-lucide="layers"></i> Tổn thất theo bán thành phẩm
+      <span class="sp"></span><span class="rt" id="dmBtpNote"></span></div>
+    <div class="table-wrap" id="dmBtp"></div>
+  </div>
+
+  <!-- i) Danh sách bản ghi -->
+  <div class="card mb-6">
+    <div class="dm-sec"><i data-lucide="list"></i> Danh sách bản ghi thiệt hại
+      <span class="sp"></span><span class="rt" id="dmRecNote"></span></div>
+    <div class="table-wrap" id="dmRecords"></div>
+  </div>
+
+  <!-- j) Khuyến nghị -->
+  <div class="card">
+    <div class="dm-sec"><i data-lucide="target"></i> Khuyến nghị ưu tiên xử lý
+      <span class="sp"></span><span class="rt">Sinh tự động từ Pareto nguyên nhân gốc</span></div>
+    <div class="dm-reco" id="dmReco"></div>
+  </div>
+
+</div>
+
+<script src="../assets/js/layout.js"></script>
+<script src="../assets/js/loss-data.js"></script>
+<script src="../assets/js/loss-ui.js"></script>
+<script src="../assets/js/pricing-engine.js"></script>
+<script src="../assets/js/quote-data.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  var DAYS = 30;
+  var GROUP_LABEL = { 'vat-chat': 'Vật chất', 'thoi-gian': 'Thời gian', 'tai-chinh': 'Tài chính' };
+  var RED = '#8a1f1f';
+
+  function S() { return window.LossStore; }
+  function U() { return window.LossUI; }
+  function esc(s) { return U().esc(s); }
+  function attr(o) { return U().attr(o); }
+  function money(v) { return S().money(v) + '₫'; }
+  function fmt(n) { return S().fmt(n); }
+  function el(id) { return document.getElementById(id); }
+  function icons() { if (window.lucide) try { window.lucide.createIcons(); } catch (e) {} }
+  function toast(msg, type) {
+    if (window.ERPInteract && window.ERPInteract.showToast) window.ERPInteract.showToast(msg, type || 'info');
+  }
+  function pct(a, b) { return b ? +(a / b * 100).toFixed(1) : 0; }
+  function bar(p, soft) {
+    return '<span class="dm-bar' + (soft ? ' soft' : '') + '" style="display:block"><i style="width:' +
+      Math.max(2, Math.min(100, p)) + '%"></i></span>';
+  }
+  /* Chỉ vẽ biểu đồ khi khung đã có bề rộng thật (tránh SVG âm lúc layout chưa ổn định) */
+  function drawWhenReady(id, fn, tries) {
+    var e = el(id); if (!e) return;
+    tries = tries || 0;
+    if (e.clientWidth < 160 && tries < 30) {
+      requestAnimationFrame(function () { drawWhenReady(id, fn, tries + 1); });
+      return;
+    }
+    fn(e);
+  }
+  function deltaHtml(d) {
+    if (d == null || !isFinite(d)) return '';
+    var up = d >= 0;
+    return '<span class="dm-delta ' + (up ? 'dm-up' : 'dm-dn') + '">' + (up ? '▲' : '▼') + ' ' +
+      Math.abs(d).toFixed(1) + '%</span>';
+  }
+
+  /* ============================================================
+     b) DẢI KPI
+     ============================================================ */
+  function renderKpi() {
+    var k = S().kpi(DAYS), t = S().total({ days: DAYS });
+    var tiles = [
+      { cls: 'tot', icon: 'alert-octagon', label: 'Tổng thiệt hại quy tiền',
+        value: money(k.totalCost),
+        desc: 'So kỳ trước ' + deltaHtml(k.deltaCost) + ' · <b>' + fmt(k.records) + '</b> bản ghi · ' +
+              'kỳ trước ' + money(k.prevCost),
+        f: { days: DAYS }, title: 'Toàn bộ thiệt hại ' + DAYS + ' ngày gần nhất' },
+      { icon: 'package-x', label: 'Thiệt hại vật chất',
+        value: money(k.matCost),
+        desc: 'Phế <b>' + fmt(k.scrapQty) + '</b> · tái chế <b>' + fmt(k.reworkQty) + '</b> · chiếm ' +
+              pct(k.matCost, k.totalCost) + '% tổng',
+        f: { days: DAYS, group: 'vat-chat' }, title: 'Thất thoát vật chất' },
+      { icon: 'hourglass', label: 'Thiệt hại thời gian',
+        value: money(k.timeCost),
+        desc: 'Dừng máy · chờ việc · setup vượt ĐM · chiếm ' + pct(k.timeCost, k.totalCost) + '% tổng',
+        f: { days: DAYS, group: 'thoi-gian' }, title: 'Lãng phí thời gian' },
+      { icon: 'banknote', label: 'Thiệt hại tài chính',
+        value: money(k.finCost),
+        desc: 'Mua gấp · phạt giao trễ · sửa đột xuất · nợ quá hạn ' + money(t.debt),
+        f: { days: DAYS, group: 'tai-chinh' }, title: 'Thất thoát tài chính' },
+      { icon: 'timer-off', label: 'Giờ sản xuất mất',
+        value: fmt(k.lostHours) + '<span class="u"> giờ</span>',
+        desc: 'Biến động ' + deltaHtml(k.deltaMinutes) + ' · OEE kỳ này <b>' + k.oee + '%</b>',
+        f: { days: DAYS, group: 'thoi-gian' }, title: 'Giờ sản xuất bị mất' },
+      { icon: 'percent', label: 'Thiệt hại / doanh thu',
+        value: k.costPctRevenue + '<span class="u">%</span>',
+        desc: 'Doanh thu tham chiếu <b>' + money(k.revenueRef) + '</b> · tỷ lệ đạt ' + k.yieldPct + '%',
+        f: { days: DAYS }, title: 'Thiệt hại trên doanh thu' }
+    ];
+    el('dmKpi').innerHTML = tiles.map(function (t2) {
+      return '<button type="button" class="dm-k ' + (t2.cls || '') + '" data-no-interact="true" ' +
+        'data-loss-drill="' + attr(t2.f) + '" data-loss-title="' + esc(t2.title) + '">' +
+        '<span class="go"><i data-lucide="arrow-up-right" style="width:13px;height:13px"></i></span>' +
+        '<div class="l"><i data-lucide="' + t2.icon + '" style="width:11px;height:11px"></i>' + esc(t2.label) + '</div>' +
+        '<div class="v">' + t2.value + '</div>' +
+        '<div class="d">' + t2.desc + '</div></button>';
+    }).join('');
+
+    el('dmSubtitle').innerHTML = 'Kỳ báo cáo <b>' + DAYS + ' ngày</b> (đến ' + S().dayStr(0) + ') · ' +
+      fmt(k.records) + ' bản ghi thất thoát · tổng thiệt hại <b style="color:#8a1f1f">' + money(k.totalCost) + '</b>';
+
+    var top = S().byCauseAgg({ days: DAYS })[0];
+    el('dmBanner').innerHTML = !top ? '' :
+      '<div class="lw-banner"><i data-lucide="siren" style="width:17px;height:17px"></i>' +
+      '<div class="tx">Trong <b>' + DAYS + ' ngày</b> gần nhất nhà máy mất <b>' + money(k.totalCost) +
+      '</b> vì lỗi hỏng và lãng phí — tương đương <b>' + k.costPctRevenue + '% doanh thu</b> và <b>' +
+      fmt(k.lostHours) + ' giờ</b> sản xuất. Nguyên nhân lớn nhất: <b>' + esc(top.label) + '</b> (' +
+      money(top.cost) + ').</div>' +
+      '<button data-loss-drill="' + attr({ days: DAYS, cause: top.key }) + '" data-loss-title="' +
+      esc(top.label) + '">Xem ' + top.count + ' bản ghi</button></div>';
+  }
+
+  /* ============================================================
+     c) BẢNG CÂN ĐỐI THIỆT HẠI (theo loại thất thoát)
+     ============================================================ */
+  function renderBalance() {
+    var rows = S().byTypeAgg({ days: DAYS });
+    var sum = rows.reduce(function (a, b) { return a + b.cost; }, 0);
+    var tt = { count: 0, scrap: 0, rework: 0, minutes: 0, cost: 0 };
+    var body = rows.map(function (r) {
+      var ty = S().typeOf(r.key);
+      tt.count += r.count; tt.scrap += r.scrap; tt.rework += r.rework; tt.minutes += r.minutes; tt.cost += r.cost;
+      var p = pct(r.cost, sum);
+      return '<tr class="dm-clk' + (p >= 10 ? ' dm-hot' : '') + '" data-loss-drill="' +
+        attr({ days: DAYS, type: r.key }) + '" data-loss-title="' + esc(ty.label) + '">' +
+        '<td><div style="display:flex;align-items:center;gap:8px">' +
+          '<i data-lucide="' + ty.icon + '" style="width:14px;height:14px;color:#8a1f1f;flex:none"></i>' +
+          '<div><b>' + esc(ty.label) + '</b><div class="dm-sub">' + esc(S().moduleOf(ty.module).label) + '</div></div>' +
+        '</div></td>' +
+        '<td><span class="dm-pill' + (ty.group === 'vat-chat' ? ' red' : '') + '">' +
+          esc(GROUP_LABEL[ty.group] || ty.group) + '</span></td>' +
+        '<td class="num">' + fmt(r.count) + '</td>' +
+        '<td class="num">' + U().bad(r.scrap) + '</td>' +
+        '<td class="num">' + U().bad(r.rework) + '</td>' +
+        '<td class="num">' + U().badMin(r.minutes) + '</td>' +
+        '<td class="dm-money">' + money(r.cost) + '</td>' +
+        '<td class="num">' + p.toFixed(1) + '%</td>' +
+        '<td style="min-width:110px">' + bar(p) + '</td></tr>';
+    }).join('');
+
+    el('dmBalance').innerHTML =
+      '<table class="tbl" style="min-width:1020px"><thead><tr>' +
+      '<th>Loại thất thoát</th><th>Nhóm</th><th class="num">Số bản ghi</th><th class="num">SL phế</th>' +
+      '<th class="num">SL tái chế</th><th class="num">Giờ mất</th><th class="num">Thiệt hại quy tiền</th>' +
+      '<th class="num">% tổng</th><th>Tỷ trọng</th></tr></thead><tbody>' + body + '</tbody>' +
+      '<tfoot><tr><td>TỔNG CỘNG</td><td>' + rows.length + ' loại</td>' +
+      '<td class="num">' + fmt(tt.count) + '</td><td class="num">' + U().bad(tt.scrap) + '</td>' +
+      '<td class="num">' + U().bad(tt.rework) + '</td><td class="num">' + U().badMin(tt.minutes) + '</td>' +
+      '<td class="dm-money">' + money(tt.cost) + '</td><td class="num">100%</td><td></td></tr></tfoot></table>';
+
+    el('dmBalanceNote').textContent = rows.length + ' loại thất thoát · ' + fmt(tt.count) +
+      ' bản ghi · bấm vào dòng để truy nguyên';
+  }
+
+  /* ============================================================
+     d) BIỂU ĐỒ
+     ============================================================ */
+  function renderCharts() {
+    var ser = S().series(DAYS, null);
+    var step = Math.max(1, Math.ceil(ser.length / 9));
+    drawWhenReady('dmChartTrend', function (e) {
+      ERPCharts.line(e, {
+        labels: ser.map(function (s, i) { return i % step === 0 ? s.label : ''; }),
+        values: ser.map(function (s) { return +(s.cost / 1e6).toFixed(1); })
+      }, { height: 236, color: RED, fill: true, startFromZero: true });
+    });
+
+    var worst = ser.slice().sort(function (a, b) { return b.cost - a.cost; })[0];
+    var avg = ser.reduce(function (a, b) { return a + b.cost; }, 0) / (ser.length || 1);
+    el('dmTrendNote').innerHTML = 'Bình quân ' + money(avg) + '/ngày · cao nhất ' +
+      (worst ? esc(worst.label) + ' (' + money(worst.cost) + ')' : '—');
+
+    var cg = S().byCauseGroupAgg({ days: DAYS });
+    var totalCg = cg.reduce(function (a, b) { return a + b.cost; }, 0);
+    drawWhenReady('dmChartCause', function (e) {
+      ERPCharts.donut(e, {
+        labels: cg.map(function (c) { return c.label; }),
+        values: cg.map(function (c) { return +(c.cost / 1e6).toFixed(1); }),
+        colors: cg.map(function (c) { return S().groupOf(c.key).color; })
+      }, { size: 208, centerLabel: 'Tổng thiệt hại', centerValue: S().money(totalCg) + '₫' });
+    });
+
+    el('dmCauseLegend').innerHTML = cg.map(function (c) {
+      return '<div class="dm-lg" data-loss-drill="' + attr({ days: DAYS, causeGroup: c.key }) +
+        '" data-loss-title="Nhóm nguyên nhân: ' + esc(c.label) + '">' +
+        '<span class="sw" style="background:' + S().groupOf(c.key).color + '"></span>' +
+        '<span>' + esc(c.label) + ' <span style="color:var(--ash)">· ' + c.count + ' bản ghi</span></span>' +
+        '<span class="lv">' + money(c.cost) + ' · ' + pct(c.cost, totalCg).toFixed(1) + '%</span></div>';
+    }).join('');
+  }
+
+  /* ============================================================
+     e) PARETO NGUYÊN NHÂN GỐC
+     ============================================================ */
+  function renderPareto() {
+    var rows = S().pareto({ days: DAYS });
+    var cut = 0;
+    for (var i = 0; i < rows.length; i++) { cut = i + 1; if (rows[i].cum >= 80) break; }
+    var top = rows.slice(0, 10);
+
+    drawWhenReady('dmParetoChart', function (e) {
+      ERPCharts.bar(e, {
+        labels: top.map(function (r, i) { return String(i + 1); }),
+        values: top.map(function (r) { return +(r.cost / 1e6).toFixed(1); }),
+        colors: top.map(function (r, i) { return i < cut ? RED : '#b8b2a2'; })
+      }, { height: 190 });
+    });
+
+    var body = rows.map(function (r, i) {
+      var c = S().causeOf(r.key), hot = i < cut;
+      return '<tr class="dm-clk' + (hot ? ' dm-hot' : '') + '" data-loss-drill="' +
+        attr({ days: DAYS, cause: r.key }) + '" data-loss-title="' + esc(r.label) + '">' +
+        '<td class="num dm-code">' + (i + 1) + '</td>' +
+        '<td><span class="dm-code" style="color:#8a1f1f;font-weight:600">' + esc(r.key) + '</span></td>' +
+        '<td><div style="max-width:380px">' + esc(r.label) + '</div>' +
+          '<div class="dm-sub">' + esc(S().groupOf(c.group).label) + ' · BP: ' + esc(S().deptOf(c.dept).label) + '</div></td>' +
+        '<td class="num">' + fmt(r.count) + '</td>' +
+        '<td class="num">' + U().bad(r.qty) + '</td>' +
+        '<td class="dm-money">' + money(r.cost) + '</td>' +
+        '<td class="num">' + r.pct.toFixed(1) + '%</td>' +
+        '<td class="num" style="font-weight:600;color:' + (hot ? RED : 'var(--ash)') + '">' + r.cum.toFixed(1) + '%</td>' +
+        '<td style="min-width:100px">' + bar(r.pct * (100 / Math.max(1, rows[0].pct)), !hot) + '</td>' +
+        '<td>' + (hot ? '<span class="lw-chip bad">Xử lý trước</span>' : '<span class="lw-chip neutral">Theo dõi</span>') + '</td></tr>';
+    }).join('');
+
+    el('dmPareto').innerHTML =
+      '<table class="tbl" style="min-width:1080px"><thead><tr>' +
+      '<th class="num">#</th><th>Mã nguyên nhân</th><th>Mô tả nguyên nhân gốc</th><th class="num">Số lần</th>' +
+      '<th class="num">SL hỏng</th><th class="num">Thiệt hại</th><th class="num">%</th><th class="num">% luỹ kế</th>' +
+      '<th>Tỷ trọng</th><th>Ưu tiên</th></tr></thead><tbody>' + body + '</tbody></table>';
+
+    var cutCost = rows.slice(0, cut).reduce(function (a, b) { return a + b.cost; }, 0);
+    el('dmParetoNote').innerHTML = '<b style="color:#8a1f1f">' + cut + '/' + rows.length +
+      '</b> nguyên nhân đầu chiếm ' + (rows[cut - 1] ? rows[cut - 1].cum.toFixed(1) : '0') +
+      '% thiệt hại (' + money(cutCost) + ') — nhóm cần xử lý trước';
+    return rows.slice(0, Math.min(6, Math.max(4, cut)));
+  }
+
+  /* ============================================================
+     f) CÁC BẢNG XẾP HẠNG
+     ============================================================ */
+  function rankHtml(rows, opt) {
+    opt = opt || {};
+    if (!rows.length) return '<div class="lw-empty">Không có dữ liệu trong kỳ</div>';
+    var max = rows[0].cost || 1;
+    return rows.map(function (r, i) {
+      var f = {}; f[opt.field] = r.key; f.days = DAYS;
+      var a = 'data-loss-drill="' + attr(f) + '" data-loss-title="' + esc((opt.prefix || '') + r.label) + '"';
+      var meta = '<span class="dm-pill">' + r.count + ' bản ghi</span>' +
+        (r.scrap ? '<span class="dm-pill red">Phế ' + fmt(r.scrap) + '</span>' : '') +
+        (r.minutes ? '<span class="dm-pill red">Mất ' + S().hours(r.minutes) + 'h</span>' : '');
+      if (opt.link) meta += '<a class="lw-link" href="' + opt.link(r) + '">' + esc(opt.linkText || 'Mở') +
+        ' <i data-lucide="arrow-up-right" style="width:10px;height:10px;vertical-align:-1px"></i></a>';
+      return '<div class="dm-rw">' +
+        '<div class="hd" ' + a + '><span class="no">' + (i + 1) + '</span>' +
+        '<span class="nm">' + esc(r.label) + '</span><span class="cs">' + money(r.cost) + '</span></div>' +
+        '<div class="bar dm-bar" ' + a + '><i style="width:' + Math.max(3, r.cost / max * 100) + '%"></i></div>' +
+        '<div class="mt">' + meta + '</div></div>';
+    }).join('');
+  }
+
+  function renderRanks() {
+    var f = { days: DAYS };
+    el('dmRankLsx').innerHTML = rankHtml(S().byLsxAgg(f).slice(0, 8), {
+      field: 'lsxId', prefix: 'Lệnh sản xuất ',
+      link: function (r) { return '06-lsx-phieu-cong-nghe.html?lsx=' + encodeURIComponent(r.key); },
+      linkText: 'Phiếu công nghệ'
+    });
+    el('dmRankMachine').innerHTML = rankHtml(S().byMachineAgg(f).slice(0, 8), {
+      field: 'machine', prefix: 'Máy ',
+      link: function () { return '17-may-moc.html'; }, linkText: 'Hồ sơ máy'
+    });
+    el('dmRankStep').innerHTML = rankHtml(S().byStepAgg(f).slice(0, 8), { field: 'stepName', prefix: 'Công đoạn ' });
+    el('dmRankProduct').innerHTML = rankHtml(S().byProductAgg(f).slice(0, 8), {
+      field: 'product', prefix: 'Sản phẩm ',
+      link: function () { return '20-san-pham.html'; }, linkText: 'Hồ sơ sản phẩm'
+    });
+    el('dmRankDept').innerHTML = rankHtml(S().byDeptAgg(f).slice(0, 8), { field: 'dept', prefix: 'Bộ phận ' });
+    el('dmRankShift').innerHTML = rankHtml(S().byShiftAgg(f), { field: 'shift', prefix: 'Ca ' });
+  }
+
+  /* ============================================================
+     g) THIỆT HẠI THEO PHÂN HỆ
+     ============================================================ */
+  function renderModules() {
+    var rows = S().byModuleAgg({ days: DAYS });
+    var sum = rows.reduce(function (a, b) { return a + b.cost; }, 0);
+    var body = rows.map(function (r) {
+      var m = S().moduleOf(r.key);
+      var sm = S().moduleSummary(r.key, DAYS);
+      var p = pct(r.cost, sum);
+      return '<tr>' +
+        '<td><div style="display:flex;align-items:center;gap:8px">' +
+          '<i data-lucide="' + m.icon + '" style="width:14px;height:14px;color:#8a1f1f"></i><b>' + esc(m.label) + '</b></div></td>' +
+        '<td class="num">' + fmt(r.count) + '</td>' +
+        '<td class="num">' + U().bad(r.scrap) + '</td>' +
+        '<td class="num">' + U().badMin(r.minutes) + '</td>' +
+        '<td class="dm-money">' + money(r.cost) + '</td>' +
+        '<td class="num">' + p.toFixed(1) + '%</td>' +
+        '<td style="min-width:110px">' + bar(p) + '</td>' +
+        '<td><div class="dm-sub" style="margin:0;max-width:260px">' +
+          (sm.topCause ? esc(sm.topCause.label) : '—') + '</div></td>' +
+        '<td style="white-space:nowrap">' +
+          '<a class="btn btn-sm btn-secondary" href="' + m.page + '" style="margin-right:6px">' +
+            '<i data-lucide="external-link" style="width:12px;height:12px"></i> Mở phân hệ</a>' +
+          '<button class="btn btn-sm btn-primary" data-no-interact="true" data-loss-drill="' +
+            attr({ days: DAYS, module: r.key }) + '" data-loss-title="Thiệt hại phân hệ ' + esc(m.label) + '">' +
+            '<i data-lucide="search-x" style="width:12px;height:12px"></i> Bản ghi</button>' +
+        '</td></tr>';
+    }).join('');
+
+    el('dmModule').innerHTML =
+      '<table class="tbl" style="min-width:1080px"><thead><tr>' +
+      '<th>Phân hệ</th><th class="num">Bản ghi</th><th class="num">SL phế</th><th class="num">Giờ mất</th>' +
+      '<th class="num">Thiệt hại</th><th class="num">% tổng</th><th>Tỷ trọng</th>' +
+      '<th>Nguyên nhân lớn nhất</th><th>Thao tác</th></tr></thead><tbody>' + body + '</tbody></table>';
+  }
+
+  /* ============================================================
+     h) TỔN THẤT THEO BÁN THÀNH PHẨM
+     ============================================================ */
+  function renderBtp() {
+    var rows = U().btpSummary(DAYS);
+    var tt = { ok: 0, ng: 0, scrap: 0, waste: 0, cost: 0 };
+    var body = rows.map(function (b) {
+      tt.ok += b.ok; tt.ng += b.ng; tt.scrap += b.scrap; tt.waste += b.waste; tt.cost += b.cost;
+      return '<tr class="dm-clk' + (b.yieldPct < 95 ? ' dm-hot' : '') + '" data-loss-drill="' +
+        attr({ days: DAYS, btpCode: b.code }) + '" data-loss-title="Bán thành phẩm ' + esc(b.code) + '">' +
+        '<td><span class="dm-code" style="color:#8a1f1f;font-weight:600">' + esc(b.code) + '</span></td>' +
+        '<td><b>' + esc(b.name) + '</b><div class="dm-sub">' + esc(b.stepName || '') + ' · ' + b.steps + ' lượt chạy</div></td>' +
+        '<td>' + esc(b.unit) + '</td>' +
+        '<td class="num"><span class="lw-ok">' + fmt(b.ok) + '</span></td>' +
+        '<td class="num">' + U().bad(b.ng) + '</td>' +
+        '<td class="num">' + U().bad(b.scrap) + '</td>' +
+        '<td style="min-width:120px">' + U().yieldBar(b.yieldPct) + '</td>' +
+        '<td class="num">' + U().badMin(b.waste) + '</td>' +
+        '<td class="dm-money">' + money(b.cost) + '</td></tr>';
+    }).join('');
+
+    el('dmBtp').innerHTML =
+      '<table class="tbl" style="min-width:1020px"><thead><tr>' +
+      '<th>Mã BTP</th><th>Tên bán thành phẩm</th><th>ĐVT</th><th class="num">SL đạt</th><th class="num">SL lỗi</th>' +
+      '<th class="num">SL phế</th><th>Tỷ lệ đạt</th><th class="num">Giờ mất</th><th class="num">Thiệt hại</th>' +
+      '</tr></thead><tbody>' + body + '</tbody>' +
+      '<tfoot><tr><td colspan="3">TỔNG CỘNG ' + rows.length + ' bán thành phẩm</td>' +
+      '<td class="num"><span class="lw-ok">' + fmt(tt.ok) + '</span></td>' +
+      '<td class="num">' + U().bad(tt.ng) + '</td><td class="num">' + U().bad(tt.scrap) + '</td>' +
+      '<td>' + U().yieldBar(tt.ok + tt.ng ? +(tt.ok / (tt.ok + tt.ng) * 100).toFixed(2) : 100) + '</td>' +
+      '<td class="num">' + U().badMin(tt.waste) + '</td>' +
+      '<td class="dm-money">' + money(tt.cost) + '</td></tr></tfoot></table>';
+
+    el('dmBtpNote').textContent = rows.length + ' bán thành phẩm phát sinh tổn thất trong kỳ';
+  }
+
+  /* ============================================================
+     i) DANH SÁCH BẢN GHI THIỆT HẠI
+     ============================================================ */
+  function renderRecords() {
+    var all = S().filter({ days: DAYS }).slice();
+    all.sort(function (a, b) { return (b.cost || 0) - (a.cost || 0); });
+    var rows = all.slice(0, 40);
+    var sumTop = rows.reduce(function (a, b) { return a + b.cost; }, 0);
+    var sumAll = all.reduce(function (a, b) { return a + b.cost; }, 0);
+
+    var body = rows.map(function (r) {
+      var ty = S().typeOf(r.type);
+      return '<tr class="dm-clk" data-loss-id="' + esc(r.id) + '">' +
+        '<td class="dm-code" style="color:#8a1f1f;font-weight:600">' + esc(r.id) + '</td>' +
+        '<td style="white-space:nowrap">' + esc(r.date) + '<div class="dm-sub">' + esc(r.shift || '') + '</div></td>' +
+        '<td><span class="dm-pill">' + esc(S().moduleOf(r.module).label) + '</span></td>' +
+        '<td><span class="dm-pill red">' + esc(ty.short) + '</span></td>' +
+        '<td><div style="max-width:300px;font-weight:500">' + esc(r.title) + '</div>' +
+          '<div class="dm-sub">' + esc(r.lsxId ? r.lsxId + ' · ' : '') + esc(r.stepName || '') +
+          (r.machine ? ' · ' + esc(r.machine) : '') + '</div></td>' +
+        '<td class="num">' + (r.qty ? U().bad(r.qty) + ' <span class="dm-code">' + esc(r.unit || '') + '</span>'
+          : '<span class="lw-zero">—</span>') + '</td>' +
+        '<td class="num">' + (r.minutes ? U().badMin(r.minutes) : '<span class="lw-zero">—</span>') + '</td>' +
+        '<td class="dm-money">' + money(r.cost) + '</td>' +
+        '<td><div style="max-width:230px">' + esc(r.causeLabel) + '</div>' +
+          '<div class="dm-sub">' + esc(r.causeCode) + ' · ' + esc(S().deptOf(r.dept).label) + '</div></td>' +
+        '<td>' + U().sevChip(r.severity) + '</td>' +
+        '<td>' + U().statusChip(r.status) + '</td></tr>';
+    }).join('');
+
+    el('dmRecords').innerHTML =
+      '<table class="tbl" style="min-width:1200px"><thead><tr>' +
+      '<th>Mã bản ghi</th><th>Ngày / ca</th><th>Phân hệ</th><th>Loại</th><th>Nội dung thất thoát</th>' +
+      '<th class="num">SL hỏng</th><th class="num">Giờ mất</th><th class="num">Thiệt hại</th>' +
+      '<th>Nguyên nhân · bộ phận</th><th>Mức độ</th><th>Trạng thái</th></tr></thead><tbody>' + body + '</tbody></table>';
+
+    el('dmRecNote').innerHTML = '40/' + fmt(all.length) + ' bản ghi lớn nhất — chiếm <b style="color:#8a1f1f">' +
+      pct(sumTop, sumAll).toFixed(1) + '%</b> tổng thiệt hại · bấm vào dòng để xem nguyên nhân &amp; hành động';
+  }
+
+  /* ============================================================
+     j) KHUYẾN NGHỊ ƯU TIÊN XỬ LÝ
+     ============================================================ */
+  function renderReco(top) {
+    var totalCost = S().total({ days: DAYS }).cost;
+    el('dmReco').innerHTML = top.map(function (r, i) {
+      var c = S().causeOf(r.key);
+      var dept = S().deptOf(c.dept).label;
+      var grp = S().groupOf(c.group).label;
+      return '<div class="dm-ri">' +
+        '<span class="rno">' + (i + 1) + '</span>' +
+        '<div class="rt1">' + esc(r.label) + ' <span class="dm-code">(' + esc(r.key) + ')</span></div>' +
+        '<div class="rt2">Gây thiệt hại <b>' + money(r.cost) + '</b> qua <b>' + r.count +
+          '</b> lần phát sinh — chiếm <b>' + pct(r.cost, totalCost).toFixed(1) +
+          '%</b> tổng thiệt hại kỳ ' + DAYS + ' ngày (luỹ kế tới đây ' + r.cum.toFixed(1) + '%)' +
+          (r.qty ? ' · hỏng <b>' + fmt(r.qty) + '</b> đơn vị' : '') +
+          (r.minutes ? ' · mất <b>' + S().hours(r.minutes) + ' giờ</b>' : '') +
+          ' · nhóm ' + esc(grp) + ' · bộ phận chịu trách nhiệm: <b>' + esc(dept) + '</b>.</div>' +
+        '<div class="rfx"><b style="font-family:var(--ff-mono);font-size:9px;letter-spacing:.12em">BIỆN PHÁP ĐỀ XUẤT · </b>' +
+          esc(c.fix || 'Rà soát quy trình và chuẩn hoá thao tác') + '</div>' +
+        '<div class="rbt"><button class="dm-btn-red" data-no-interact="true" data-loss-drill="' +
+          attr({ days: DAYS, cause: r.key }) + '" data-loss-title="' + esc(r.label) + '">' +
+          '<i data-lucide="search-x" style="width:12px;height:12px"></i> Mở ' + r.count + ' bản ghi</button></div>' +
+        '</div>';
+    }).join('');
+  }
+
+  /* ============================================================
+     RENDER TOÀN TRANG
+     ============================================================ */
+  function renderAll() {
+    document.querySelectorAll('#dmPeriod .filter-pill').forEach(function (b) {
+      var on = +b.getAttribute('data-days') === DAYS;
+      b.style.background = on ? '#8a1f1f' : '';
+      b.style.color = on ? '#f5f1e8' : '';
+      b.style.borderColor = on ? '#8a1f1f' : '';
+      b.style.fontWeight = on ? '600' : '';
+    });
+    renderKpi();
+    renderBalance();
+    renderCharts();
+    var top = renderPareto();
+    renderRanks();
+    renderModules();
+    renderBtp();
+    renderRecords();
+    renderReco(top);
+    icons();
+  }
+
+  document.addEventListener('erp:ready', function () {
+    if (!window.LossStore || !window.LossUI) return;
+    renderAll();
+
+    var per = el('dmPeriod');
+    if (per && !per.getAttribute('data-bound')) {
+      per.setAttribute('data-bound', '1');
+      per.addEventListener('click', function (e) {
+        var b = e.target.closest('.filter-pill');
+        if (!b) return;
+        e.preventDefault(); e.stopPropagation();
+        DAYS = +b.getAttribute('data-days') || 30;
+        renderAll();
+        toast('Kỳ báo cáo: <b>' + DAYS + ' ngày</b> gần nhất', 'info');
+      });
+    }
+    var xl = el('dmExcel');
+    if (xl && !xl.getAttribute('data-bound')) {
+      xl.setAttribute('data-bound', '1');
+      xl.addEventListener('click', function () {
+        toast('Đang xuất <b>Báo cáo thiệt hại ' + DAYS + ' ngày</b> ra Excel…', 'info');
+      });
+    }
+    var pr = el('dmPrint');
+    if (pr && !pr.getAttribute('data-bound')) {
+      pr.setAttribute('data-bound', '1');
+      pr.addEventListener('click', function () {
+        toast('Đang chuẩn bị bản in <b>Báo cáo thiệt hại</b>…', 'info');
+      });
+    }
+
+    var rt;
+    window.addEventListener('resize', function () {
+      clearTimeout(rt);
+      rt = setTimeout(function () { renderCharts(); renderPareto(); icons(); }, 220);
+    });
+  });
+})();
+</script>
+</body>
+</html>

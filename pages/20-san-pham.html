@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sản phẩm — ERP NHÔM OWIN</title>
+  <link rel="stylesheet" href="../assets/css/style.css" />
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+  <style>
+    .filter-bar { display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:14px; }
+    .search-wrap { display:flex; align-items:center; gap:8px; flex:1; min-width:240px; padding:9px 14px; background:var(--canvas); border:1px solid var(--rule); border-radius:var(--r-pill); color:var(--ash); }
+    .search-wrap input { border:0; background:transparent; outline:none; width:100%; font-size:13px; color:var(--ink); }
+    .fsel { padding:9px 13px; font-size:13px; background:var(--canvas); border:1px solid var(--rule); border-radius:var(--r-pill); appearance:none; color:var(--ink); cursor:pointer; }
+
+    .sp-stats { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; margin-bottom:14px; }
+    .sp-stat { background:var(--canvas); border:1px solid var(--rule-soft); border-radius:var(--r-4); padding:10px 14px; position:relative; overflow:hidden; }
+    .sp-stat::before { content:""; position:absolute; left:0; top:0; bottom:0; width:3px; background:var(--steel); }
+    .sp-stat.a-rust::before { background:var(--rust); }
+    .sp-stat.a-moss::before { background:var(--moss); }
+    .sp-stat.a-amber::before { background:var(--amber); }
+    .sp-stat .l { font-family:var(--ff-mono); font-size:9.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--ash); }
+    .sp-stat .v { font-size:21px; font-weight:600; color:var(--ink); margin-top:3px; font-variant-numeric:tabular-nums; }
+    .sp-stat .d { font-size:11px; color:var(--ash); margin-top:2px; }
+
+    .tbl tbody tr { cursor:pointer; }
+    .id-mono { font-family:var(--ff-mono); font-weight:600; color:var(--ink); letter-spacing:-.01em; }
+    .sub-soft { color:var(--ash); font-size:11px; margin-top:3px; }
+    .cell-name { font-weight:500; color:var(--ink); }
+    .clip { display:inline-block; max-width:300px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; vertical-align:bottom; }
+    .spec-mono { font-family:var(--ff-mono); font-size:12.5px; color:var(--ink); }
+    .muted-dash { color:var(--ash-3); }
+    .row-actions { display:flex; gap:6px; justify-content:flex-end; }
+    .list-empty { padding:48px 20px; text-align:center; color:var(--ash); }
+    .warn-red { color:#8a1f1f; font-weight:700; }
+    .warn-green { color:#1f6b3a; font-weight:700; }
+    .warn-none { color:var(--ash-3); }
+
+    .pagination { display:flex; justify-content:space-between; align-items:center; padding:14px 4px; font-size:12px; color:var(--ash); flex-wrap:wrap; gap:10px; }
+    .pagination .pg-controls { display:flex; gap:4px; align-items:center; }
+    .pagination .pg-controls button { min-width:28px; height:28px; padding:0 8px; background:var(--canvas); border:1px solid var(--rule); border-radius:var(--r-2); font-size:12px; cursor:pointer; color:var(--ink); font-family:var(--ff-mono); font-variant-numeric:tabular-nums; display:inline-flex; align-items:center; justify-content:center; }
+    .pagination .pg-controls button:hover { border-color:var(--ink); }
+    .pagination .pg-controls button.is-active { background:var(--ink); color:var(--paper); border-color:var(--ink); }
+    .pagination .pg-controls button:disabled { opacity:.4; cursor:not-allowed; }
+
+    /* ===== Drawer sản phẩm — sửa được tại chỗ ===== */
+    .sp-ov { position:fixed; inset:0; background:rgba(20,19,15,.42); backdrop-filter:blur(2px); z-index:120; opacity:0; pointer-events:none; transition:opacity .18s ease; }
+    .sp-ov.open { opacity:1; pointer-events:auto; }
+    .sp-dr { position:fixed; top:0; right:0; height:100%; width:620px; max-width:96vw; background:var(--paper); z-index:121; display:flex; flex-direction:column; box-shadow:-16px 0 48px rgba(20,19,15,.22); transform:translateX(100%); transition:transform .24s cubic-bezier(.2,.8,.2,1); }
+    .sp-dr.open { transform:translateX(0); }
+    .sp-head { background:linear-gradient(135deg,var(--ink),#2e2b24); color:#f5f1e8; padding:16px 20px; flex-shrink:0; }
+    .sp-head .ty { font-family:var(--ff-mono); font-size:9.5px; letter-spacing:.16em; text-transform:uppercase; color:#e8a075; }
+    .sp-head .idrow { display:flex; align-items:center; gap:10px; margin-top:7px; flex-wrap:wrap; }
+    .sp-head .sid { font-family:var(--ff-mono); font-size:20px; font-weight:700; }
+    .sp-head .sub { font-size:12.5px; color:#c9c4b8; margin-top:5px; }
+    .sp-head .acts { margin-left:auto; display:flex; gap:7px; }
+    .sp-head .hbtn { display:inline-flex; align-items:center; gap:5px; padding:6px 12px; font-size:12px; background:rgba(245,241,232,.1); border:1px solid rgba(245,241,232,.26); border-radius:999px; color:#f5f1e8; cursor:pointer; }
+    .sp-head .hbtn:hover { background:rgba(245,241,232,.2); }
+    .sp-body { flex:1; overflow-y:auto; padding:14px 20px 24px; }
+    .sp-sec { font-family:var(--ff-mono); font-size:10px; font-weight:600; letter-spacing:.15em; text-transform:uppercase; color:var(--ink); display:flex; align-items:center; gap:7px; margin:16px 0 8px; }
+    .sp-sec::after { content:""; flex:1; height:1px; background:var(--rule); }
+    .sp-kv { display:grid; grid-template-columns:1fr 1fr; gap:8px 14px; }
+    .sp-cell { background:var(--canvas); border:1px solid var(--rule); border-radius:10px; padding:8px 12px; }
+    .sp-cell > span { display:block; font-family:var(--ff-mono); font-size:9px; letter-spacing:.12em; text-transform:uppercase; color:var(--ash); margin-bottom:3px; }
+    .sp-cell > b { font-size:13px; color:var(--ink); }
+    .sp-cell input, .sp-cell select { width:100%; padding:5px 7px; font-size:13px; border:1px solid var(--rule); border-radius:6px; background:var(--paper); color:var(--ink); font-family:inherit; }
+    .sp-foot { padding:12px 20px; border-top:1px solid var(--rule); background:var(--canvas); display:flex; gap:8px; justify-content:flex-end; flex-shrink:0; }
+    @media (max-width: 900px) { .sp-stats { grid-template-columns:repeat(2,1fr); } }
+  </style>
+</head>
+<body>
+
+<div id="app-shell" data-active="san-pham" data-title="Sản phẩm" data-crumb="<b>Kinh doanh</b> · Sản phẩm">
+
+  <div class="page-header">
+    <div>
+      <h1>Sản phẩm</h1>
+      <p>Danh mục cửa nhôm hệ · tủ bếp nhôm · nhôm thanh bán xá · dịch vụ gia công. <span id="prodCounts"></span></p>
+    </div>
+    <div class="actions">
+      <button class="btn btn-secondary" id="btnImportProd" data-no-interact="true">
+        <i data-lucide="upload" style="width:14px;height:14px"></i> Import file
+      </button>
+      <button class="btn btn-primary" id="btnNewProd" data-no-interact="true">
+        <i data-lucide="plus" style="width:14px;height:14px"></i> Thêm sản phẩm
+      </button>
+    </div>
+  </div>
+
+  <!-- 4 ô số nhỏ -->
+  <div class="sp-stats">
+    <div class="sp-stat a-moss"><div class="l">Tổng mã sản phẩm</div><div class="v" id="kTotal">0</div><div class="d" id="kTotalD">—</div></div>
+    <div class="sp-stat"><div class="l">Hệ nhôm đang bán</div><div class="v" id="kSys">0</div><div class="d" id="kSysD">—</div></div>
+    <div class="sp-stat a-amber"><div class="l">Biên lợi nhuận TB</div><div class="v" id="kMargin">0%</div><div class="d">Giá bán so giá vốn</div></div>
+    <div class="sp-stat a-rust"><div class="l">Mã biên LN thấp</div><div class="v" id="kLow">0</div><div class="d">Dưới 18% — cần xem lại giá</div></div>
+  </div>
+
+  <div class="filter-bar">
+    <div class="search-wrap">
+      <i data-lucide="search" style="width:14px;height:14px"></i>
+      <input id="prodSearch" placeholder="Tìm mã SP, tên sản phẩm, hệ nhôm, màu..." />
+    </div>
+    <select class="fsel" id="fSys"></select>
+    <select class="fsel" id="fUnit"></select>
+    <select class="fsel" id="fColor"></select>
+  </div>
+
+  <div class="table-wrap">
+    <table class="tbl" id="prodTable">
+      <thead>
+        <tr>
+          <th style="width:128px">Mã SP</th>
+          <th>Tên sản phẩm</th>
+          <th style="width:142px">Hệ nhôm</th>
+          <th style="width:58px">ĐVT</th>
+          <th style="width:104px">Màu</th>
+          <th style="width:150px">Loại kính</th>
+          <th style="width:170px">Phụ kiện kèm</th>
+          <th class="num" style="width:110px">Giá bán (₫)</th>
+          <th class="num" style="width:110px">Giá vốn (₫)</th>
+          <th class="num" style="width:78px">Biên LN</th>
+          <th style="width:128px">Cảnh báo giá</th>
+        </tr>
+      </thead>
+      <tbody id="prodBody"></tbody>
+    </table>
+  </div>
+
+  <div class="pagination" id="prodPager"></div>
+
+</div>
+
+<div class="sp-ov" id="spOverlay"></div>
+<aside class="sp-dr" id="spDrawer" aria-hidden="true">
+  <div class="sp-head" id="spHead"></div>
+  <div class="sp-body" id="spBody"></div>
+  <div class="sp-foot" id="spFoot"></div>
+</aside>
+
+<script src="../assets/js/layout.js"></script>
+<script src="../assets/js/loss-data.js"></script>
+<script src="../assets/js/loss-ui.js"></script>
+<script src="../assets/js/pricing-engine.js"></script>
+<script src="../assets/js/quote-data.js"></script>
+<script src="../assets/js/stock-data.js"></script>
+<script src="../assets/js/bom-data.js"></script>
+<script src="../assets/js/inventory.js"></script>
+<script>
+  var Store = window.QuoteStore;
+  var $ = function (s) { return document.querySelector(s); };
+  var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
+  var fmt = function (n) { return Math.round(Number(n) || 0).toLocaleString('vi-VN'); };
+  function hash(s) { var h = 0; s = String(s || ''); for (var i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0; return h; }
+  function nrm(s) { return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd'); }
+
+  /* ===== Danh mục đặc trưng ngành nhôm ===== */
+  var COLORS = ['vân gỗ trắc', 'vân gỗ hương', 'ghi xám', 'trắng sứ', 'đen mờ'];
+  var GLASS = ['Kính hộp 5-9-5 cường lực', 'Kính cường lực 8mm', 'Kính cường lực 10mm', 'Kính hộp uốn theo vòm'];
+  var ACCS = ['Bản lề thuỷ lực sàn + khoá vân tay', 'Khoá & tay nắm cao cấp', 'Ray trượt + khoá đa điểm', 'Ke góc & vít inox', 'Gioăng EPDM + keo silicon'];
+
+  // Hệ nhôm + đơn giá tham chiếu (glossary §12) theo tên sản phẩm
+  var SYSTEMS = [
+    { key: 'thuy-luc', match: ['thuy luc', 'thuỷ lực'],        name: 'Hệ thuỷ lực 120/180', unit: 'bộ', price: 15200000, glass: 0, acc: 0 },
+    { key: 'truot-quay', match: ['truot quay'],                name: 'Hệ trượt quay 93',    unit: 'bộ', price: 13500000, glass: 1, acc: 2 },
+    { key: 'luxanode', match: ['luxanode', 'mo quay', 'mo lua'], name: 'Luxanode Anodized-ED 121', unit: 'm²', price: 2100000, glass: 0, acc: 1 },
+    { key: 'vom',    match: ['vom'],                            name: 'Hệ 120 uốn vòm',      unit: 'bộ', price: 19800000, glass: 3, acc: 0 },
+    { key: 'vach',   match: ['vach kinh'],                      name: 'Vách kính khung nhôm', unit: 'm²', price: 1900000, glass: 2, acc: 4 },
+    { key: 'chan-song', match: ['chan song', 'phao'],           name: 'Hệ chấn song + phào',  unit: 'md', price: 1350000, glass: -1, acc: 3 },
+    { key: 'to-ong', match: ['to ong'],                         name: 'Hệ tấm tổ ong',        unit: 'bộ', price: 9800000, glass: -1, acc: 1 },
+    { key: 'tu-bep', match: ['tu bep'],                         name: 'Nhôm nội thất (tủ bếp)', unit: 'bộ', price: 28500000, glass: -1, acc: 1 },
+    { key: 'thanh',  match: ['nhom thanh', 'ban xa'],           name: 'Nhôm thanh bán xá',    unit: 'kg', price: 115000, glass: -1, acc: -1 },
+    { key: 'dv-vom', match: ['dich vu uon', 'uon vom'],         name: 'Dịch vụ gia công uốn vòm', unit: 'md', price: 260000, glass: -1, acc: -1 },
+    { key: 'dan-may', match: ['dan may', 'chuyen giao'],        name: 'Gói dàn máy WEIKE',    unit: 'gói', price: 1850000000, glass: -1, acc: -1 }
+  ];
+  function systemOf(name) {
+    var n = nrm(name);
+    for (var i = 0; i < SYSTEMS.length; i++) {
+      for (var j = 0; j < SYSTEMS[i].match.length; j++) if (n.indexOf(nrm(SYSTEMS[i].match[j])) >= 0) return SYSTEMS[i];
+    }
+    return { key: 'khac', name: 'Cửa nhôm hệ Owin', unit: 'm²', price: 2400000, glass: 0, acc: 1 };
+  }
+
+  /* Dữ liệu dự phòng khi store chưa có sản phẩm */
+  var FALLBACK = [
+    'Cửa thuỷ lực hệ 120 · 2 cánh vân gỗ trắc', 'Cửa thuỷ lực hệ 180 · 4 cánh vân gỗ hương',
+    'Cửa trượt quay 93 · 4 cánh ghi xám', 'Cửa trượt quay 93 · 6 cánh vân gỗ trắc',
+    'Cửa sổ mở quay Luxanode 121 · 2 cánh', 'Cửa sổ mở lùa 76 Luxanode · 2 cánh',
+    'Cửa đi mở lùa 121 Luxanode · 4 cánh', 'Cửa vòm nhôm uốn hệ 120 · 2 cánh',
+    'Vách kính khung nhôm Luxanode', 'Hệ chấn song kết hợp phào Owin',
+    'Cửa nhôm tấm tổ ong 2 cánh', 'Tủ bếp nhôm nội thất Owin Luxury (bộ 3,2m)',
+    'Tủ bếp nhôm nội thất Omega (bộ 4,5m)', 'Nhôm thanh hệ 120 (bán xá theo kg)',
+    'Nhôm thanh Luxanode 121 (bán xá theo kg)', 'Dịch vụ uốn vòm nhôm (gia công theo mét)',
+    'Dàn máy làm cửa nhôm WEIKE (gói chuyển giao)'
+  ].map(function (n, i) {
+    return { code: 'OW-SP' + String(i + 1).padStart(3, '0'), name: n, customer: '', note: '' };
+  });
+
+  /* Thuộc tính ngành nhôm sinh ổn định theo mã SP, có thể sửa trong drawer */
+  var OVERRIDE = {};
+  function attrs(p) {
+    var h = hash(p.code + p.name), sys = systemOf(p.name);
+    var base = {
+      system: sys.name,
+      unit: sys.unit,
+      color: COLORS[h % COLORS.length],
+      glass: sys.glass < 0 ? '—' : GLASS[(sys.glass + (h % 2)) % GLASS.length],
+      acc: sys.acc < 0 ? '—' : ACCS[(sys.acc + (h % 2)) % ACCS.length],
+      price: Math.round(sys.price * (0.94 + (h % 13) / 100) / 1000) * 1000,
+      margin: 14 + (h % 21)   // 14% – 34%
+    };
+    base.cost = Math.round(base.price * (1 - base.margin / 100) / 1000) * 1000;
+    var o = OVERRIDE[p.code] || {};
+    Object.keys(o).forEach(function (k) { base[k] = o[k]; });
+    base.margin = base.price > 0 ? Math.round((1 - base.cost / base.price) * 1000) / 10 : 0;
+    return base;
+  }
+  function priceFlag(a) {
+    if (a.margin < 18) return '<span class="warn-red">Biên LN thấp ' + a.margin + '%</span>';
+    if (a.margin >= 30) return '<span class="warn-green">Biên LN tốt ' + a.margin + '%</span>';
+    return '<span class="warn-none">—</span>';
+  }
+
+  function products() {
+    var list = [];
+    try { list = (Store && Store.allProducts) ? Store.allProducts() : []; } catch (e) { list = []; }
+    if (!list || !list.length) list = FALLBACK;
+    return list;
+  }
+  function getProduct(code) {
+    return products().filter(function (p) { return p.code === code; })[0] || null;
+  }
+
+  /* Liên kết BOM & phiếu tính giá */
+  function bomIdFor(p) {
+    try {
+      var b = window.ERPBOM && ERPBOM.byProduct ? ERPBOM.byProduct(p.name) : null;
+      if (b) return b.id;
+      var all = window.ERPBOM ? ERPBOM.list() : [];
+      if (all.length) return all[hash(p.code) % all.length].id;
+    } catch (e) {}
+    return '';
+  }
+  function ptgIdFor(p) {
+    try {
+      var list = Store.allPTG ? Store.allPTG() : [];
+      var hit = list.filter(function (x) { return x.product === p.name; })[0];
+      if (hit) return hit.id;
+      if (list.length) return list[hash(p.code) % list.length].id;
+    } catch (e) {}
+    return '';
+  }
+
+  var searchTerm = '', fSys = '', fUnit = '', fColor = '';
+  var PAGE_SIZE = 10, currentPage = 1;
+
+  function rows() {
+    return products().filter(function (p) {
+      var a = attrs(p);
+      if (fSys && a.system !== fSys) return false;
+      if (fUnit && a.unit !== fUnit) return false;
+      if (fColor && a.color !== fColor) return false;
+      if (searchTerm) {
+        var hay = nrm(p.code + ' ' + p.name + ' ' + a.system + ' ' + a.color + ' ' + a.glass);
+        if (hay.indexOf(nrm(searchTerm)) < 0) return false;
+      }
+      return true;
+    });
+  }
+
+  function renderStats() {
+    var all = products().map(function (p) { return attrs(p); });
+    var sys = {}; all.forEach(function (a) { sys[a.system] = 1; });
+    var avg = all.length ? all.reduce(function (s, a) { return s + a.margin; }, 0) / all.length : 0;
+    var low = all.filter(function (a) { return a.margin < 18; }).length;
+    $('#kTotal').textContent = all.length;
+    $('#kTotalD').textContent = 'Đang chào bán toàn quốc';
+    $('#kSys').textContent = Object.keys(sys).length;
+    $('#kSysD').textContent = Object.keys(sys).slice(0, 2).join(' · ');
+    $('#kMargin').textContent = avg.toFixed(1) + '%';
+    $('#kLow').textContent = low;
+  }
+
+  function renderList() {
+    var rs = rows(), total = rs.length;
+    $('#prodCounts').textContent = '· ' + total + '/' + products().length + ' mã SP';
+
+    var totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+    if (currentPage > totalPages) currentPage = totalPages;
+    var start = (currentPage - 1) * PAGE_SIZE;
+    var pageRows = rs.slice(start, start + PAGE_SIZE);
+
+    var body = $('#prodBody');
+    if (!total) {
+      body.innerHTML = '<tr><td colspan="11"><div class="list-empty"><i data-lucide="package-search" style="width:28px;height:28px"></i><div style="margin-top:8px">Không có sản phẩm nào khớp bộ lọc.</div></div></td></tr>';
+      renderPager(0, 0, 0, 1);
+      if (window.lucide) lucide.createIcons();
+      return;
+    }
+    body.innerHTML = pageRows.map(function (p) {
+      var a = attrs(p);
+      return '<tr data-code="' + esc(p.code) + '">' +
+        '<td><span class="id-mono">' + esc(p.code) + '</span></td>' +
+        '<td><div class="cell-name"><span class="clip" title="' + esc(p.name) + '">' + esc(p.name) + '</span></div>' +
+          (p.customer ? '<div class="sub-soft">' + esc(p.customer) + '</div>' : '') + '</td>' +
+        '<td><span class="badge badge-steel">' + esc(a.system) + '</span></td>' +
+        '<td>' + esc(a.unit) + '</td>' +
+        '<td><span class="spec-mono">' + esc(a.color) + '</span></td>' +
+        '<td>' + (a.glass === '—' ? '<span class="muted-dash">—</span>' : esc(a.glass)) + '</td>' +
+        '<td>' + (a.acc === '—' ? '<span class="muted-dash">—</span>' : esc(a.acc)) + '</td>' +
+        '<td class="num"><b>' + fmt(a.price) + '</b></td>' +
+        '<td class="num">' + fmt(a.cost) + '</td>' +
+        '<td class="num">' + a.margin + '%</td>' +
+        '<td>' + priceFlag(a) + '</td>' +
+        '</tr>';
+    }).join('');
+
+    Array.prototype.forEach.call(body.querySelectorAll('tr[data-code]'), function (tr) {
+      tr.addEventListener('click', function (e) {
+        if (e.target.closest('a') || e.target.closest('button')) return;
+        openDrawer(tr.dataset.code, false);
+      });
+    });
+    renderPager(total, start, pageRows.length, totalPages);
+    if (window.lucide) lucide.createIcons();
+  }
+
+  function pageList(cur, totalP) {
+    var out = [];
+    for (var i = 1; i <= totalP; i++) {
+      if (i === 1 || i === totalP || (i >= cur - 1 && i <= cur + 1)) out.push(i);
+      else if (out[out.length - 1] !== '…') out.push('…');
+    }
+    return out;
+  }
+
+  function renderPager(total, start, count, totalPages) {
+    var pager = $('#prodPager');
+    if (!pager) return;
+    if (!total) { pager.innerHTML = ''; return; }
+    var from = start + 1, to = start + count;
+    var btns = '<button data-pg="prev" data-no-interact="true"' + (currentPage === 1 ? ' disabled' : '') + ' aria-label="Trang trước"><i data-lucide="chevron-left" style="width:13px;height:13px"></i></button>';
+    pageList(currentPage, totalPages).forEach(function (pg) {
+      if (pg === '…') btns += '<span style="padding:0 4px;color:var(--ash-2)">…</span>';
+      else btns += '<button data-pg="' + pg + '" data-no-interact="true"' + (pg === currentPage ? ' class="is-active"' : '') + '>' + pg + '</button>';
+    });
+    btns += '<button data-pg="next" data-no-interact="true"' + (currentPage === totalPages ? ' disabled' : '') + ' aria-label="Trang sau"><i data-lucide="chevron-right" style="width:13px;height:13px"></i></button>';
+    pager.innerHTML = '<div>Hiển thị <b style="color: var(--ink); font-family: var(--ff-mono);">' + from + '–' + to + '</b> trong ' + total + ' sản phẩm</div>' +
+      '<div class="pg-controls">' + btns + '</div>';
+    Array.prototype.forEach.call(pager.querySelectorAll('[data-pg]'), function (b) {
+      b.addEventListener('click', function () {
+        if (b.disabled) return;
+        var v = b.dataset.pg;
+        if (v === 'prev') currentPage = Math.max(1, currentPage - 1);
+        else if (v === 'next') currentPage = Math.min(totalPages, currentPage + 1);
+        else currentPage = parseInt(v, 10);
+        renderList();
+      });
+    });
+  }
+
+  /* ================= Drawer sản phẩm (xem + sửa tại chỗ) ================= */
+  var curCode = null, editing = false;
+  function cell(k, v) { return '<div class="sp-cell"><span>' + k + '</span><b>' + v + '</b></div>'; }
+  function cellIn(k, id, v, type) { return '<div class="sp-cell"><span>' + k + '</span><input id="' + id + '" type="' + (type || 'text') + '" value="' + esc(v) + '"></div>'; }
+  function cellSel(k, id, list, cur) {
+    return '<div class="sp-cell"><span>' + k + '</span><select id="' + id + '">' +
+      list.map(function (o) { return '<option' + (o === cur ? ' selected' : '') + '>' + esc(o) + '</option>'; }).join('') + '</select></div>';
+  }
+
+  function renderDrawer() {
+    var p = getProduct(curCode); if (!p) return;
+    var a = attrs(p);
+    var bomId = bomIdFor(p), ptgId = ptgIdFor(p);
+
+    $('#spHead').innerHTML =
+      '<div class="ty">Bản ghi sản phẩm</div>' +
+      '<div class="idrow"><span class="sid">' + esc(p.code) + '</span>' +
+        '<span class="badge badge-steel">' + esc(a.system) + '</span>' +
+        (a.margin < 18 ? '<span class="badge status-overdue">Biên LN thấp</span>' : (a.margin >= 30 ? '<span class="badge badge-moss">Biên LN tốt</span>' : '')) +
+        '<span class="acts">' +
+          (editing ? '' : '<button class="hbtn" id="spEdit" data-no-interact="true"><i data-lucide="pencil" style="width:12px;height:12px"></i> Sửa</button>') +
+          '<button class="hbtn" id="spPrint" data-no-interact="true"><i data-lucide="printer" style="width:12px;height:12px"></i> In</button>' +
+          '<button class="hbtn" id="spClose" data-no-interact="true"><i data-lucide="x" style="width:12px;height:12px"></i></button>' +
+        '</span>' +
+      '</div>' +
+      '<div class="sub">' + esc(p.name) + '</div>';
+
+    var body = '<div class="sp-sec"><i data-lucide="info" style="width:12px;height:12px"></i> Thông tin chung</div>';
+    if (editing) {
+      body += '<div class="sp-kv">' +
+        '<div class="sp-cell" style="grid-column:1/-1"><span>Tên sản phẩm</span><input id="spName" value="' + esc(p.name) + '"></div>' +
+        cellIn('Khách hàng / dự án', 'spCust', p.customer || '') +
+        cellSel('Hệ nhôm', 'spSys', SYSTEMS.map(function (s) { return s.name; }).concat(['Cửa nhôm hệ Owin']), a.system) +
+        cellSel('ĐVT', 'spUnit', ['bộ', 'm²', 'cánh', 'md', 'kg', 'cây', 'gói'], a.unit) +
+        cellSel('Màu', 'spColor', COLORS, a.color) +
+        cellSel('Loại kính', 'spGlass', GLASS.concat(['—']), a.glass) +
+        cellSel('Phụ kiện kèm', 'spAcc', ACCS.concat(['—']), a.acc) +
+        cellIn('Giá bán (₫)', 'spPrice', a.price, 'number') +
+        cellIn('Giá vốn (₫)', 'spCost', a.cost, 'number') +
+        '<div class="sp-cell" style="grid-column:1/-1"><span>Ghi chú</span><input id="spNote" value="' + esc(p.note || '') + '"></div>' +
+      '</div>';
+    } else {
+      body += '<div class="sp-kv">' +
+        cell('Tên sản phẩm', esc(p.name)) +
+        cell('Khách hàng / dự án', esc(p.customer || 'Dùng chung')) +
+        cell('Hệ nhôm', esc(a.system)) +
+        cell('ĐVT', esc(a.unit)) +
+        cell('Màu', esc(a.color)) +
+        cell('Loại kính', esc(a.glass)) +
+        '<div class="sp-cell" style="grid-column:1/-1"><span>Phụ kiện kèm</span><b>' + esc(a.acc) + '</b></div>' +
+      '</div>' +
+      '<div class="sp-sec"><i data-lucide="badge-dollar-sign" style="width:12px;height:12px"></i> Thương mại</div>' +
+      '<div class="sp-kv">' +
+        cell('Giá bán', fmt(a.price) + ' ₫/' + esc(a.unit)) +
+        cell('Giá vốn', fmt(a.cost) + ' ₫/' + esc(a.unit)) +
+        cell('Biên lợi nhuận', a.margin + '%') +
+        cell('Lãi gộp / đơn vị', fmt(a.price - a.cost) + ' ₫') +
+        '<div class="sp-cell" style="grid-column:1/-1"><span>Ghi chú</span><b>' + esc(p.note || '—') + '</b></div>' +
+      '</div>';
+    }
+
+    body += '<div class="sp-sec"><i data-lucide="link" style="width:12px;height:12px"></i> Liên kết</div>' +
+      '<div class="sp-kv">' +
+        '<div class="sp-cell"><span>Định mức BOM</span><b>' +
+          (bomId ? '<a href="bom-dinh-muc.html?bom=' + encodeURIComponent(bomId) + '" class="lnk">' + esc(bomId) + '</a>' : '<a href="bom-dinh-muc.html" class="lnk">Thiết lập BOM</a>') + '</b></div>' +
+        '<div class="sp-cell"><span>Phiếu tính giá</span><b>' +
+          (ptgId ? '<a href="17-tinh-gia.html?ptg=' + encodeURIComponent(ptgId) + '" class="lnk">' + esc(ptgId) + '</a>' : '<a href="17-tinh-gia.html" class="lnk">Tính giá sản phẩm</a>') + '</b></div>' +
+        '<div class="sp-cell"><span>Tồn thành phẩm</span><b><a href="22-kho-thanh-pham.html" class="lnk">Xem tồn kho</a></b></div>' +
+        '<div class="sp-cell"><span>Vật tư nhôm – kính</span><b><a href="05-kho.html" class="lnk">Kho vật tư</a></b></div>' +
+      '</div>';
+
+    $('#spBody').innerHTML = body;
+    $('#spFoot').innerHTML = editing
+      ? '<button class="btn btn-secondary" id="spCancel" data-no-interact="true">Huỷ</button>' +
+        '<button class="btn btn-primary" id="spSave" data-no-interact="true"><i data-lucide="save" style="width:14px;height:14px"></i> Lưu</button>'
+      : '<button class="btn btn-secondary" id="spDel" data-no-interact="true"><i data-lucide="trash-2" style="width:14px;height:14px"></i> Xoá</button>' +
+        '<a class="btn btn-secondary" href="17-tinh-gia.html?sp=' + encodeURIComponent(p.code) + '" data-no-interact="true"><i data-lucide="calculator" style="width:14px;height:14px"></i> Báo giá SP này</a>' +
+        '<button class="btn btn-primary" id="spEdit2" data-no-interact="true"><i data-lucide="pencil" style="width:14px;height:14px"></i> Sửa bản ghi</button>';
+
+    if (window.lucide) lucide.createIcons();
+
+    var on = function (id, fn) { var e = document.getElementById(id); if (e) e.addEventListener('click', fn); };
+    on('spClose', closeDrawer);
+    on('spEdit', function () { editing = true; renderDrawer(); });
+    on('spEdit2', function () { editing = true; renderDrawer(); });
+    on('spCancel', function () { editing = false; renderDrawer(); });
+    on('spSave', function () { saveDrawer(p); });
+    on('spPrint', function () { printProduct(p, a); });
+    on('spDel', function () { confirmDelete(p.code); });
+  }
+
+  function saveDrawer(p) {
+    var g = function (id) { return (document.getElementById(id) || {}).value; };
+    var name = (g('spName') || '').trim();
+    if (!name) { ERPInteract.showToast('Cần nhập <b>tên sản phẩm</b>', 'error'); return; }
+    var price = Number(g('spPrice')) || 0, cost = Number(g('spCost')) || 0;
+    if (price <= 0) { ERPInteract.showToast('Giá bán phải lớn hơn 0', 'error'); return; }
+    if (cost > price) { ERPInteract.showToast('Giá vốn không được lớn hơn giá bán', 'error'); return; }
+    OVERRIDE[p.code] = {
+      system: g('spSys'), unit: g('spUnit'), color: g('spColor'),
+      glass: g('spGlass'), acc: g('spAcc'), price: price, cost: cost
+    };
+    try {
+      if (Store && Store.updateProduct && Store.getProduct && Store.getProduct(p.code)) {
+        Store.updateProduct(p.code, { name: name, customer: g('spCust') || '', note: g('spNote') || '' });
+      } else { p.name = name; p.customer = g('spCust') || ''; p.note = g('spNote') || ''; }
+    } catch (e) { p.name = name; }
+    editing = false;
+    ERPInteract.showToast('<b>Đã lưu</b> ' + esc(p.code), 'success');
+    renderStats(); renderList(); fillFilters(); renderDrawer();
+  }
+
+  function printProduct(p, a) {
+    var body = ERPPrint.docHead() +
+      '<div class="pdoc">' +
+      '<div class="pdoc-title">THÔNG TIN SẢN PHẨM</div>' +
+      '<div class="pdoc-sub">Mã: <b>' + esc(p.code) + '</b></div>' +
+      '<table class="pdoc-rows">' +
+        '<tr><td>Tên sản phẩm</td><td><b>' + esc(p.name) + '</b></td></tr>' +
+        '<tr><td>Hệ nhôm</td><td>' + esc(a.system) + '</td></tr>' +
+        '<tr><td>Đơn vị tính</td><td>' + esc(a.unit) + '</td></tr>' +
+        '<tr><td>Màu</td><td>' + esc(a.color) + '</td></tr>' +
+        '<tr><td>Loại kính</td><td>' + esc(a.glass) + '</td></tr>' +
+        '<tr><td>Phụ kiện kèm</td><td>' + esc(a.acc) + '</td></tr>' +
+        '<tr><td>Giá bán</td><td><b>' + fmt(a.price) + ' ₫/' + esc(a.unit) + '</b></td></tr>' +
+        '<tr><td>Giá vốn</td><td>' + fmt(a.cost) + ' ₫/' + esc(a.unit) + '</td></tr>' +
+        '<tr><td>Biên lợi nhuận</td><td>' + a.margin + '%</td></tr>' +
+      '</table>' +
+      '<div class="pdoc-sign"><div><b>NGƯỜI LẬP</b><i>(Ký, họ tên)</i><div class="sp"></div></div>' +
+      '<div><b>TRƯỞNG PHÒNG KINH DOANH DỰ ÁN</b><i>(Ký, họ tên)</i><div class="sp"></div></div></div>' +
+      '</div>';
+    ERPPrint.preview({ title: 'Sản phẩm ' + p.code, printTitle: 'Sản phẩm ' + p.code, bodyHtml: body });
+  }
+
+  function openDrawer(code, edit) {
+    if (!getProduct(code)) return;
+    curCode = code; editing = !!edit;
+    renderDrawer();
+    $('#spOverlay').classList.add('open'); $('#spDrawer').classList.add('open');
+    $('#spDrawer').setAttribute('aria-hidden', 'false');
+  }
+  function closeDrawer() {
+    $('#spOverlay').classList.remove('open'); $('#spDrawer').classList.remove('open');
+    $('#spDrawer').setAttribute('aria-hidden', 'true'); editing = false;
+  }
+
+  function confirmDelete(code) {
+    var p = getProduct(code); if (!p) return;
+    ERPInteract.showModal({
+      title: 'Xoá sản phẩm',
+      body: '<p>Xoá <b>' + esc(p.code) + ' · ' + esc(p.name) + '</b> khỏi danh mục? Thao tác này không ảnh hưởng các báo giá/đơn đã tạo.</p>',
+      primaryText: 'Xoá', secondaryText: 'Huỷ',
+      onPrimary: function () {
+        try { Store.deleteProduct(code); } catch (e) {}
+        ERPInteract.showToast('Đã xoá ' + esc(p.code), 'info');
+        closeDrawer(); renderStats(); renderList();
+      }
+    });
+  }
+
+  /* ================= Thêm sản phẩm ================= */
+  function openNewForm() {
+    var body = '<div class="sp-kv" style="gap:10px 14px">' +
+      '<div class="sp-cell" style="grid-column:1/-1"><span>Tên sản phẩm</span><input id="npName" placeholder="VD: Cửa thuỷ lực hệ 120 · 2 cánh vân gỗ trắc"></div>' +
+      cellSel('Hệ nhôm', 'npSys', SYSTEMS.map(function (s) { return s.name; }), SYSTEMS[0].name) +
+      cellSel('ĐVT', 'npUnit', ['bộ', 'm²', 'cánh', 'md', 'kg', 'cây', 'gói'], 'bộ') +
+      cellSel('Màu', 'npColor', COLORS, COLORS[0]) +
+      cellSel('Loại kính', 'npGlass', GLASS.concat(['—']), GLASS[0]) +
+      cellSel('Phụ kiện kèm', 'npAcc', ACCS.concat(['—']), ACCS[0]) +
+      cellIn('Giá bán (₫)', 'npPrice', 15200000, 'number') +
+      cellIn('Giá vốn (₫)', 'npCost', 11400000, 'number') +
+      cellIn('Khách hàng / dự án', 'npCust', '') +
+    '</div>';
+    ERPInteract.showModal({
+      title: 'Thêm sản phẩm', body: body, primaryText: 'Tạo sản phẩm', secondaryText: 'Huỷ',
+      onPrimary: function () {
+        var g = function (id) { return (document.getElementById(id) || {}).value; };
+        var name = (g('npName') || '').trim();
+        if (!name) { ERPInteract.showToast('Cần nhập <b>tên sản phẩm</b>', 'error'); return false; }
+        var np = null;
+        try { np = Store.createProduct({ name: name, customer: g('npCust') || '', type: 'offset', state: PricingEngine.defaultState('offset') }); } catch (e) {}
+        var code = np ? np.code : ('OW-SP' + String(products().length + 1).padStart(3, '0'));
+        if (!np) FALLBACK.push({ code: code, name: name, customer: g('npCust') || '', note: '' });
+        OVERRIDE[code] = {
+          system: g('npSys'), unit: g('npUnit'), color: g('npColor'), glass: g('npGlass'),
+          acc: g('npAcc'), price: Number(g('npPrice')) || 0, cost: Number(g('npCost')) || 0
+        };
+        ERPInteract.showToast('<b>Đã tạo</b> ' + esc(code), 'success');
+        renderStats(); renderList(); fillFilters();
+        return true;
+      }
+    });
+    setTimeout(function () { if (window.lucide) lucide.createIcons(); }, 30);
+  }
+
+  function importProducts() {
+    var input = document.createElement('input');
+    input.type = 'file'; input.accept = '.xlsx,.xls,.csv';
+    input.addEventListener('change', function () {
+      var f = input.files && input.files[0];
+      if (!f) return;
+      ERPInteract.showModal({
+        title: 'Import danh mục sản phẩm',
+        body: '<p>File <b>' + esc(f.name) + '</b> đã được đọc.</p>' +
+          '<p style="margin-top:8px;color:var(--ash)">Hệ thống nhận diện <b>cột Mã SP · Tên · Hệ nhôm · ĐVT · Màu · Loại kính · Giá bán</b> và thêm các dòng hợp lệ vào danh mục. Dòng trùng mã sẽ được bỏ qua.</p>',
+        primaryText: 'Import', secondaryText: 'Huỷ',
+        onPrimary: function () { ERPInteract.showToast('<b>Đã import</b> danh mục từ ' + esc(f.name) + ' (mô phỏng)', 'success'); }
+      });
+    });
+    input.click();
+  }
+
+  function fillFilters() {
+    var all = products().map(attrs);
+    var uniq = function (arr) { var o = {}; arr.forEach(function (x) { if (x && x !== '—') o[x] = 1; }); return Object.keys(o).sort(); };
+    $('#fSys').innerHTML = '<option value="">Mọi hệ nhôm</option>' + uniq(all.map(function (a) { return a.system; })).map(function (v) { return '<option' + (v === fSys ? ' selected' : '') + '>' + esc(v) + '</option>'; }).join('');
+    $('#fUnit').innerHTML = '<option value="">Mọi ĐVT</option>' + uniq(all.map(function (a) { return a.unit; })).map(function (v) { return '<option' + (v === fUnit ? ' selected' : '') + '>' + esc(v) + '</option>'; }).join('');
+    $('#fColor').innerHTML = '<option value="">Mọi màu</option>' + uniq(all.map(function (a) { return a.color; })).map(function (v) { return '<option' + (v === fColor ? ' selected' : '') + '>' + esc(v) + '</option>'; }).join('');
+  }
+
+  document.addEventListener('erp:ready', function () {
+    fillFilters();
+    renderStats();
+    renderList();
+
+    $('#prodSearch').addEventListener('input', function (e) { searchTerm = e.target.value; currentPage = 1; renderList(); });
+    $('#fSys').addEventListener('change', function (e) { fSys = e.target.value; currentPage = 1; renderList(); });
+    $('#fUnit').addEventListener('change', function (e) { fUnit = e.target.value; currentPage = 1; renderList(); });
+    $('#fColor').addEventListener('change', function (e) { fColor = e.target.value; currentPage = 1; renderList(); });
+    $('#btnNewProd').addEventListener('click', openNewForm);
+    $('#btnImportProd').addEventListener('click', importProducts);
+    $('#spOverlay').addEventListener('click', closeDrawer);
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeDrawer(); });
+
+    var qsp = new URLSearchParams(location.search).get('sp');
+    if (qsp && getProduct(qsp)) openDrawer(qsp, false);
+  });
+</script>
+</body>
+</html>

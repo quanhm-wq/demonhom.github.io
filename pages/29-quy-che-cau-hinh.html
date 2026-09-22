@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Quy chế & Cấu hình — ERP NHÔM OWIN</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/css/style.css" />
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+  <style>
+    /* Doc list / table cell tweaks */
+    .doc-name { display:flex; align-items:center; gap:9px; }
+    .doc-name .di { width:18px; height:18px; color:var(--rust); flex-shrink:0; }
+    .doc-name .sub { color:var(--ash); font-size:11px; }
+
+    /* Upload dropzone */
+    .dropzone {
+      border:1.5px dashed var(--rule); border-radius:10px; background:var(--paper-2);
+      padding:22px 16px; text-align:center; cursor:pointer; transition:border-color .15s, background .15s;
+    }
+    .dropzone:hover { border-color:var(--rust); background:var(--rust-soft); }
+    .dropzone .dz-ic { width:26px; height:26px; color:var(--ash-2); margin-bottom:6px; }
+
+    /* Config param grid */
+    .cfg-grid { display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:12px 22px; }
+    @media (max-width:760px){ .cfg-grid{ grid-template-columns:1fr; } }
+    .cfg-row { display:flex; flex-direction:column; gap:5px; padding-bottom:11px; border-bottom:1px solid var(--rule-hair); }
+    .cfg-row .cfg-k { font-size:12.5px; color:var(--ash); display:flex; align-items:center; gap:6px; }
+    .cfg-row .cfg-k i { width:13px; height:13px; color:var(--ash-2); }
+    .cfg-row .cfg-in { display:flex; align-items:center; gap:7px; }
+    .cfg-row .cfg-in .input { flex:1; }
+    .cfg-row .cfg-suf { font-size:12px; color:var(--ash); white-space:nowrap; }
+
+    /* Toggle switch */
+    .sw { position:relative; display:inline-block; width:38px; height:21px; flex-shrink:0; }
+    .sw input { opacity:0; width:0; height:0; }
+    .sw .slider { position:absolute; inset:0; background:var(--paper-3); border-radius:999px; transition:.2s; }
+    .sw .slider::before { content:""; position:absolute; height:15px; width:15px; left:3px; top:3px; background:#fff; border-radius:50%; transition:.2s; box-shadow:0 1px 2px rgba(0,0,0,.2); }
+    .sw input:checked + .slider { background:var(--moss); }
+    .sw input:checked + .slider::before { transform:translateX(17px); }
+
+    /* Progress wrap inline */
+    .prog-cell { display:flex; align-items:center; gap:8px; min-width:120px; }
+    .prog-cell .progress { width:64px; }
+    .prog-cell .pv { font-size:11.5px; color:var(--ash); white-space:nowrap; }
+
+    /* mini employee row */
+    .emp-mini { display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid var(--rule-hair); }
+    .emp-mini:last-child { border-bottom:0; }
+    .emp-av { width:32px; height:32px; border-radius:8px; background:var(--paper-3); color:var(--ink); display:inline-flex; align-items:center; justify-content:center; font-size:12px; font-weight:600; flex-shrink:0; }
+  </style>
+</head>
+<body>
+
+<div id="app-shell" data-active="hr-quyche" data-title="Quy chế & Cấu hình" data-crumb="<b>Nhân sự</b> · Quy chế & Cấu hình">
+
+  <div class="page-header">
+    <div>
+      <h1>Quy chế & Cấu hình</h1>
+      <p>12 văn bản quy chế hiệu lực · 40/42 NV đã nhận nội quy · cập nhật gần nhất 18/06/2026</p>
+    </div>
+    <div class="actions">
+      <button class="btn btn-secondary"><i data-lucide="save" style="width:14px;height:14px"></i> Lưu cấu hình</button>
+      <button class="btn btn-primary"><i data-lucide="upload" style="width:14px;height:14px"></i> Tải văn bản lên</button>
+    </div>
+  </div>
+
+  <!-- KPI -->
+  <div class="grid grid-4 mb-4">
+    <div class="card-feature-blue">
+      <div class="t-micro-u" style="color:var(--steel)">VĂN BẢN QUY CHẾ</div>
+      <div class="t-h2 mt-1">12</div>
+      <div class="t-caption" style="color:var(--steel)">hiệu lực · 6 nhóm</div>
+    </div>
+    <div class="card-feature-teal">
+      <div class="t-micro-u" style="color:var(--moss-deep)">NV ĐÃ NHẬN NỘI QUY</div>
+      <div class="t-h2 mt-1">40/42</div>
+      <div class="t-caption" style="color:var(--moss-deep)">95% đã phổ biến</div>
+    </div>
+    <div class="card-feature-yellow">
+      <div class="t-micro-u" style="color:var(--rust-deep)">THAM SỐ LƯƠNG ĐANG DÙNG</div>
+      <div class="t-h2 mt-1">10</div>
+      <div class="t-caption" style="color:var(--rust-deep)">tham số cấu hình</div>
+    </div>
+    <div class="card-feature-orange">
+      <div class="t-micro-u" style="color:var(--amber)">CẬP NHẬT GẦN NHẤT</div>
+      <div class="t-h2 mt-1">18/06</div>
+      <div class="t-caption" style="color:var(--amber)">/2026 · v2.3</div>
+    </div>
+  </div>
+
+  <!-- ============ Văn bản quy định & quy chế ============ -->
+  <div class="card mb-4">
+    <div class="flex-between mb-2" style="flex-wrap:wrap;gap:10px">
+      <div>
+        <div class="t-h5">Văn bản quy định & quy chế</div>
+        <div class="t-caption">Kho văn bản chính thức · tường minh, đúng pháp luật · phổ biến tới toàn bộ nhân sự</div>
+      </div>
+      <button class="btn btn-primary btn-sm"><i data-lucide="upload" style="width:13px;height:13px"></i> Tải văn bản lên</button>
+    </div>
+
+    <!-- filter bar -->
+    <div class="flex-between mb-3" style="flex-wrap:wrap;gap:10px">
+      <div class="tabs">
+        <button class="tab tab-active">Tất cả (12)</button>
+        <button class="tab">Hiệu lực (10)</button>
+        <button class="tab">Hết hiệu lực (2)</button>
+      </div>
+      <div class="flex" style="gap:8px;flex-wrap:wrap">
+        <span class="filter-pill"><i data-lucide="folder" style="width:13px;height:13px"></i> Nhóm văn bản <i data-lucide="chevron-down" style="width:13px;height:13px"></i></span>
+        <div style="position:relative">
+          <i data-lucide="search" style="width:14px;height:14px;position:absolute;left:10px;top:9px;color:var(--ash-2)"></i>
+          <input class="input" placeholder="Tìm văn bản…" style="padding-left:30px;width:190px"/>
+        </div>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th>Tên văn bản</th>
+            <th>Nhóm</th>
+            <th>Phiên bản</th>
+            <th class="num">Ngày hiệu lực</th>
+            <th>Trạng thái</th>
+            <th>Đã phổ biến</th>
+            <th>Cảnh báo</th>
+            <th class="num">Thao tác</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><div class="doc-name"><i data-lucide="file-text" class="di"></i><div>Nội quy lao động Công ty<div class="sub">PDF · 420 KB</div></div></div></td>
+            <td><span class="badge badge-steel">Nội quy lao động</span></td>
+            <td>v2.3</td>
+            <td class="num">01/01/2026</td>
+            <td><span class="badge badge-moss">Hiệu lực</span></td>
+            <td><div class="prog-cell"><span class="progress success"><div style="width:95%"></div></span><span class="pv">40/42</span></div></td>
+            <td><span style="color:#1f6b3a;font-weight:700">Phổ biến 40/42 · đúng hạn</span></td>
+            <td class="num">
+              <button class="btn-icon" title="Xem"><i data-lucide="eye" style="width:15px;height:15px"></i></button>
+              <button class="btn-icon" title="Tải về"><i data-lucide="download" style="width:15px;height:15px"></i></button>
+              <button class="btn-icon" title="Phổ biến (chiếu)"><i data-lucide="megaphone" style="width:15px;height:15px"></i></button>
+            </td>
+          </tr>
+          <tr>
+            <td><div class="doc-name"><i data-lucide="file-badge" class="di"></i><div>Quy chế trả lương & phụ cấp<div class="sub">PDF · 510 KB</div></div></div></td>
+            <td><span class="badge badge-orange">Quy chế lương–thưởng</span></td>
+            <td>v2.1</td>
+            <td class="num">01/01/2026</td>
+            <td><span class="badge badge-moss">Hiệu lực</span></td>
+            <td><div class="prog-cell"><span class="progress success"><div style="width:95%"></div></span><span class="pv">40/42</span></div></td>
+            <td><span style="color:var(--rule)">—</span></td>
+            <td class="num">
+              <button class="btn-icon" title="Xem"><i data-lucide="eye" style="width:15px;height:15px"></i></button>
+              <button class="btn-icon" title="Tải về"><i data-lucide="download" style="width:15px;height:15px"></i></button>
+              <button class="btn-icon" title="Phổ biến (chiếu)"><i data-lucide="megaphone" style="width:15px;height:15px"></i></button>
+            </td>
+          </tr>
+          <tr>
+            <td><div class="doc-name"><i data-lucide="file-badge" class="di"></i><div>Quy chế thưởng năng suất – KPI<div class="sub">PDF · 360 KB</div></div></div></td>
+            <td><span class="badge badge-orange">Quy chế lương–thưởng</span></td>
+            <td>v1.4</td>
+            <td class="num">01/04/2026</td>
+            <td><span class="badge badge-moss">Hiệu lực</span></td>
+            <td><div class="prog-cell"><span class="progress success"><div style="width:90%"></div></span><span class="pv">38/42</span></div></td>
+            <td><span style="color:#8a1f1f;font-weight:700">Còn 4 NV chưa ký xác nhận</span></td>
+            <td class="num">
+              <button class="btn-icon" title="Xem"><i data-lucide="eye" style="width:15px;height:15px"></i></button>
+              <button class="btn-icon" title="Tải về"><i data-lucide="download" style="width:15px;height:15px"></i></button>
+              <button class="btn-icon" title="Phổ biến (chiếu)"><i data-lucide="megaphone" style="width:15px;height:15px"></i></button>
+            </td>
+          </tr>
+          <tr>
+            <td><div class="doc-name"><i data-lucide="gavel" class="di"></i><div>Quy chế khen thưởng – kỷ luật<div class="sub">PDF · 290 KB</div></div></div></td>
+            <td><span class="badge badge-rust">Khen thưởng–kỷ luật</span></td>
+            <td>v1.2</td>
+            <td class="num">01/01/2026</td>
+            <td><span class="badge badge-moss">Hiệu lực</span></td>
+            <td><div class="prog-cell"><span class="progress success"><div style="width:95%"></div></span><span class="pv">40/42</span></div></td>
+            <td><span style="color:var(--rule)">—</span></td>
+            <td class="num">
+              <button class="btn-icon" title="Xem"><i data-lucide="eye" style="width:15px;height:15px"></i></button>
+              <button class="btn-icon" title="Tải về"><i data-lucide="download" style="width:15px;height:15px"></i></button>
+              <button class="btn-icon" title="Phổ biến (chiếu)"><i data-lucide="megaphone" style="width:15px;height:15px"></i></button>
+            </td>
+          </tr>
+          <tr>
+            <td><div class="doc-name"><i data-lucide="table-2" class="di"></i><div>Thang bảng lương 7 bậc (đăng ký)<div class="sub">XLSX · 180 KB</div></div></div></td>
+            <td><span class="badge badge-moss">Thang bảng lương</span></td>
+            <td>v3.0</td>
+            <td class="num">01/01/2026</td>
+            <td><span class="badge badge-moss">Hiệu lực</span></td>
+            <td><div class="prog-cell"><span class="progress success"><div style="width:88%"></div></span><span class="pv">37/42</span></div></td>
+            <td><span style="color:var(--rule)">—</span></td>
+            <td class="num">
+              <button class="btn-icon" title="Xem"><i data-lucide="eye" style="width:15px;height:15px"></i></button>
+              <button class="btn-icon" title="Tải về"><i data-lucide="download" style="width:15px;height:15px"></i></button>
+              <button class="btn-icon" title="Phổ biến (chiếu)"><i data-lucide="megaphone" style="width:15px;height:15px"></i></button>
+            </td>
+          </tr>
+          <tr>
+            <td><div class="doc-name"><i data-lucide="hard-hat" class="di"></i><div>Quy định an toàn lao động xưởng cửa nhôm<div class="sub">PDF · 640 KB</div></div></div></td>
+            <td><span class="badge badge-steel">An toàn lao động</span></td>
+            <td>v2.0</td>
+            <td class="num">15/02/2026</td>
+            <td><span class="badge badge-moss">Hiệu lực</span></td>
+            <td><div class="prog-cell"><span class="progress success"><div style="width:95%"></div></span><span class="pv">40/42</span></div></td>
+            <td><span style="color:#8a1f1f;font-weight:700">Quá hạn rà soát bản v1.x</span></td>
+            <td class="num">
+              <button class="btn-icon" title="Xem"><i data-lucide="eye" style="width:15px;height:15px"></i></button>
+              <button class="btn-icon" title="Tải về"><i data-lucide="download" style="width:15px;height:15px"></i></button>
+              <button class="btn-icon" title="Phổ biến (chiếu)"><i data-lucide="megaphone" style="width:15px;height:15px"></i></button>
+            </td>
+          </tr>
+          <tr>
+            <td><div class="doc-name"><i data-lucide="file-text" class="di"></i><div>Quy định 5S & vệ sinh máy<div class="sub">PDF · 210 KB</div></div></div></td>
+            <td><span class="badge">Quy định khác</span></td>
+            <td>v1.1</td>
+            <td class="num">01/03/2026</td>
+            <td><span class="badge badge-moss">Hiệu lực</span></td>
+            <td><div class="prog-cell"><span class="progress success"><div style="width:81%"></div></span><span class="pv">34/42</span></div></td>
+            <td><span style="color:var(--rule)">—</span></td>
+            <td class="num">
+              <button class="btn-icon" title="Xem"><i data-lucide="eye" style="width:15px;height:15px"></i></button>
+              <button class="btn-icon" title="Tải về"><i data-lucide="download" style="width:15px;height:15px"></i></button>
+              <button class="btn-icon" title="Phổ biến (chiếu)"><i data-lucide="megaphone" style="width:15px;height:15px"></i></button>
+            </td>
+          </tr>
+          <tr>
+            <td><div class="doc-name"><i data-lucide="file-text" class="di"></i><div>Quy định bồi thường phế phẩm sản xuất<div class="sub">PDF · 240 KB</div></div></div></td>
+            <td><span class="badge badge-rust">Khen thưởng–kỷ luật</span></td>
+            <td>v1.3</td>
+            <td class="num">01/04/2026</td>
+            <td><span class="badge badge-moss">Hiệu lực</span></td>
+            <td><div class="prog-cell"><span class="progress success"><div style="width:90%"></div></span><span class="pv">38/42</span></div></td>
+            <td><span style="color:#8a1f1f;font-weight:700">Chưa phổ biến tới tổ Lắp đặt công trình</span></td>
+            <td class="num">
+              <button class="btn-icon" title="Xem"><i data-lucide="eye" style="width:15px;height:15px"></i></button>
+              <button class="btn-icon" title="Tải về"><i data-lucide="download" style="width:15px;height:15px"></i></button>
+              <button class="btn-icon" title="Phổ biến (chiếu)"><i data-lucide="megaphone" style="width:15px;height:15px"></i></button>
+            </td>
+          </tr>
+          <tr style="opacity:.6">
+            <td><div class="doc-name"><i data-lucide="file-clock" class="di"></i><div>Nội quy lao động (cũ)<div class="sub">PDF · 400 KB</div></div></div></td>
+            <td><span class="badge badge-steel">Nội quy lao động</span></td>
+            <td>v2.2</td>
+            <td class="num">01/01/2025</td>
+            <td><span class="badge badge-steel">Hết hiệu lực</span></td>
+            <td><div class="prog-cell"><span class="pv">đã thay thế</span></div></td>
+            <td class="num">
+              <button class="btn-icon" title="Xem"><i data-lucide="eye" style="width:15px;height:15px"></i></button>
+              <button class="btn-icon" title="Tải về"><i data-lucide="download" style="width:15px;height:15px"></i></button>
+            </td>
+          </tr>
+          <tr style="opacity:.6">
+            <td><div class="doc-name"><i data-lucide="file-clock" class="di"></i><div>Thang bảng lương 6 bậc (cũ)<div class="sub">XLSX · 160 KB</div></div></div></td>
+            <td><span class="badge badge-moss">Thang bảng lương</span></td>
+            <td>v2.0</td>
+            <td class="num">01/01/2024</td>
+            <td><span class="badge badge-steel">Hết hiệu lực</span></td>
+            <td><div class="prog-cell"><span class="pv">đã thay thế</span></div></td>
+            <td class="num">
+              <button class="btn-icon" title="Xem"><i data-lucide="eye" style="width:15px;height:15px"></i></button>
+              <button class="btn-icon" title="Tải về"><i data-lucide="download" style="width:15px;height:15px"></i></button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- vùng upload minh hoạ -->
+    <div class="dropzone mt-3">
+      <i data-lucide="upload-cloud" class="dz-ic"></i>
+      <div style="font-size:13px;font-weight:500">Kéo thả file hoặc <span style="color:var(--rust)">bấm chọn</span> để tải văn bản lên</div>
+      <div class="t-caption mt-1">Hỗ trợ PDF, DOCX, XLSX · tối đa 20 MB · chọn nhóm văn bản sau khi tải</div>
+    </div>
+  </div>
+
+  <!-- ============ Cấu hình tham số lương + Phổ biến nội quy ============ -->
+  <div class="grid grid-12 mb-4">
+
+    <!-- Cấu hình tham số lương & chế độ -->
+    <div class="card">
+      <div class="flex-between mb-1" style="flex-wrap:wrap;gap:8px">
+        <div class="t-h5">Cấu hình tham số lương & chế độ</div>
+        <span class="badge badge-orange"><i data-lucide="zap" style="width:11px;height:11px"></i> Nguồn cho phân hệ Lương</span>
+      </div>
+      <div class="t-caption mb-3">Các tham số dưới đây được Chấm công–Lương, Bậc lương–KPI và Phiếu lỗi–Biên bản đọc trực tiếp.</div>
+
+      <div class="cfg-grid">
+        <div class="cfg-row">
+          <div class="cfg-k"><i data-lucide="landmark"></i> Lương cơ bản tối thiểu (vùng I)</div>
+          <div class="cfg-in"><input class="input" value="4.960.000"/><span class="cfg-suf">đ/tháng</span></div>
+        </div>
+        <div class="cfg-row">
+          <div class="cfg-k"><i data-lucide="layers"></i> Số bậc lương</div>
+          <div class="cfg-in"><input class="input" value="7"/><span class="cfg-suf">bậc</span></div>
+        </div>
+        <div class="cfg-row">
+          <div class="cfg-k"><i data-lucide="trending-up"></i> % tăng lương định kỳ</div>
+          <div class="cfg-in"><input class="input" value="1"/><span class="cfg-suf">% / 6 tháng</span></div>
+        </div>
+        <div class="cfg-row">
+          <div class="cfg-k"><i data-lucide="award"></i> % phụ cấp thâm niên</div>
+          <div class="cfg-in"><input class="input" value="0,5"/><span class="cfg-suf">% / 6 tháng</span></div>
+        </div>
+        <div class="cfg-row">
+          <div class="cfg-k"><i data-lucide="shield"></i> BHXH – YT – TN (người LĐ)</div>
+          <div class="cfg-in"><input class="input" value="10,5"/><span class="cfg-suf">%</span></div>
+        </div>
+        <div class="cfg-row">
+          <div class="cfg-k"><i data-lucide="moon"></i> Phụ cấp ca đêm</div>
+          <div class="cfg-in"><input class="input" value="30"/><span class="cfg-suf">% LCB giờ</span></div>
+        </div>
+        <div class="cfg-row">
+          <div class="cfg-k"><i data-lucide="calendar-check"></i> Ngày chốt công</div>
+          <div class="cfg-in"><input class="input" value="25"/><span class="cfg-suf">hàng tháng</span></div>
+        </div>
+        <div class="cfg-row">
+          <div class="cfg-k"><i data-lucide="banknote"></i> Ngày trả lương</div>
+          <div class="cfg-in"><input class="input" value="5"/><span class="cfg-suf">tháng sau</span></div>
+        </div>
+        <div class="cfg-row">
+          <div class="cfg-k"><i data-lucide="file-warning"></i> Ngưỡng phiếu lỗi → lập biên bản</div>
+          <div class="cfg-in"><input class="input" value="300.000"/><span class="cfg-suf">đ</span></div>
+        </div>
+        <div class="cfg-row">
+          <div class="cfg-k"><i data-lucide="percent"></i> Trần khấu trừ kỷ luật / kỳ</div>
+          <div class="cfg-in"><input class="input" value="30"/><span class="cfg-suf">% lương thực lĩnh</span></div>
+        </div>
+      </div>
+
+      <div class="flex-between mt-3" style="background:var(--moss-soft);border:1px solid rgba(47,93,58,.18);border-radius:9px;padding:10px 12px">
+        <div style="min-width:0">
+          <div style="font-size:13px;font-weight:600;color:var(--moss-deep)">Nguyên tắc thực lĩnh ≥ 0</div>
+          <div class="t-caption" style="color:var(--moss-deep)">Lương thực lĩnh không âm — phần khấu trừ vượt được dồn sang kỳ sau.</div>
+        </div>
+        <label class="sw"><input type="checkbox" checked data-toggle="1"/><span class="slider"></span></label>
+      </div>
+
+      <div class="flex" style="gap:8px;margin-top:14px">
+        <button class="btn btn-secondary btn-sm" style="flex:1"><i data-lucide="rotate-ccw" style="width:13px;height:13px"></i> Khôi phục mặc định</button>
+        <button class="btn btn-primary btn-sm" style="flex:1"><i data-lucide="save" style="width:13px;height:13px"></i> Lưu cấu hình</button>
+      </div>
+    </div>
+
+    <!-- Phổ biến nội quy tới nhân viên -->
+    <div class="card">
+      <div class="t-h5 mb-1">Phổ biến nội quy tới nhân viên</div>
+      <div class="t-caption mb-3">Tỷ lệ NV đã nhận & xác nhận đọc nội quy</div>
+
+      <div style="text-align:center;margin:4px 0 12px">
+        <div class="t-h1" style="line-height:1">95<span style="font-size:20px">%</span></div>
+        <div class="t-caption">40 / 42 nhân sự đã nhận nội quy</div>
+      </div>
+      <div class="progress success mb-1" style="height:8px"><div style="width:95%"></div></div>
+      <div class="flex-between t-caption mb-3"><span>Đã nhận 40</span><span>Chưa nhận 2</span></div>
+
+      <hr class="hr-soft">
+
+      <div class="flex-between mb-1">
+        <div class="t-micro-u">Chưa nhận / chưa đọc nội quy</div>
+        <span class="badge status-warning">2 NV</span>
+      </div>
+
+      <div class="emp-mini">
+        <span class="emp-av">VK</span>
+        <div style="min-width:0;flex:1">
+          <div style="font-size:13px;font-weight:500">Võ Minh Khôi</div>
+          <div class="t-caption">NV-040 · Hoàn thiện · gửi 12/06</div>
+        </div>
+        <button class="btn btn-secondary btn-sm"><i data-lucide="bell" style="width:13px;height:13px"></i> Nhắc đọc</button>
+      </div>
+      <div class="emp-mini">
+        <span class="emp-av">PH</span>
+        <div style="min-width:0;flex:1">
+          <div style="font-size:13px;font-weight:500">Phạm Thu Hà</div>
+          <div class="t-caption">NV-041 · Văn phòng · gửi 12/06</div>
+        </div>
+        <button class="btn btn-secondary btn-sm"><i data-lucide="bell" style="width:13px;height:13px"></i> Nhắc đọc</button>
+      </div>
+
+      <button class="btn btn-primary btn-sm" style="width:100%;margin-top:14px"><i data-lucide="send" style="width:13px;height:13px"></i> Gửi nhắc tất cả NV chưa nhận</button>
+
+      <div class="mt-3" style="background:var(--steel-soft);border-radius:9px;padding:10px 12px;font-size:12px;color:var(--steel)">
+        <i data-lucide="info" style="width:13px;height:13px;vertical-align:-2px"></i>
+        NV xác nhận đọc trực tiếp trên app · hệ thống ghi nhận thời điểm để đối chiếu khi xử lý kỷ luật.
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ Cơ chế thưởng/phạt theo bộ phận ============ -->
+  <div class="card mb-4">
+    <div class="t-h5 mb-1">Cơ chế thưởng / phạt theo bộ phận</div>
+    <div class="t-caption mb-3">Ánh xạ bộ phận → cơ chế thưởng → cơ chế phạt · đồng bộ với Phiếu lỗi–Biên bản · phân biệt lỗi nội bộ và lỗi ảnh hưởng khách hàng</div>
+
+    <div class="table-wrap">
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th>Bộ phận</th>
+            <th>Cơ chế thưởng</th>
+            <th>Cơ chế phạt</th>
+            <th>Phân biệt nội bộ / khách hàng</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><b>Cắt CNC</b><div class="t-caption">Dây chuyền Alfa Laval</div></td>
+            <td>Thưởng năng suất theo cây nhôm cắt đạt + thưởng tiết kiệm nhôm (ít đầu mẩu)</td>
+            <td>Bồi thường giá thành sản xuất lại phần phế phẩm do lỗi thao tác (vượt định mức hao hụt)</td>
+            <td><span class="badge badge-rust">KH: bồi thường + xin lỗi</span> <span class="badge badge-steel">Nội bộ: nhắc nhở</span></td>
+          </tr>
+          <tr>
+            <td><b>KCS</b><div class="t-caption">KCS nhôm kính</div></td>
+            <td>Thưởng KPI tỷ lệ phát hiện lỗi sớm, không để hàng lỗi ra khách</td>
+            <td>Trừ 10% LCB nếu để lọt lỗi nghiêm trọng đến khách hàng</td>
+            <td><span class="badge badge-rust">KH: trừ 10% LCB</span> <span class="badge badge-steel">Nội bộ: lập biên bản</span></td>
+          </tr>
+          <tr>
+            <td><b>Hoàn thiện</b><div class="t-caption">Tổ đóng kiện 1–3</div></td>
+            <td>Thưởng sản lượng theo số bộ cửa đóng kiện đạt chuẩn / ca</td>
+            <td>Trừ công làm lại bộ cửa đóng kiện lỗi (xước sơn, bọc màng thiếu)</td>
+            <td><span class="badge badge-rust">KH: làm lại + trừ công</span> <span class="badge badge-steel">Nội bộ: làm lại</span></td>
+          </tr>
+          <tr>
+            <td><b>Ép góc</b><div class="t-caption">Tổ ép góc – lắp ráp</div></td>
+            <td>Thưởng năng suất m² ép góc + thưởng mối ép kín, ít phải ép lại</td>
+            <td>Trừ công ép lại phần khung cánh hở mối; bồi thường nếu hỏng dao ép do bất cẩn</td>
+            <td><span class="badge badge-rust">KH: làm lại</span> <span class="badge badge-steel">Nội bộ: trừ công</span></td>
+          </tr>
+          <tr>
+            <td><b>Uốn vòm</b><div class="t-caption">Tổ lọc</div></td>
+            <td>Thưởng sản lượng + tiết kiệm vật tư lọc</td>
+            <td>Bồi thường vật tư + công làm lại phần lọc lỗi (đục, lẫn cặn)</td>
+            <td><span class="badge badge-rust">KH: bồi thường VT</span> <span class="badge badge-steel">Nội bộ: làm lại</span></td>
+          </tr>
+          <tr>
+            <td><b>Kho</b><div class="t-caption">Thủ kho</div></td>
+            <td>Thưởng KPI tồn kho chính xác, không thất thoát</td>
+            <td>Bồi thường chênh lệch kiểm kê do lỗi chủ quan</td>
+            <td><span class="badge badge-steel">Chủ yếu nội bộ: bồi thường chênh lệch</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div style="text-align:center;padding:16px">
+    <div class="sticky teal"><i data-lucide="git-fork" style="width:14px;height:14px"></i> Cấu hình tại đây là <b>nguồn duy nhất</b> — Chấm công–Lương, Bậc lương–KPI và Phiếu lỗi–Biên bản đều đọc tham số từ trang này · mọi quy chế tường minh, rõ ràng, đúng pháp luật</div>
+  </div>
+
+</div>
+
+<script src="../assets/js/layout.js"></script>
+<script src="../assets/js/pricing-engine.js"></script>
+<script src="../assets/js/quote-data.js"></script>
+<script src="../assets/js/loss-data.js"></script>
+<script src="../assets/js/loss-ui.js"></script>
+</body>
+</html>

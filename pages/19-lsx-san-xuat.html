@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lệnh dạng danh sách — ERP NHÔM OWIN</title>
+  <link rel="stylesheet" href="../assets/css/style.css" />
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+  <style>
+    /* ===== 4 ô số nhỏ (strip mảnh ~64px) ===== */
+    .ls-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-bottom: 12px; }
+    @media (max-width: 900px) { .ls-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    .ls-stat { background: var(--canvas); border: 1px solid var(--rule-soft); border-radius: var(--r-5); padding: 10px 14px; min-height: 64px; display: flex; flex-direction: column; justify-content: center; min-width: 0; }
+    .ls-stat .l { font-family: var(--ff-mono); font-size: 9px; font-weight: 500; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ash); }
+    .ls-stat .v { font-size: 22px; font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; letter-spacing: -0.02em; margin-top: 3px; line-height: 1.1; }
+    .ls-stat .v .u { font-size: 11px; color: var(--ash); font-weight: 400; margin-left: 4px; letter-spacing: 0; }
+    .ls-stat.bad .v { color: #8a1f1f; }
+    .ls-stat.good .v { color: #1f6b3a; }
+
+    /* ===== Bộ lọc gọn ===== */
+    .ls-filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; background: var(--canvas); border: 1px solid var(--rule-soft); border-radius: var(--r-5); padding: 10px 12px; margin-bottom: 12px; }
+    .ls-filters select, .ls-filters input { font: inherit; font-size: 13px; padding: 7px 10px; min-height: 36px; border: 1px solid var(--rule); border-radius: var(--r-3); background: var(--paper); color: var(--ink); }
+    .ls-filters select:focus, .ls-filters input:focus { outline: none; border-color: var(--ink); }
+    .ls-filters .grow { flex: 1; min-width: 200px; }
+    .ls-filters .lbl { font-family: var(--ff-mono); font-size: 9px; font-weight: 500; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ash); }
+    .ls-filters .sep { width: 1px; height: 24px; background: var(--rule); }
+
+    /* ===== Bảng danh sách (phần chính) ===== */
+    .ls-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+    .ls-head .t { font-size: 14px; font-weight: 600; color: var(--ink); display: flex; align-items: center; gap: 8px; }
+    .ls-head .t .tag { font-family: var(--ff-mono); font-size: 9px; font-weight: 500; letter-spacing: 0.16em; text-transform: uppercase; color: var(--ash); padding: 2px 7px; background: var(--paper-2); border-radius: 2px; }
+    #lsxTbl { min-width: 1240px; }
+    #lsxTbl tbody td { padding: 10px 12px; }
+    .ls-row { cursor: pointer; }
+    .ls-code { font-family: var(--ff-mono); font-size: 13px; font-weight: 700; color: var(--ink); text-decoration: none; letter-spacing: -0.01em; }
+    .ls-row:hover .ls-code { color: var(--rust); }
+    .ls-name { font-weight: 600; color: var(--ink); line-height: 1.3; }
+    .ls-sub { font-size: 11px; color: var(--ash); margin-top: 2px; }
+    .ls-mono { font-family: var(--ff-mono); font-size: 12.5px; font-variant-numeric: tabular-nums; }
+    /* liên kết dạng trường — ERPPeek mở drawer đúng bản ghi */
+    .lnk { color: var(--steel); font-family: var(--ff-mono); font-size: 12.5px; text-decoration: none; border-bottom: 1px dashed rgba(74, 85, 96, 0.45); }
+    .lnk:hover { color: var(--rust); border-bottom-color: var(--rust); }
+    .ls-prog { display: flex; align-items: center; gap: 8px; min-width: 112px; }
+    .ls-bar { flex: 1; height: 6px; border-radius: 4px; background: var(--rule-hair); overflow: hidden; min-width: 56px; }
+    .ls-bar > i { display: block; height: 100%; border-radius: 4px; background: var(--moss); }
+    .ls-bar.warn > i { background: var(--amber); }
+    .ls-bar.bad > i { background: #8a1f1f; }
+    .ls-pct { font-family: var(--ff-mono); font-size: 11.5px; min-width: 34px; text-align: right; font-variant-numeric: tabular-nums; color: var(--ink); }
+    /* cột Trễ hạn / Thiệt hại — chỉ ~30% dòng có giá trị đỏ */
+    .ls-loss { font-size: 12.5px; font-weight: 600; white-space: nowrap; }
+    .ls-loss.bad { color: #8a1f1f; }
+    .ls-loss.good { color: #1f6b3a; }
+    .ls-loss.none { color: var(--ash-2); font-weight: 400; }
+    .ls-act { display: flex; gap: 6px; white-space: nowrap; }
+    .ls-act .btn { min-height: 36px; }
+    .ls-empty { padding: 48px 20px; text-align: center; color: var(--ash); font-size: 13px; }
+    .ls-qrbox { flex: none; text-align: center; }
+    .ls-qrbox svg { display: block; }
+    .ls-qrbox .cap { font-family: var(--ff-mono); font-size: 10px; letter-spacing: 0.08em; margin-top: 4px; color: #3d3a33; }
+  </style>
+</head>
+<body>
+
+<div id="app-shell" data-active="lsx" data-title="Lệnh dạng danh sách" data-crumb="<b>Sản xuất</b> · Lệnh dạng danh sách">
+  <div class="ls-stats" id="lsStats"></div>
+
+  <div class="ls-filters">
+    <span class="lbl">Trạng thái</span>
+    <select id="fStatus"><option value="">Tất cả</option></select>
+    <span class="lbl">Sản phẩm</span>
+    <select id="fProduct"><option value="">Tất cả</option></select>
+    <span class="lbl">Quản đốc</span>
+    <select id="fOwner"><option value="">Tất cả</option></select>
+    <span class="sep"></span>
+    <span class="lbl">Hạn giao</span>
+    <input type="date" id="fFrom" title="Từ ngày" />
+    <input type="date" id="fTo" title="Đến ngày" />
+    <input class="grow" type="search" id="fSearch" placeholder="Tìm mã LSX, đơn hàng, khách hàng, sản phẩm, máy…" />
+    <button class="btn btn-secondary" id="btnReset" data-no-interact="true"><i data-lucide="rotate-ccw" style="width:14px;height:14px"></i> Xoá lọc</button>
+  </div>
+
+  <div class="ls-head">
+    <div class="t"><i data-lucide="clipboard-list" style="width:14px;height:14px"></i> Danh sách lệnh sản xuất <span class="tag" id="lsCount">0 lệnh</span></div>
+    <span class="lbl" style="font-family:var(--ff-mono);font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--ash)">Bấm dòng để mở phiếu công nghệ</span>
+  </div>
+
+  <div class="table-wrap">
+    <table class="tbl" id="lsxTbl">
+      <thead>
+        <tr>
+          <th>Mã LSX</th>
+          <th>Sản phẩm</th>
+          <th class="num">SL KH</th>
+          <th class="num">SL đạt</th>
+          <th style="width:140px">Tiến độ</th>
+          <th>Đơn hàng</th>
+          <th>Khách hàng</th>
+          <th>Hạn giao</th>
+          <th>Quản đốc</th>
+          <th>Trạng thái</th>
+          <th>Trễ hạn / Thiệt hại</th>
+          <th style="width:200px">Thao tác</th>
+        </tr>
+      </thead>
+      <tbody id="lsxBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<script src="../assets/js/layout.js"></script>
+<script src="../assets/js/loss-data.js"></script>
+<script src="../assets/js/loss-ui.js"></script>
+<script src="../assets/js/pricing-engine.js"></script>
+<script src="../assets/js/quote-data.js"></script>
+<script src="../assets/js/stock-data.js"></script>
+<script src="../assets/js/vpp-data.js"></script>
+<script>
+  var Store = window.QuoteStore;
+  var $ = function (s) { return document.querySelector(s); };
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+  function fmt(n) { n = Number(n) || 0; return n.toLocaleString('vi-VN'); }
+  function fmt1(n) { return (Math.round((Number(n) || 0) * 10) / 10).toLocaleString('vi-VN', { minimumFractionDigits: 1, maximumFractionDigits: 1 }); }
+  function trieu(v) { return fmt1((Number(v) || 0) / 1000000) + ' tr'; }
+  function hashOf(s) { var h = 2166136261; s = String(s || ''); for (var i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = (h * 16777619) >>> 0; } return h >>> 0; }
+
+  // ===== Nhãn vòng đời theo ngành cửa nhôm (glossary §2) — key giữ nguyên =====
+  var LC_LABEL = {
+    'du-thao': 'Dự thảo', 'da-phat-hanh': 'Đã phát hành', 'cho-vat-tu': 'Chờ vật tư',
+    'dang-che-ban': 'Đang cắt & phay đố', 'cho-duyet-proof': 'Chờ duyệt mẫu', 'da-duyet-proof': 'Đã duyệt mẫu',
+    'dang-in': 'Đang ép góc – lắp khung', 'dang-gia-cong': 'Đang lắp kính & đóng kiện',
+    'cho-kcs': 'Chờ KCS', 'kcs-dat': 'KCS đạt', 'da-nhap-kho': 'Đã nhập kho',
+    'da-giao': 'Đã giao', 'da-dong': 'Đã đóng',
+    'kcs-loi': 'KCS lỗi', 'rework': 'Làm lại', 'scrap': 'Loại bỏ', 'tam-dung': 'Tạm dừng', 'da-huy': 'Đã huỷ'
+  };
+  var RUNNING_LC = ['da-phat-hanh', 'cho-vat-tu', 'dang-che-ban', 'cho-duyet-proof', 'da-duyet-proof', 'dang-in', 'dang-gia-cong', 'cho-kcs', 'kcs-loi'];
+  var CLOSED_LC = ['da-nhap-kho', 'da-giao', 'da-dong', 'da-huy', 'scrap'];
+  function lcOf(L) { return Store.lsxLifecycle(L); }
+  function lcMeta(L) { var k = lcOf(L); var m = Store.lifecycleMeta(k) || {}; return { key: k, label: LC_LABEL[k] || m.label || k, cls: m.cls || 'badge' }; }
+
+  // ===== Đơn vị theo ngành (glossary §12) =====
+  function unitOf(L) {
+    var p = ((L.product || '') + ' ' + (L.size || '')).toLowerCase();
+    if (/nhôm thanh|profile|bán xá|theo kg/.test(p)) return 'kg';
+    if (/uốn vòm|gia công theo mét|mét dài|\bmd\b/.test(p)) return 'md';
+    if (/cửa sổ|vách kính|chấn song|m²|m2/.test(p)) return 'm²';
+    return 'bộ';
+  }
+  // Trần năng lực 1 ca + đơn giá quy đổi thiệt hại (glossary §11)
+  var CAP_PER_SHIFT = { 'bộ': 28, 'm²': 120, 'kg': 1400, 'md': 300 };
+  var UNIT_VALUE = { 'bộ': 9800000, 'm²': 2400000, 'kg': 78500, 'md': 260000 };
+  var GIO_MAY = 185000, GIO_CONG = 62000;
+
+  function parseDate(s) { var m = /(\d{1,2})\/(\d{1,2})\/(\d{4})/.exec(String(s || '')); return m ? new Date(+m[3], +m[2] - 1, +m[1]) : null; }
+  function isoOf(d) { if (!d) return ''; function p(n) { return (n < 10 ? '0' : '') + n; } return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()); }
+
+  // ===== Quản đốc: tổ trưởng công đoạn đang chạy, fallback công đoạn đầu có người =====
+  function ownerOf(L, d) {
+    var work = (L.stages || []).filter(function (s) { return s.type !== 'date' && s.owner; });
+    var doing = work.filter(function (s) { return s.status === 'doing'; })[0];
+    if (doing) return doing.owner;
+    if (work.length) return work[0].owner;
+    return (d && d.worker && d.worker !== '—') ? d.worker : '—';
+  }
+  function machineOf(L) { var m = String(L.machineIn || L.machine || '').split('·')[0].trim(); return m; }
+
+  // ============================================================
+  //  CỘT "TRỄ HẠN / THIỆT HẠI" — CÓ CHỌN LỌC
+  //  Tất định theo mã LSX: ~30% đỏ (18% trễ hạn + 12% lỗi cao),
+  //  ~12% xanh (làm tốt), còn lại để "—". Không random mỗi lần render.
+  // ============================================================
+  var LOSS_CACHE = {}, LOSS_SLOT = null;
+  // Chu kỳ 10 dòng: 3 dòng đỏ (30%) + 1 dòng xanh (10%), rải đều — tất định,
+  // không random lại mỗi lần render. Hash mã LSX chỉ quyết định KIỂU và SỐ LIỆU.
+  var SLOT_BAD = [0, 4, 7], SLOT_GOOD = [2];
+  function lossSlots() {
+    if (LOSS_SLOT) return LOSS_SLOT;
+    LOSS_SLOT = {};
+    (Store.allLSX() || []).forEach(function (L, i) {
+      var m = i % 10, s = 'none';
+      if (SLOT_BAD.indexOf(m) >= 0) s = (hashOf(L.id) % 5) < 3 ? 'late' : 'defect';
+      else if (SLOT_GOOD.indexOf(m) >= 0) s = 'good';
+      LOSS_SLOT[L.id] = s;
+    });
+    return LOSS_SLOT;
+  }
+  function lossOf(L, d) {
+    if (LOSS_CACHE[L.id]) return LOSS_CACHE[L.id];
+    var h = hashOf(L.id), u = unitOf(L);
+    var slot = lossSlots()[L.id] || 'none';
+    // lệnh đã khép (nhập kho / giao / đóng) thì không còn "trễ hạn" → quy về lỗi chất lượng
+    if (slot === 'late' && CLOSED_LC.indexOf(lcOf(L)) >= 0) slot = 'defect';
+    var r = { kind: 'none', text: '—', amount: 0, lateDays: 0, defect: 0 };
+    if (slot === 'late') {
+      var days = 1 + ((h >>> 3) % 5);                       // trễ 1–5 ngày
+      var amt = days * 8 * (GIO_MAY + 4 * GIO_CONG);        // giờ máy dừng + 4 thợ chờ việc
+      r = { kind: 'bad', text: 'Trễ ' + days + ' ngày · ' + trieu(amt), amount: amt, lateDays: days, defect: 0 };
+    } else if (slot === 'defect') {
+      var pct = 2 + ((h >>> 5) % 26) / 10;                  // lỗi 2,0 – 4,5 %
+      var lot = Math.min(Number(L.qty) || 0, CAP_PER_SHIFT[u] || 28) || (CAP_PER_SHIFT[u] || 28);
+      var amt2 = Math.max(1500000, Math.round(pct / 100 * lot * (UNIT_VALUE[u] || 9800000)));
+      r = { kind: 'bad', text: 'Lỗi ' + fmt1(pct) + '% · ' + trieu(amt2), amount: amt2, lateDays: 0, defect: pct };
+    } else if (slot === 'good') {
+      if ((h >>> 7) % 2) r = { kind: 'good', text: 'Xong sớm ' + (1 + ((h >>> 9) % 2)) + ' ngày', amount: 0, lateDays: 0, defect: 0 };
+      else r = { kind: 'good', text: 'Hao dưới ĐM ' + fmt1(0.8 + ((h >>> 11) % 12) / 10) + '%', amount: 0, lateDays: 0, defect: 0 };
+    }
+    LOSS_CACHE[L.id] = r;
+    return r;
+  }
+
+  // ============================================================
+  //  QR — dùng ERPQR.svg của layout.js; dự phòng khi chưa có
+  // ============================================================
+  function qrSvg(text, size) {
+    size = size || 104;
+    if (window.ERPQR && typeof ERPQR.svg === 'function') return ERPQR.svg(String(text), size);
+    var n = 25, out = '<svg width="' + size + '" height="' + size + '" viewBox="0 0 ' + n + ' ' + n + '" xmlns="http://www.w3.org/2000/svg"><rect width="' + n + '" height="' + n + '" fill="#ffffff"/>';
+    var s = hashOf(text);
+    for (var y = 0; y < n; y++) for (var x = 0; x < n; x++) {
+      if ((x < 8 && y < 8) || (x > n - 9 && y < 8) || (x < 8 && y > n - 9)) continue;
+      s = (s * 1664525 + 1013904223) >>> 0;
+      if (((s >>> 16) & 3) === 0) out += '<rect x="' + x + '" y="' + y + '" width="1" height="1" fill="#14130f"/>';
+    }
+    [[0, 0], [n - 7, 0], [0, n - 7]].forEach(function (p) {
+      out += '<rect x="' + p[0] + '" y="' + p[1] + '" width="7" height="7" fill="#14130f"/>' +
+        '<rect x="' + (p[0] + 1) + '" y="' + (p[1] + 1) + '" width="5" height="5" fill="#ffffff"/>' +
+        '<rect x="' + (p[0] + 2) + '" y="' + (p[1] + 2) + '" width="3" height="3" fill="#14130f"/>';
+    });
+    return out + '</svg>';
+  }
+
+  // ============================================================
+  //  IN LỆNH — bản rút gọn có QR (ERPPrint.preview)
+  // ============================================================
+  function printLSX(L, d) {
+    var u = unitOf(L), lm = lcMeta(L), ls = lossOf(L, d);
+    var work = (L.stages || []).filter(function (s) { return s.type !== 'date'; });
+    var rows = work.map(function (s, i) {
+      var st = s.status === 'done' ? 'Đã xong' : (s.status === 'doing' ? 'Đang chạy' : 'Chờ');
+      return '<tr><td class="c">' + (i + 1) + '</td><td>' + esc(s.name) + '</td><td>' + esc(s.owner || '—') + '</td>' +
+        '<td>' + esc(s.machine || machineOf(L) || '—') + '</td><td class="c">' + st + '</td></tr>';
+    }).join('') || '<tr><td colspan="5" class="c">Chưa cấu hình công đoạn</td></tr>';
+    var body = ERPPrint.docHead() +
+      '<div class="pdoc-title">LỆNH SẢN XUẤT</div>' +
+      '<div class="pdoc-sub">' + esc(L.id) + ' · ' + esc(lm.label) + ' · hạn giao ' + esc(L.dateDelivery || '—') + '</div>' +
+      '<div style="display:flex;gap:18px;align-items:flex-start">' +
+        '<table class="pdoc-rows" style="flex:1;margin:0">' +
+          '<tr><td>Mã lệnh sản xuất</td><td><b>' + esc(L.id) + '</b></td></tr>' +
+          '<tr><td>Sản phẩm</td><td>' + esc(L.product || '—') + (L.size ? ' · ' + esc(L.size) : '') + '</td></tr>' +
+          '<tr><td>Số lượng kế hoạch</td><td>' + fmt(L.qty) + ' ' + esc(u) + '</td></tr>' +
+          '<tr><td>Đơn hàng / Báo giá</td><td>' + esc(L.orderId || '—') + ' / ' + esc(L.bgId || '—') + '</td></tr>' +
+          '<tr><td>Khách hàng</td><td>' + esc(L.customer || '—') + '</td></tr>' +
+          '<tr><td>Quản đốc · Máy</td><td>' + esc(ownerOf(L, d)) + ' · ' + esc(machineOf(L) || '—') + '</td></tr>' +
+        '</table>' +
+        '<div class="ls-qrbox">' + qrSvg(L.id, 104) + '<div class="cap">' + esc(L.id) + '</div></div>' +
+      '</div>' +
+      '<table class="pdoc-items"><thead><tr><th style="width:34px">#</th><th>Công đoạn</th><th>Tổ trưởng</th><th>Máy</th><th style="width:88px">Trạng thái</th></tr></thead><tbody>' + rows + '</tbody></table>' +
+      (ls.kind === 'bad' ? '<div class="pdoc-note"><b>Cảnh báo:</b> ' + esc(ls.text) + '</div>' : '') +
+      '<div class="pdoc-sign"><div><b>NGƯỜI LẬP LỆNH</b><i>Kế hoạch sản xuất</i><div class="sp"></div></div>' +
+        '<div><b>QUẢN ĐỐC</b><i>' + esc(ownerOf(L, d)) + '</i><div class="sp"></div></div>' +
+        '<div><b>KCS NHÔM KÍNH</b><i>Ký xác nhận</i><div class="sp"></div></div></div>';
+    ERPPrint.preview({ title: 'Xem trước — Lệnh sản xuất ' + L.id, printTitle: 'Lenh-san-xuat-' + L.id, bodyHtml: body });
+  }
+
+  // ============================================================
+  //  DỮ LIỆU + LỌC + RENDER
+  // ============================================================
+  function buildRows() {
+    var views = {};
+    (Store.lsxKanbanView() || []).forEach(function (v) { views[v.id] = v; });
+    return (Store.allLSX() || []).map(function (L) {
+      var d = views[L.id] || {};
+      var due = parseDate(L.dateDelivery);
+      return {
+        L: L, d: d,
+        id: L.id,
+        product: L.product || '—',
+        unit: unitOf(L),
+        qty: Number(L.qty) || 0,
+        done: Number(d.done != null ? d.done : 0) || 0,
+        progress: Math.max(0, Math.min(100, Number(d.progress) || 0)),
+        orderId: L.orderId || '',
+        bgId: L.bgId || '',
+        customer: L.customer || '—',
+        due: due, dueText: L.dateDelivery || '—',
+        owner: ownerOf(L, d),
+        machine: machineOf(L),
+        lc: lcMeta(L),
+        loss: lossOf(L, d)
+      };
+    });
+  }
+
+  var ROWS = [];
+
+  function fillSelect(sel, values, keep) {
+    var cur = keep ? sel.value : '';
+    sel.innerHTML = '<option value="">Tất cả</option>' + values.map(function (v) {
+      return '<option value="' + esc(v.k) + '">' + esc(v.n) + '</option>';
+    }).join('');
+    if (cur) sel.value = cur;
+  }
+
+  function buildFilters() {
+    var lcs = [], prods = [], owners = [];
+    ROWS.forEach(function (r) {
+      if (lcs.filter(function (x) { return x.k === r.lc.key; }).length === 0) lcs.push({ k: r.lc.key, n: r.lc.label });
+      if (prods.indexOf(r.product) < 0) prods.push(r.product);
+      if (r.owner !== '—' && owners.indexOf(r.owner) < 0) owners.push(r.owner);
+    });
+    lcs.sort(function (a, b) { return a.n.localeCompare(b.n, 'vi'); });
+    prods.sort(function (a, b) { return a.localeCompare(b, 'vi'); });
+    owners.sort(function (a, b) { return a.localeCompare(b, 'vi'); });
+    fillSelect($('#fStatus'), lcs, true);
+    fillSelect($('#fProduct'), prods.map(function (p) { return { k: p, n: p }; }), true);
+    fillSelect($('#fOwner'), owners.map(function (o) { return { k: o, n: o }; }), true);
+  }
+
+  function filtered() {
+    var st = $('#fStatus').value, pr = $('#fProduct').value, ow = $('#fOwner').value;
+    var from = $('#fFrom').value ? new Date($('#fFrom').value) : null;
+    var to = $('#fTo').value ? new Date($('#fTo').value) : null;
+    var q = ($('#fSearch').value || '').trim().toLowerCase();
+    return ROWS.filter(function (r) {
+      if (st && r.lc.key !== st) return false;
+      if (pr && r.product !== pr) return false;
+      if (ow && r.owner !== ow) return false;
+      if (from && (!r.due || r.due < from)) return false;
+      if (to && (!r.due || r.due > to)) return false;
+      if (q) {
+        var hay = [r.id, r.orderId, r.bgId, r.customer, r.product, r.machine, r.owner, r.lc.label].join(' ').toLowerCase();
+        if (hay.indexOf(q) < 0) return false;
+      }
+      return true;
+    });
+  }
+
+  function statsHTML(list) {
+    var running = list.filter(function (r) { return RUNNING_LC.indexOf(r.lc.key) >= 0; }).length;
+    var late = list.filter(function (r) { return r.loss.lateDays > 0; }).length;
+    var damage = list.reduce(function (a, r) { return a + r.loss.amount; }, 0);
+    var sum = 0;
+    list.forEach(function (r) { sum += r.loss.defect ? (100 - r.loss.defect) : (r.loss.kind === 'good' ? 99.6 : 98.7); });
+    var rate = list.length ? sum / list.length : 0;
+    return '' +
+      '<div class="ls-stat"><span class="l">Lệnh đang chạy</span><span class="v">' + fmt(running) + '<span class="u">lệnh</span></span></div>' +
+      '<div class="ls-stat' + (late ? ' bad' : '') + '"><span class="l">Lệnh trễ hạn</span><span class="v">' + fmt(late) + '<span class="u">lệnh</span></span></div>' +
+      '<div class="ls-stat' + (rate >= 98 ? ' good' : '') + '"><span class="l">Tỷ lệ đạt TB</span><span class="v">' + fmt1(rate) + '<span class="u">%</span></span></div>' +
+      '<div class="ls-stat' + (damage ? ' bad' : '') + '"><span class="l">Thiệt hại tháng</span><span class="v">' + fmt1(damage / 1000000) + '<span class="u">tr ₫</span></span></div>';
+  }
+
+  function rowHTML(r) {
+    var barCls = r.progress >= 80 ? '' : (r.progress >= 40 ? ' warn' : ' bad');
+    var orderCell = r.orderId
+      ? '<a class="lnk" href="03-don-hang.html?order=' + encodeURIComponent(r.orderId) + '">' + esc(r.orderId) + '</a>'
+      : '<span class="ls-loss none">—</span>';
+    var bgCell = r.bgId ? '<div class="ls-sub"><a class="lnk" href="02-bao-gia.html?bg=' + encodeURIComponent(r.bgId) + '">' + esc(r.bgId) + '</a></div>' : '';
+    var machineCell = r.machine ? '<div class="ls-sub"><a class="lnk" href="17-may-moc.html?may=' + encodeURIComponent(r.machine) + '">' + esc(r.machine) + '</a></div>' : '';
+    return '<tr class="ls-row" data-lsx="' + esc(r.id) + '">' +
+      '<td><a class="ls-code" data-pk-nav="1" href="06-lsx-phieu-cong-nghe.html?id=' + encodeURIComponent(r.id) + '">' + esc(r.id) + '</a>' +
+        (r.L.lot ? '<div class="ls-sub">' + esc(r.L.lot) + '</div>' : '') + '</td>' +
+      '<td><div class="ls-name">' + esc(r.product) + '</div><div class="ls-sub">' + esc(r.L.size || r.L.productCode || '—') + '</div></td>' +
+      '<td class="num ls-mono">' + fmt(r.qty) + ' <span style="color:var(--ash);font-size:10px">' + esc(r.unit) + '</span></td>' +
+      '<td class="num ls-mono" style="color:var(--moss-deep)">' + fmt(r.done) + '</td>' +
+      '<td><div class="ls-prog"><div class="ls-bar' + barCls + '"><i style="width:' + r.progress + '%"></i></div><span class="ls-pct">' + r.progress + '%</span></div></td>' +
+      '<td>' + orderCell + bgCell + '</td>' +
+      '<td><a class="lnk" href="07-crm.html?kh=' + encodeURIComponent(r.customer) + '">' + esc(r.customer) + '</a></td>' +
+      '<td class="ls-mono">' + esc(r.dueText) + '</td>' +
+      '<td><div class="ls-name" style="font-weight:500">' + esc(r.owner) + '</div>' + machineCell + '</td>' +
+      '<td><span class="badge ' + esc(r.lc.cls) + '">' + esc(r.lc.label) + '</span></td>' +
+      '<td><span class="ls-loss ' + r.loss.kind + '">' + esc(r.loss.text) + '</span></td>' +
+      '<td><div class="ls-act">' +
+        '<button class="btn btn-secondary btn-sm" data-no-interact="true" data-open="' + esc(r.id) + '"><i data-lucide="eye" style="width:13px;height:13px"></i> Xem chi tiết</button>' +
+        '<button class="btn btn-secondary btn-sm" data-no-interact="true" data-print="' + esc(r.id) + '"><i data-lucide="printer" style="width:13px;height:13px"></i> In lệnh</button>' +
+      '</div></td>' +
+      '</tr>';
+  }
+
+  function render() {
+    var list = filtered();
+    $('#lsStats').innerHTML = statsHTML(list);
+    $('#lsCount').textContent = fmt(list.length) + ' lệnh';
+    $('#lsxBody').innerHTML = list.length
+      ? list.map(rowHTML).join('')
+      : '<tr><td colspan="12"><div class="ls-empty">Không có lệnh sản xuất nào khớp bộ lọc.</div></td></tr>';
+    if (window.lucide) lucide.createIcons();
+  }
+
+  function openDetail(id) { window.location.href = '06-lsx-phieu-cong-nghe.html?id=' + encodeURIComponent(id); }
+  function rowById(id) { return ROWS.filter(function (r) { return r.id === id; })[0] || null; }
+
+  function init() {
+    ROWS = buildRows();
+    buildFilters();
+    // lọc sẵn theo tham số URL (mở từ trang khác)
+    var p = new URLSearchParams(location.search);
+    var q = p.get('lsx') || p.get('order') || p.get('q');
+    if (q) $('#fSearch').value = q;
+    render();
+
+    ['#fStatus', '#fProduct', '#fOwner', '#fFrom', '#fTo'].forEach(function (s) { $(s).addEventListener('change', render); });
+    $('#fSearch').addEventListener('input', render);
+    $('#btnReset').addEventListener('click', function () {
+      ['#fStatus', '#fProduct', '#fOwner', '#fFrom', '#fTo', '#fSearch'].forEach(function (s) { $(s).value = ''; });
+      render();
+    });
+
+    $('#lsxBody').addEventListener('click', function (e) {
+      var pb = e.target.closest('[data-print]');
+      if (pb) { e.preventDefault(); e.stopPropagation(); var rp = rowById(pb.getAttribute('data-print')); if (rp) printLSX(rp.L, rp.d); return; }
+      var ob = e.target.closest('[data-open]');
+      if (ob) { e.preventDefault(); e.stopPropagation(); openDetail(ob.getAttribute('data-open')); return; }
+      // anchor liên kết trường (ĐH · BG · KH · máy) → để ERPPeek xử lý, không mở chi tiết
+      if (e.target.closest('a.lnk')) return;
+      var a = e.target.closest('a.ls-code');
+      if (a) return;                       // anchor mã LSX tự điều hướng sang trang 06
+      var tr = e.target.closest('.ls-row');
+      if (tr) openDetail(tr.getAttribute('data-lsx'));
+    });
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
+</script>
+</body>
+</html>

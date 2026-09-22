@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Báo cáo — ERP NHÔM OWIN</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/css/style.css" />
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+  <style>
+    .rep-card { display:block; text-decoration:none; color:inherit; padding:18px 16px; cursor:pointer; }
+    .rep-card .t-h5 { line-height:1.25; }
+    .rep-card:hover { border-color: var(--ink); }
+  </style>
+</head>
+<body>
+
+<div id="app-shell" data-active="bao-cao" data-title="Báo cáo" data-crumb="<b>Báo cáo</b> · Phân tích &amp; thống kê nhà máy cửa nhôm">
+
+  <div class="page-header">
+    <div>
+      <h1>Báo cáo &amp; phân tích</h1>
+      <p>8 nhóm báo cáo ngành nhôm · cập nhật realtime · xuất Excel/PDF</p>
+    </div>
+    <div class="actions">
+      <button class="filter-pill" data-no-interact="true"><i data-lucide="calendar" style="width:13px;height:13px"></i> Tháng 5/2026 <i data-lucide="chevron-down" style="width:13px;height:13px"></i></button>
+      <button class="btn btn-primary" data-no-interact="true"><i data-lucide="download" style="width:14px;height:14px"></i> Xuất Excel</button>
+    </div>
+  </div>
+
+  <!-- ===== Danh mục báo cáo theo ngành nhôm ===== -->
+  <div class="grid grid-4 mb-6" style="gap:16px">
+    <a class="card-feature-yellow rep-card" href="#repDoanhThu">
+      <i data-lucide="trending-up" style="width:24px;height:24px;color:var(--rust)"></i>
+      <div class="t-h5 mt-3">Doanh thu theo hệ nhôm</div>
+      <div class="t-caption" style="color:var(--rust);margin-top:4px">Thuỷ lực · Trượt quay · Luxanode · Vòm · Nhôm thanh</div>
+    </a>
+    <a class="card-feature-teal rep-card" href="#repSanLuong">
+      <i data-lucide="factory" style="width:24px;height:24px;color:var(--moss)"></i>
+      <div class="t-h5 mt-3">Sản lượng theo công đoạn</div>
+      <div class="t-caption" style="color:var(--moss);margin-top:4px">Cắt CNC → Uốn vòm → Ép góc → Lắp kính → Đóng kiện</div>
+    </a>
+    <a class="card-feature-coral rep-card" href="#repQC">
+      <i data-lucide="shield-check" style="width:24px;height:24px;color:var(--rust-2)"></i>
+      <div class="t-h5 mt-3">Tỷ lệ đạt / lỗi / phế</div>
+      <div class="t-caption" style="color:var(--rust-2);margin-top:4px">KCS nhôm kính · theo mã lỗi &amp; công đoạn</div>
+    </a>
+    <a class="card-feature-rose rep-card" href="#repHaoHut">
+      <i data-lucide="trending-down" style="width:24px;height:24px;color:var(--rust-2)"></i>
+      <div class="t-h5 mt-3">Hao hụt nhôm so định mức</div>
+      <div class="t-caption" style="color:var(--rust-2);margin-top:4px">Đầu mẩu cắt · phôi hỏng khi uốn vòm</div>
+    </a>
+    <a class="card-feature-blue rep-card" href="14-tbmm-bao-tri.html">
+      <i data-lucide="gauge" style="width:24px;height:24px;color:var(--steel)"></i>
+      <div class="t-h5 mt-3">Hiệu suất máy (OEE)</div>
+      <div class="t-caption" style="color:var(--steel);margin-top:4px">CAT · CNC · EP · UON · LAP · DOT</div>
+    </a>
+    <a class="card-feature-orange rep-card" href="05-kho.html">
+      <i data-lucide="package" style="width:24px;height:24px;color:var(--amber)"></i>
+      <div class="t-h5 mt-3">Tồn kho &amp; vòng quay</div>
+      <div class="t-caption" style="margin-top:4px;color:var(--amber)">Nhôm thanh · kính · phụ kiện · thành phẩm</div>
+    </a>
+    <a class="card-feature rep-card" href="15-ke-toan.html">
+      <i data-lucide="receipt" style="width:24px;height:24px;color:var(--moss)"></i>
+      <div class="t-h5 mt-3">Công nợ khách &amp; NCC</div>
+      <div class="t-caption" style="margin-top:4px">Phải thu đại lý · phải trả nhà cung cấp</div>
+    </a>
+    <a class="card-feature rep-card" href="07-crm.html">
+      <i data-lucide="users" style="width:24px;height:24px;color:var(--rust)"></i>
+      <div class="t-h5 mt-3">Hiệu quả đại lý</div>
+      <div class="t-caption" style="margin-top:4px">Doanh số luỹ kế · hạng đại lý · dàn máy chuyển giao</div>
+    </a>
+  </div>
+
+  <!-- ===== Báo cáo thiệt hại (tách riêng, nổi bật) ===== -->
+  <a class="card mb-6" href="31-bao-cao-thiet-hai.html"
+     style="background:var(--ink);color:#fff;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:22px 24px;text-decoration:none;flex-wrap:wrap">
+    <div style="display:flex;align-items:center;gap:16px">
+      <i data-lucide="alert-octagon" style="width:30px;height:30px;color:#e5c454"></i>
+      <div>
+        <div class="t-h4" style="color:#fff">Báo cáo thiệt hại &amp; lãng phí</div>
+        <div class="t-caption" style="color:rgba(255,255,255,.7);margin-top:3px">
+          Nhôm hỏng khi uốn vòm · kính vỡ khi lắp · giờ máy chết · công làm lại — quy ra tiền, bấm vào truy nguyên tới lệnh sản xuất gốc
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:18px">
+      <div style="text-align:right">
+        <div class="t-micro-u" style="color:rgba(255,255,255,.6)">THIỆT HẠI T5/2026</div>
+        <div class="t-h3" style="color:#e5c454">184.6M ₫</div>
+      </div>
+      <i data-lucide="arrow-right" style="width:22px;height:22px;color:#fff"></i>
+    </div>
+  </a>
+
+  <!-- ===== Preview: Doanh thu theo hệ nhôm ===== -->
+  <div class="card mb-4" id="repDoanhThu">
+    <div class="flex-between mb-4">
+      <div>
+        <div class="t-h5">Doanh thu theo hệ nhôm · 6 tháng gần nhất</div>
+        <div class="t-caption">Đơn vị: triệu ₫ · Mục tiêu tháng 5: 3.000 triệu</div>
+      </div>
+      <div class="flex-gap-2">
+        <button class="tab tab-active" data-no-interact="true">Cột</button>
+        <button class="tab" data-no-interact="true">Đường</button>
+        <button class="tab" data-no-interact="true">Bảng</button>
+      </div>
+    </div>
+    <div id="chartRevByLine" style="min-height:260px"></div>
+  </div>
+
+  <div class="grid grid-2 mb-4">
+    <div class="card">
+      <div class="t-h5 mb-3">Top 5 khách hàng theo doanh số</div>
+      <div class="table-wrap" style="border:none">
+        <table class="tbl">
+          <thead><tr><th>#</th><th>Khách hàng</th><th>Nhóm</th><th class="num">Số đơn</th><th class="num">Doanh số</th></tr></thead>
+          <tbody>
+            <tr><td>1</td><td><b>VINHOMES OCEAN PARK</b></td><td>Chủ đầu tư</td><td class="num">42</td><td class="num"><b>1.200M</b></td></tr>
+            <tr><td>2</td><td><b>ĐL Owin Hoàng Long</b></td><td>Đại lý uỷ quyền</td><td class="num">38</td><td class="num"><b>980M</b></td></tr>
+            <tr><td>3</td><td><b>SUN GROUP HẠ LONG</b></td><td>Chủ đầu tư</td><td class="num">22</td><td class="num"><b>640M</b></td></tr>
+            <tr><td>4</td><td><b>ĐL Nhôm kính Minh Anh</b></td><td>Đại lý uỷ quyền</td><td class="num">25</td><td class="num"><b>620M</b></td></tr>
+            <tr><td>5</td><td><b>Nhôm kính Đại Phát</b></td><td>Cửa hàng nhôm kính</td><td class="num">25</td><td class="num"><b>580M</b></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="t-h5 mb-3">Top 5 sản phẩm bán chạy</div>
+      <div class="table-wrap" style="border:none">
+        <table class="tbl">
+          <thead><tr><th>#</th><th>Sản phẩm</th><th class="num">Sản lượng</th><th class="num">Doanh số</th></tr></thead>
+          <tbody>
+            <tr><td>1</td><td>Cửa thuỷ lực hệ 120 · 2 cánh</td><td class="num">286 m²</td><td class="num"><b>1.082M</b></td></tr>
+            <tr><td>2</td><td>Cửa trượt quay 93 · 4 cánh</td><td class="num">268 m²</td><td class="num"><b>684M</b></td></tr>
+            <tr><td>3</td><td>Nhôm thanh hệ 120 (bán xá)</td><td class="num">5.420 kg</td><td class="num"><b>569M</b></td></tr>
+            <tr><td>4</td><td>Cửa sổ mở quay Luxanode 121</td><td class="num">158 m²</td><td class="num"><b>342M</b></td></tr>
+            <tr><td>5</td><td>Cửa vòm nhôm uốn hệ 120 · 2 cánh</td><td class="num">38 m²</td><td class="num"><b>170M</b></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Hao hụt + QC ===== -->
+  <div class="grid grid-2 mb-4">
+    <div class="card" id="repHaoHut">
+      <div class="t-h5 mb-3">Hao hụt nhôm theo công đoạn · tháng 5/2026</div>
+      <div id="chartLoss" style="min-height:240px"></div>
+      <div class="t-caption mt-2">Hao thực tế (%) so định mức BOM · uốn vòm hao cao nhất do phôi hỏng khi bán kính nhỏ</div>
+    </div>
+    <div class="card" id="repQC">
+      <div class="t-h5 mb-3">Lỗi KCS theo mã lỗi</div>
+      <div id="chartQC" style="min-height:240px"></div>
+      <div class="t-caption mt-2">Tổng 412 lỗi/tháng · giảm 8% so với T4</div>
+    </div>
+  </div>
+
+  <!-- ===== Sản lượng theo công đoạn ===== -->
+  <div class="card" id="repSanLuong">
+    <div class="flex-between mb-3">
+      <div>
+        <div class="t-h5">Sản lượng &amp; tỷ lệ đạt theo công đoạn · T5/2026</div>
+        <div class="t-caption">Bán thành phẩm ra ở từng bước · đỏ = kém hiệu quả, xanh = làm tốt</div>
+      </div>
+      <button class="btn btn-secondary btn-sm" data-no-interact="true"><i data-lucide="download" style="width:13px;height:13px"></i> Xuất bảng</button>
+    </div>
+    <div class="table-wrap" style="border:none">
+      <table class="tbl">
+        <thead><tr><th>Công đoạn</th><th>Bán thành phẩm ra</th><th>Máy chính</th><th class="num">Sản lượng</th><th class="num">Tỷ lệ đạt</th><th>Cảnh báo</th></tr></thead>
+        <tbody>
+          <tr><td><b>1 · Tiếp nhận &amp; kiểm nhôm thanh</b></td><td>Nhôm thanh đã kiểm</td><td>—</td><td class="num">42.600 kg</td><td class="num text-success">99.6%</td><td class="text-success">Đạt ≥99% · làm tốt</td></tr>
+          <tr><td><b>2 · Cắt &amp; phay đố (CNC)</b></td><td>Bộ thanh đã cắt–phay</td><td>CAT-01 · CNC-03</td><td class="num">1.248 bộ</td><td class="num">97.8%</td><td style="color:var(--ash)">—</td></tr>
+          <tr><td><b>3 · Uốn vòm / định hình</b></td><td>Thanh vòm đã uốn</td><td>UON-01 · UON-02</td><td class="num">186 bộ</td><td class="num text-danger">91.4%</td><td class="text-danger">Phế 11.2% · vượt định mức 4.2đ</td></tr>
+          <tr><td><b>4 · Ép góc &amp; lắp khung cánh</b></td><td>Khung cánh đã ép góc</td><td>EP-02</td><td class="num">1.186 cánh</td><td class="num">98.2%</td><td style="color:var(--ash)">—</td></tr>
+          <tr><td><b>5 · Lắp kính &amp; phụ kiện</b></td><td>Cánh đã lắp kính–phụ kiện</td><td>LAP-01</td><td class="num">1.164 cánh</td><td class="num text-danger">96.1%</td><td class="text-danger">Vỡ 18 tấm kính · 6.9M ₫</td></tr>
+          <tr><td><b>6 · Bọc màng, QC &amp; đóng kiện</b></td><td>Bộ cửa hoàn thiện đóng kiện</td><td>—</td><td class="num">572 bộ</td><td class="num text-success">99.3%</td><td class="text-success">Xong trước hạn 2 ngày</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="t-caption mt-2" style="display:flex;align-items:flex-start;gap:6px">
+      <i data-lucide="alert-triangle" style="width:13px;height:13px;color:var(--rust-2);flex-shrink:0;margin-top:1px"></i>
+      <span>Chi tiết thiệt hại quy ra tiền &amp; truy nguyên lệnh sản xuất gốc xem tại
+        <a href="31-bao-cao-thiet-hai.html" style="color:var(--rust);border-bottom:1px solid">Báo cáo thiệt hại</a>.</span>
+    </div>
+  </div>
+
+</div>
+
+<script src="../assets/js/layout.js"></script>
+<script src="../assets/js/pricing-engine.js"></script>
+<script src="../assets/js/quote-data.js"></script>
+<script src="../assets/js/loss-data.js"></script>
+<script src="../assets/js/loss-ui.js"></script>
+<script>
+  document.addEventListener('erp:ready', () => {
+    ERPCharts.stackedBar('chartRevByLine', {
+      labels: ['T12/25','T1/26','T2/26','T3/26','T4/26','T5/26'],
+      datasets: [
+        { name:'Cửa thuỷ lực',        values:[420,480,510,580,620,720], color:'#14130f' },
+        { name:'Cửa trượt quay',      values:[380,400,440,520,580,680], color:'#c5400a' },
+        { name:'Cửa sổ Luxanode',     values:[300,340,360,420,480,560], color:'#2f5d3a' },
+        { name:'Uốn vòm nhôm',        values:[120,140,160,180,200,240], color:'#9c7714' },
+        { name:'Nhôm thanh (bán xá)', values:[280,310,330,380,420,520], color:'#4a5560' },
+      ]
+    }, { height: 260 });
+
+    ERPCharts.bar('chartLoss', {
+      labels: ['Kiểm nhôm','Cắt CNC','Uốn vòm','Ép góc','Lắp kính','Đóng kiện'],
+      values: [0.4, 6.2, 11.2, 1.8, 3.1, 0.5],
+    }, { height: 220, color: '#c5400a' });
+
+    ERPCharts.donut('chartQC', {
+      labels: ['UON-NUT Nứt khi uốn','CAT-SAI-KT Cắt sai KT','KINH-NUT Nứt vỡ kính','EP-HO-MOI Mối ép hở','Khác'],
+      values: [35, 22, 18, 15, 10],
+      colors: ['#c5400a','#9c7714','#4a5560','#2f5d3a','#918b7e'],
+    }, { size: 200, centerLabel: 'Tổng lỗi', centerValue: '412' });
+  });
+</script>
+</body>
+</html>

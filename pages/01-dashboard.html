@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard điều hành — ERP NHÔM OWIN</title>
+  <link rel="stylesheet" href="../assets/css/style.css" />
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+  <style>
+    /* ============================================================
+       Dashboard · Executive Cockpit (tab theo nhóm báo cáo)
+       ============================================================ */
+    .dash-hero {
+      display: flex; align-items: center; gap: 24px;
+      padding: 18px 22px;
+      background: var(--ink); color: var(--paper);
+      border-radius: var(--r-5);
+      margin-bottom: 12px;
+      position: relative; overflow: hidden;
+    }
+    .dash-hero::before { content: ""; position: absolute; top: 0; left: 0; width: 4px; height: 100%; background: var(--rust); }
+    .dash-hero .h-greet { flex: 1; min-width: 0; }
+    .dash-hero .h-greet h1 { font-size: 22px; font-weight: 500; letter-spacing: -0.01em; color: var(--paper); line-height: 1.15; }
+    .dash-hero .h-greet .h-sub { margin-top: 6px; font-size: 12px; color: rgba(245, 241, 232, 0.65); display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .dash-hero .h-sub b { color: var(--paper); font-weight: 500; }
+    .dash-hero .h-sub .danger { color: #e88a5e; font-weight: 500; }
+    .dash-hero .h-sub .good { color: #8db58f; font-weight: 500; }
+    .shift-pill { display: inline-flex; align-items: center; gap: 6px; padding: 3px 9px; background: rgba(245, 241, 232, 0.1); border: 1px solid rgba(245, 241, 232, 0.18); border-radius: 3px; font-family: var(--ff-mono); font-size: 10px; font-weight: 500; letter-spacing: 0.14em; text-transform: uppercase; }
+    .shift-pill::before { content: ""; width: 6px; height: 6px; background: var(--rust-2); border-radius: 9999px; animation: pulse 2.4s ease-in-out infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(1.6); } }
+    .dash-hero .h-clock { font-family: var(--ff-mono); font-size: 11px; font-weight: 500; letter-spacing: 0.16em; text-transform: uppercase; color: rgba(245, 241, 232, 0.55); align-self: flex-start; padding-top: 4px; }
+    .dash-hero .h-clock b { display: block; color: var(--paper); font-size: 26px; font-weight: 500; letter-spacing: -0.02em; line-height: 1; margin-top: 6px; text-transform: none; font-variant-numeric: tabular-nums; }
+    .dash-hero .h-actions { display: flex; gap: 8px; flex-shrink: 0; }
+    .dash-hero .btn-secondary { background: rgba(245, 241, 232, 0.06); border-color: rgba(245, 241, 232, 0.2); color: var(--paper); }
+    .dash-hero .btn-secondary:hover { background: rgba(245, 241, 232, 0.12); border-color: rgba(245, 241, 232, 0.4); color: var(--paper); }
+    .dash-hero .btn-primary { background: var(--rust); border-color: var(--rust); color: var(--paper); }
+    .dash-hero .btn-primary:hover { background: var(--rust-deep); border-color: var(--rust-deep); }
+
+    /* ============================================================
+       Global time filter
+       ============================================================ */
+    .timefilter {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 12px; flex-wrap: wrap;
+      margin-bottom: 12px; padding: 10px 12px;
+      background: var(--canvas); border: 1px solid var(--rule-soft); border-radius: var(--r-5);
+    }
+    .timefilter .tf-left { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .timefilter .tf-lbl { font-family: var(--ff-mono); font-size: 10px; font-weight: 500; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ash); padding-right: 4px; }
+    .tf-pills { display: inline-flex; gap: 3px; padding: 3px; background: var(--paper-2); border-radius: var(--r-3); }
+    .tf-pill { padding: 6px 14px; font-size: 12px; font-weight: 500; color: var(--ash); background: transparent; border: 0; border-radius: var(--r-2); cursor: pointer; transition: background 140ms ease, color 140ms ease; }
+    .tf-pill:hover { color: var(--ink); }
+    .tf-pill.active { background: var(--canvas); color: var(--ink); box-shadow: 0 1px 0 var(--rule); }
+    .timefilter .tf-right { font-size: 12px; color: var(--ash); display: inline-flex; align-items: center; gap: 8px; }
+    .timefilter .tf-right b { color: var(--moss); font-weight: 600; }
+    .tf-compare { display: inline-flex; align-items: center; gap: 5px; padding: 5px 10px; font-family: var(--ff-mono); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ash); border: 1px solid var(--rule); border-radius: var(--r-pill); cursor: pointer; }
+    .tf-compare:hover { border-color: var(--ink); color: var(--ink); }
+
+    /* ============================================================
+       Tab navigation (nhóm báo cáo)
+       ============================================================ */
+    .dtabs {
+      display: flex; gap: 2px; flex-wrap: wrap;
+      margin-bottom: 20px;
+      border-bottom: 1px solid var(--rule);
+    }
+    .dtab {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 11px 18px;
+      font-family: var(--ff-sans); font-size: 13px; font-weight: 500;
+      color: var(--ash); background: transparent;
+      border: 0; border-bottom: 2px solid transparent;
+      margin-bottom: -1px; cursor: pointer;
+      transition: color 140ms ease, border-color 140ms ease, background 140ms ease;
+    }
+    .dtab i { width: 15px; height: 15px; opacity: 0.85; }
+    .dtab:hover { color: var(--ink); background: var(--paper-2); }
+    .dtab.active { color: var(--ink); border-bottom-color: var(--rust); font-weight: 600; }
+    .dtab.active i { opacity: 1; color: var(--rust); }
+    .dt-dot { width: 6px; height: 6px; border-radius: 9999px; display: inline-block; }
+    .dt-dot.signal { background: var(--signal); }
+    .dt-dot.amber { background: var(--amber); }
+    .dtab-pane { animation: pane-in 220ms ease; }
+    @keyframes pane-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
+    /* ============================================================
+       Section bands (sub headings inside tabs)
+       ============================================================ */
+    .section-band { margin-bottom: 18px; }
+    .section-band:last-child { margin-bottom: 0; }
+    .section-band-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; padding: 0 2px; gap: 12px; flex-wrap: wrap; }
+    .section-band-head h2 { font-size: 14px; font-weight: 600; letter-spacing: -0.005em; color: var(--ink); display: inline-flex; align-items: center; gap: 8px; }
+    .section-band-head h2 .h-count { font-family: var(--ff-mono); font-size: 10px; font-weight: 500; letter-spacing: 0.14em; color: var(--ash); padding: 2px 6px; background: var(--paper-2); border-radius: 2px; text-transform: uppercase; }
+    .section-band-head .h-meta { font-family: var(--ff-mono); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ash); }
+
+    /* ============================================================
+       KPI cards (6-up financial)
+       ============================================================ */
+    .kpi-row { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; }
+    .kpi-card { background: var(--canvas); border: 1px solid var(--rule-soft); border-radius: var(--r-5); padding: 15px 15px 12px; display: flex; flex-direction: column; position: relative; min-width: 0; transition: border-color 160ms ease; }
+    .kpi-card:hover { border-color: var(--rule); }
+    .kpi-card::before { content: ""; position: absolute; top: -1px; left: 15px; width: 26px; height: 3px; background: var(--rust); border-radius: 0 0 2px 2px; }
+    .kpi-card.acc-moss::before { background: var(--moss); }
+    .kpi-card.acc-amber::before { background: var(--amber); }
+    .kpi-card.acc-steel::before { background: var(--steel); }
+    .kpi-card.acc-signal::before { background: var(--signal); }
+    .kpi-card .kpi-top { display: flex; justify-content: space-between; align-items: center; gap: 6px; margin-bottom: 8px; }
+    .kpi-card .kpi-lbl { font-family: var(--ff-mono); font-size: 9.5px; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ash); line-height: 1.4; }
+    .kpi-card .kpi-delta { display: inline-flex; align-items: center; gap: 3px; font-size: 10.5px; font-weight: 500; padding: 2px 5px; border-radius: 2px; white-space: nowrap; }
+    .kpi-card .kpi-delta.up { color: var(--moss); background: var(--moss-soft); }
+    .kpi-card .kpi-delta.down { color: var(--signal); background: var(--signal-soft); }
+    .kpi-card .kpi-delta.flat { color: var(--ash); background: var(--paper-2); }
+    .kpi-card .kpi-val { font-size: 25px; font-weight: 500; letter-spacing: -0.02em; color: var(--ink); line-height: 1.05; font-variant-numeric: tabular-nums; }
+    .kpi-card .kpi-val .unit { font-size: 12px; color: var(--ash); font-weight: 400; margin-left: 2px; }
+    .kpi-card .kpi-spark { margin: 7px -2px 5px; height: 28px; overflow: hidden; }
+    .kpi-card .kpi-spark svg { width: 100%; height: 100%; }
+    .kpi-card .kpi-bot { font-size: 10.5px; color: var(--ash); padding-top: 7px; border-top: 1px solid var(--rule-hair); display: flex; justify-content: space-between; align-items: center; gap: 6px; }
+    .kpi-card .kpi-bot b { color: var(--ink); font-weight: 500; }
+    .kpi-card .kpi-bot span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    /* card head common */
+    .card-h { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 14px; gap: 12px; }
+    .card-h .title { font-size: 14px; font-weight: 600; color: var(--ink); letter-spacing: -0.005em; }
+    .card-h .sub { font-family: var(--ff-mono); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ash); }
+    .card-h .actions { display: inline-flex; gap: 4px; }
+    .card-h .actions .tab { padding: 4px 9px; font-size: 11px; }
+
+    /* pipeline */
+    .pipeline { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; }
+    .pipe-stage { background: var(--paper); border: 1px solid var(--rule-soft); border-radius: var(--r-3); padding: 13px 12px; text-decoration: none; color: inherit; transition: border-color 140ms ease, background 140ms ease; display: flex; flex-direction: column; gap: 3px; position: relative; }
+    .pipe-stage:hover { border-color: var(--ink); background: var(--canvas); }
+    .pipe-stage .ps-name { font-family: var(--ff-mono); font-size: 9px; font-weight: 500; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ash); }
+    .pipe-stage .ps-count { font-size: 22px; font-weight: 500; letter-spacing: -0.015em; color: var(--ink); font-variant-numeric: tabular-nums; line-height: 1; margin-top: 3px; }
+    .pipe-stage .ps-count small { font-size: 11px; color: var(--ash); font-weight: 400; }
+    .pipe-stage .ps-value { font-size: 12px; font-weight: 600; color: var(--rust-deep); font-variant-numeric: tabular-nums; margin-top: 2px; }
+    .pipe-stage .ps-trend { font-size: 10px; color: var(--ash); margin-top: 2px; display: inline-flex; align-items: center; gap: 3px; }
+    .pipe-stage .ps-trend.up { color: var(--moss); }
+    .pipe-stage .ps-trend.down { color: var(--signal); }
+    .pipe-stage.has-alert::after { content: ""; position: absolute; top: 8px; right: 8px; width: 6px; height: 6px; border-radius: 9999px; background: var(--signal); }
+
+    /* mini list */
+    .mini-list { display: flex; flex-direction: column; }
+    .mini-item { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; padding: 11px 0; border-top: 1px solid var(--rule-hair); align-items: center; text-decoration: none; color: inherit; transition: padding 180ms ease; }
+    .mini-item:first-child { border-top: 0; padding-top: 2px; }
+    .mini-item:hover { padding-left: 6px; }
+    .mini-item .mi-title { font-size: 13px; font-weight: 500; color: var(--ink); line-height: 1.3; }
+    .mini-item .mi-meta { font-size: 11px; color: var(--ash); margin-top: 2px; line-height: 1.35; }
+    .mini-item .mi-right { text-align: right; flex-shrink: 0; }
+    .mini-item .mi-amt { font-size: 13px; font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; }
+
+    /* leaderboard */
+    .lb-row { display: grid; grid-template-columns: 24px minmax(0, 1fr) 70px 56px; gap: 10px; align-items: center; padding: 9px 0; border-bottom: 1px solid var(--rule-hair); font-size: 13px; }
+    .lb-row:last-child { border-bottom: 0; }
+    .lb-row .lb-rank { font-family: var(--ff-mono); font-size: 11px; color: var(--ash-2); text-align: center; }
+    .lb-row.top .lb-rank { color: var(--rust); font-weight: 600; }
+    .lb-row .lb-name { color: var(--ink); font-weight: 500; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .lb-row .lb-bar { height: 4px; background: var(--paper-2); border-radius: 9999px; overflow: hidden; }
+    .lb-row .lb-bar > div { height: 100%; background: var(--ink); transition: width 320ms ease; }
+    .lb-row.top .lb-bar > div { background: var(--rust); }
+    .lb-row .lb-val { text-align: right; font-variant-numeric: tabular-nums; font-weight: 500; color: var(--ink); }
+
+    /* quad cells */
+    .quad { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+    .quad-cell { background: var(--paper); border: 1px solid var(--rule-soft); border-radius: var(--r-3); padding: 11px 8px; text-align: center; }
+    .quad-cell .qc-num { font-size: 19px; font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; line-height: 1; }
+    .quad-cell .qc-lbl { font-size: 9.5px; color: var(--ash); margin-top: 5px; font-family: var(--ff-mono); letter-spacing: 0.06em; text-transform: uppercase; }
+    .quad-cell.ok .qc-num { color: var(--moss); }
+    .quad-cell.no .qc-num { color: var(--signal); }
+    .quad-cell.wait .qc-num { color: var(--amber); }
+
+    /* quote rows */
+    .qrow { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 8px; align-items: center; padding: 9px 0; border-top: 1px solid var(--rule-hair); text-decoration: none; color: inherit; }
+    .qrow:first-of-type { border-top: 0; }
+    .qrow:hover .q-code { color: var(--rust); }
+    .qrow .q-code { font-size: 12.5px; font-weight: 600; color: var(--ink); }
+    .qrow .q-meta { font-size: 11px; color: var(--ash); margin-top: 2px; line-height: 1.35; }
+    .qrow .q-meta .q-reason { color: var(--signal); }
+
+    /* breakdown bars */
+    .bd-row { display: grid; grid-template-columns: minmax(0,1fr) 78px; gap: 10px; align-items: center; padding: 8px 0; }
+    .bd-row .bd-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 5px; }
+    .bd-row .bd-name { font-size: 12.5px; color: var(--ink); }
+    .bd-row .bd-bar { height: 6px; background: var(--paper-2); border-radius: 9999px; overflow: hidden; }
+    .bd-row .bd-bar > div { height: 100%; background: var(--steel); border-radius: 9999px; transition: width 320ms ease; }
+    .bd-row.warn .bd-bar > div { background: var(--amber); }
+    .bd-row.danger .bd-bar > div { background: var(--signal); }
+    .bd-row.ok .bd-bar > div { background: var(--moss); }
+    .bd-row.rust .bd-bar > div { background: var(--rust); }
+    .bd-row .bd-val { text-align: right; font-size: 13px; font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; }
+    .bd-row.danger .bd-val { color: var(--signal); }
+    .bd-foot { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--rule-soft); display: flex; justify-content: space-between; align-items: baseline; font-size: 12px; color: var(--ash); }
+    .bd-foot b { color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; }
+
+    /* key-value finance table */
+    .kv { display: flex; flex-direction: column; }
+    .kv-row { display: grid; grid-template-columns: minmax(0,1fr) auto auto; gap: 10px; align-items: center; padding: 9px 0; border-bottom: 1px solid var(--rule-hair); font-size: 13px; }
+    .kv-row:last-child { border-bottom: 0; }
+    .kv-row .kv-name { color: var(--ink); font-weight: 500; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .kv-row .kv-a { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; color: var(--ink); }
+    .kv-row .kv-b { text-align: right; font-variant-numeric: tabular-nums; font-size: 12px; color: var(--ash); min-width: 64px; }
+    .kv-row .kv-b.over { color: var(--signal); font-weight: 600; }
+
+    /* op stat tiles */
+    .stat-tiles { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 10px; }
+    .stat-tile { background: var(--canvas); border: 1px solid var(--rule-soft); border-radius: var(--r-5); padding: 15px 16px; display: flex; flex-direction: column; gap: 4px; position: relative; }
+    .stat-tile .st-lbl { font-family: var(--ff-mono); font-size: 9.5px; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ash); }
+    .stat-tile .st-val { font-size: 24px; font-weight: 500; color: var(--ink); letter-spacing: -0.015em; font-variant-numeric: tabular-nums; line-height: 1.1; }
+    .stat-tile .st-val .unit { font-size: 12px; color: var(--ash); font-weight: 400; }
+    .stat-tile .st-sub { font-size: 11px; color: var(--ash); display: inline-flex; align-items: center; gap: 4px; }
+    .stat-tile .st-sub.up { color: var(--moss); }
+    .stat-tile .st-sub.down { color: var(--signal); }
+    .stat-tile .st-bar { height: 4px; background: var(--paper-2); border-radius: 9999px; overflow: hidden; margin-top: 6px; }
+    .stat-tile .st-bar > div { height: 100%; background: var(--ink); }
+    .stat-tile.good .st-bar > div { background: var(--moss); }
+    .stat-tile.warn .st-bar > div { background: var(--amber); }
+    .stat-tile.bad .st-bar > div { background: var(--signal); }
+
+    /* machine grid */
+    .machine-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+    .machine-tile { background: var(--canvas); border: 1px solid var(--rule-soft); border-radius: var(--r-5); padding: 15px 16px; text-decoration: none; color: inherit; display: flex; flex-direction: column; gap: 9px; transition: border-color 160ms ease, transform 160ms ease; position: relative; min-width: 0; }
+    .machine-tile:hover { border-color: var(--ink); text-decoration: none; transform: translateY(-1px); }
+    .machine-tile .mt-status { display: inline-flex; align-items: center; gap: 6px; font-family: var(--ff-mono); font-size: 9.5px; font-weight: 500; letter-spacing: 0.14em; text-transform: uppercase; }
+    .machine-tile .mt-dot { width: 7px; height: 7px; border-radius: 9999px; }
+    .machine-tile.running .mt-status { color: var(--moss); }
+    .machine-tile.running .mt-dot { background: var(--moss); animation: pulse 2.4s ease-in-out infinite; }
+    .machine-tile.setup .mt-status { color: var(--steel); }
+    .machine-tile.setup .mt-dot { background: var(--steel); }
+    .machine-tile.idle .mt-status { color: var(--amber); }
+    .machine-tile.idle .mt-dot { background: var(--amber); }
+    .machine-tile.down .mt-status { color: var(--signal); }
+    .machine-tile.down .mt-dot { background: var(--signal); }
+    .machine-tile .mt-name { font-size: 13.5px; font-weight: 600; color: var(--ink); display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+    .machine-tile .mt-model { font-family: var(--ff-mono); font-size: 9.5px; font-weight: 400; letter-spacing: 0.06em; color: var(--ash-2); text-transform: uppercase; }
+    .machine-tile .mt-job { font-size: 13px; font-weight: 500; color: var(--ink); letter-spacing: -0.005em; }
+    .machine-tile .mt-meta { font-size: 10.5px; color: var(--ash); line-height: 1.4; }
+    .machine-tile .mt-progress { height: 4px; background: var(--paper-3); border-radius: 9999px; overflow: hidden; }
+    .machine-tile .mt-progress > div { height: 100%; background: var(--ink); transition: width 320ms ease; }
+    .machine-tile.running .mt-progress > div { background: var(--moss); }
+    .machine-tile.idle .mt-progress > div { background: var(--amber); }
+    .machine-tile.down .mt-progress > div { background: var(--signal); }
+    .machine-tile.setup .mt-progress > div { background: var(--steel); }
+    .machine-tile .mt-foot { display: flex; justify-content: space-between; align-items: baseline; font-size: 10.5px; color: var(--ash); }
+    .machine-tile .mt-foot .qty { color: var(--ink); font-weight: 500; font-variant-numeric: tabular-nums; }
+    .machine-tile .mt-foot .eta { font-family: var(--ff-mono); font-size: 9.5px; letter-spacing: 0.12em; text-transform: uppercase; }
+
+    /* alert feed */
+    .alert-feed { display: flex; flex-direction: column; max-height: 520px; overflow-y: auto; }
+    .alert-item { display: grid; grid-template-columns: 92px minmax(0, 1fr) auto; gap: 14px; padding: 13px 0; border-top: 1px solid var(--rule-hair); align-items: start; text-decoration: none; color: inherit; transition: padding 200ms ease; }
+    .alert-item:first-child { border-top: 0; padding-top: 4px; }
+    .alert-item:hover { padding-left: 8px; }
+    .alert-item .a-type { font-family: var(--ff-mono); font-size: 9px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; padding: 3px 7px; border-radius: 2px; align-self: flex-start; text-align: center; }
+    .alert-item.crit .a-type { background: var(--signal-soft); color: var(--signal); }
+    .alert-item.warn .a-type { background: var(--amber-soft); color: var(--amber); }
+    .alert-item.info .a-type { background: var(--steel-soft); color: var(--steel); }
+    .alert-item.ok .a-type { background: var(--moss-soft); color: var(--moss-deep); }
+    .alert-item .a-body .a-title { font-size: 13px; font-weight: 500; color: var(--ink); line-height: 1.35; letter-spacing: -0.005em; }
+    .alert-item .a-body .a-meta { font-size: 11px; color: var(--ash); margin-top: 3px; line-height: 1.4; }
+    .alert-item .a-arrow { color: var(--ash); padding-top: 2px; }
+
+    /* donut legend */
+    .donut-legend { margin-top: 8px; display: flex; flex-direction: column; gap: 6px; font-size: 12px; }
+    .donut-legend .dl-row { display: grid; grid-template-columns: 12px minmax(0, 1fr) 40px; gap: 8px; align-items: center; }
+    .donut-legend .dl-row .dl-sw { width: 10px; height: 10px; border-radius: 2px; }
+    .donut-legend .dl-row .dl-name { color: var(--ink); }
+    .donut-legend .dl-row .dl-val { text-align: right; font-variant-numeric: tabular-nums; font-weight: 500; color: var(--ink); }
+
+    /* chart legend (YoY) */
+    .chart-legend { display: flex; gap: 16px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--rule-soft); }
+    .chart-legend .cl { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; color: var(--ash); }
+    .chart-legend .cl .cl-sw { width: 12px; height: 8px; border-radius: 2px; }
+
+    /* hr stats */
+    .hr-quad { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 12px; }
+    .hr-cell { background: var(--paper); border: 1px solid var(--rule-soft); border-radius: var(--r-3); padding: 11px 10px; }
+    .hr-cell .hc-num { font-size: 20px; font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; line-height: 1; }
+    .hr-cell .hc-num small { font-size: 12px; color: var(--ash); font-weight: 400; }
+    .hr-cell .hc-lbl { font-size: 10px; color: var(--ash); margin-top: 5px; }
+    .hr-cell.warn .hc-num { color: var(--amber); }
+    .hr-cell.bad .hc-num { color: var(--signal); }
+    .hr-line { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; padding: 7px 0; border-bottom: 1px solid var(--rule-hair); }
+    .hr-line:last-child { border-bottom: 0; }
+    .hr-line span { color: var(--ash); }
+    .hr-line b { color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; }
+
+    /* ============================================================
+       HR module — danh sách & đánh giá nhân sự (1Office-style)
+       ============================================================ */
+    .chip-row-f { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+    .chip-f { padding: 6px 12px; font-family: var(--ff-sans); font-size: 12px; font-weight: 500; color: var(--ash); background: var(--canvas); border: 1px solid var(--rule); border-radius: var(--r-pill); cursor: pointer; transition: color 140ms ease, background 140ms ease, border-color 140ms ease; }
+    .chip-f:hover { border-color: var(--ink); color: var(--ink); }
+    .chip-f.active { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+
+    .emp-grid { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 10px; }
+    .emp-card { text-align: left; background: var(--canvas); border: 1px solid var(--rule-soft); border-radius: var(--r-5); padding: 14px; cursor: pointer; display: flex; flex-direction: column; gap: 11px; font-family: inherit; transition: border-color 160ms ease, transform 160ms ease; }
+    .emp-card:hover { border-color: var(--ink); transform: translateY(-1px); }
+    .emp-card-top { display: flex; align-items: center; gap: 10px; }
+    .emp-av { position: relative; width: 40px; height: 40px; border-radius: 9999px; color: var(--paper); font-weight: 600; font-size: 14px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; letter-spacing: 0.02em; overflow: hidden; }
+    .emp-av img, .emp-d-av img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 58% 22%; }
+    .emp-id { flex: 1; min-width: 0; }
+    .emp-name { font-size: 13.5px; font-weight: 600; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .emp-role { font-size: 11px; color: var(--ash); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .emp-ring { flex-shrink: 0; }
+    .emp-ring svg { display: block; }
+    .emp-metrics { display: flex; flex-direction: column; gap: 6px; }
+    .emp-metric { display: grid; grid-template-columns: 62px minmax(0,1fr); gap: 8px; align-items: center; font-size: 11px; color: var(--ash); }
+    .emp-metric .emp-bar { height: 4px; background: var(--paper-2); border-radius: 9999px; overflow: hidden; }
+    .emp-metric .emp-bar > div { height: 100%; background: var(--ink); }
+    .emp-foot { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding-top: 10px; border-top: 1px solid var(--rule-hair); }
+    .emp-tag { font-size: 11px; font-weight: 500; padding: 3px 8px; border-radius: var(--r-2); display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+    .emp-tag.raise { background: var(--moss-soft); color: var(--moss-deep); }
+    .emp-tag.reward { background: var(--rust-soft); color: var(--rust-deep); }
+    .emp-tag.stable { background: var(--paper-2); color: var(--ash); }
+    .emp-tag.watch { background: var(--amber-soft); color: var(--amber); }
+    .emp-tag.improve { background: var(--signal-soft); color: var(--signal); }
+    .emp-rank { font-family: var(--ff-mono); font-size: 10px; letter-spacing: 0.06em; color: var(--ash-2); text-transform: uppercase; white-space: nowrap; }
+
+    /* employee detail modal */
+    .emp-modal-overlay { position: fixed; inset: 0; background: rgba(20,19,15,0.5); backdrop-filter: blur(3px); z-index: 950; display: flex; align-items: flex-start; justify-content: center; padding: 28px 20px; overflow-y: auto; opacity: 0; animation: overlay-in 180ms ease forwards; }
+    .emp-modal-overlay.is-leaving { animation: overlay-out 160ms ease forwards; }
+    .emp-modal { background: var(--paper); border: 1px solid var(--rule); border-radius: var(--r-6); max-width: 920px; width: 100%; margin: auto; overflow: hidden; transform: scale(0.97); animation: modal-in 200ms cubic-bezier(.2,.8,.2,1) forwards; }
+    .emp-d-head { display: flex; align-items: flex-start; gap: 16px; padding: 22px 24px; background: var(--ink); color: var(--paper); position: relative; }
+    .emp-d-av { position: relative; width: 60px; height: 60px; border-radius: var(--r-4); font-size: 20px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; color: var(--paper); flex-shrink: 0; overflow: hidden; }
+    .emp-d-id { flex: 1; min-width: 0; }
+    .emp-d-id h3 { font-size: 20px; font-weight: 600; color: var(--paper); letter-spacing: -0.01em; }
+    .emp-d-meta { font-size: 12px; color: rgba(245,241,232,0.62); margin-top: 5px; line-height: 1.6; }
+    .emp-d-meta b { color: var(--paper); font-weight: 500; }
+    .emp-d-score { text-align: center; flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 5px; padding-right: 30px; }
+    .emp-d-score .eds-rank { font-family: var(--ff-mono); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--rust-2); }
+    .eds-dots { display: flex; gap: 3px; }
+    .eds-dots .rd { width: 7px; height: 7px; border-radius: 9999px; background: rgba(245,241,232,0.2); }
+    .eds-dots .rd.on { background: var(--rust-2); }
+    .emp-d-close { position: absolute; top: 14px; right: 14px; width: 30px; height: 30px; border: 0; border-radius: var(--r-3); background: rgba(245,241,232,0.1); color: var(--paper); display: inline-flex; align-items: center; justify-content: center; cursor: pointer; }
+    .emp-d-close:hover { background: rgba(245,241,232,0.2); }
+    .emp-d-body { padding: 18px 20px; max-height: calc(92vh - 112px); overflow-y: auto; }
+    .emp-d-suggest { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; padding: 12px 14px; border-radius: var(--r-4); font-size: 13px; }
+    .emp-d-suggest.raise { background: var(--moss-soft); color: var(--moss-deep); }
+    .emp-d-suggest.reward { background: var(--rust-soft); color: var(--rust-deep); }
+    .emp-d-suggest.stable { background: var(--paper-2); color: var(--ash); }
+    .emp-d-suggest.watch { background: var(--amber-soft); color: var(--amber); }
+    .emp-d-suggest.improve { background: var(--signal-soft); color: var(--signal); }
+    .emp-section { margin-bottom: 12px; padding: 16px; }
+    .emp-sec-h { font-size: 12.5px; font-weight: 600; color: var(--ink); margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+    .emp-sec-h i { color: var(--ash); }
+    .emp-kpi-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; }
+    .emp-kpi { background: var(--paper); border: 1px solid var(--rule-soft); border-radius: var(--r-3); padding: 10px 12px; }
+    .emp-kpi .k-l { font-family: var(--ff-mono); font-size: 9px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ash); }
+    .emp-kpi .k-v { font-size: 17px; font-weight: 600; color: var(--ink); margin-top: 3px; font-variant-numeric: tabular-nums; }
+    .emp-kpi.good .k-v { color: var(--moss); }
+    .emp-kpi.warn .k-v { color: var(--amber); }
+    .emp-kpi.bad .k-v { color: var(--signal); }
+    .emp-task-head { display: grid; grid-template-columns: minmax(0,1fr) 124px 86px 60px; gap: 10px; font-family: var(--ff-mono); font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ash); padding-bottom: 8px; border-bottom: 1px solid var(--rule); }
+    .emp-task { display: grid; grid-template-columns: minmax(0,1fr) 124px 86px 60px; gap: 10px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--rule-hair); }
+    .emp-task:last-child { border-bottom: 0; }
+    .emp-task .et-code { font-size: 12.5px; font-weight: 600; color: var(--ink); }
+    .emp-task .et-name { font-size: 11px; color: var(--ash); margin-top: 1px; }
+    .emp-task .et-prog { display: flex; align-items: center; gap: 6px; }
+    .emp-task .et-prog .progress { flex: 1; }
+    .emp-task .et-pct { font-size: 11px; color: var(--ash); font-variant-numeric: tabular-nums; min-width: 30px; text-align: right; }
+    .emp-task .et-due { font-family: var(--ff-mono); font-size: 10px; color: var(--ash); text-align: right; }
+    .emp-modal svg text, .emp-card svg text { font-family: var(--ff-sans); }
+
+    /* employee detail — extra 1Office-style sections */
+    .emp-info-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 9px 16px; }
+    .emp-info { display: flex; gap: 9px; align-items: flex-start; }
+    .emp-info i { color: var(--ash); margin-top: 2px; flex-shrink: 0; }
+    .emp-info .ei-l { font-family: var(--ff-mono); font-size: 9px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ash); }
+    .emp-info .ei-v { font-size: 12.5px; color: var(--ink); font-weight: 500; margin-top: 1px; }
+    .emp-att-row { display: grid; grid-template-columns: minmax(0,1fr) 70px 70px; gap: 8px; padding: 7px 0; border-bottom: 1px solid var(--rule-hair); font-size: 12.5px; align-items: center; }
+    .emp-att-row:last-child { border-bottom: 0; }
+    .emp-att-row .ar-name { color: var(--ink); }
+    .emp-att-row .ar-total { text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--ink); }
+    .emp-att-row .ar-avg { text-align: right; font-size: 11px; color: var(--ash); font-variant-numeric: tabular-nums; }
+    .emp-att-row.warn .ar-total { color: var(--amber); }
+    .emp-att-row.bad .ar-total { color: var(--signal); }
+    .emp-att-head { display: grid; grid-template-columns: minmax(0,1fr) 70px 70px; gap: 8px; padding-bottom: 6px; border-bottom: 1px solid var(--rule); font-family: var(--ff-mono); font-size: 9px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ash); }
+    .emp-att-head span:not(:first-child) { text-align: right; }
+    .eff-row { display: grid; grid-template-columns: 116px minmax(0,1fr) 42px; gap: 10px; align-items: center; padding: 7px 0; font-size: 12px; color: var(--ash); }
+    .eff-row .ef-bar { height: 6px; background: var(--paper-2); border-radius: 9999px; overflow: hidden; }
+    .eff-row .ef-bar > div { height: 100%; }
+    .eff-row.good .ef-bar > div { background: var(--moss); }
+    .eff-row.ontime .ef-bar > div { background: var(--steel); }
+    .eff-row.late .ef-bar > div { background: var(--amber); }
+    .eff-row.none .ef-bar > div { background: var(--signal); }
+    .eff-row .ef-val { text-align: right; font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; }
+    .emp-timeline { display: flex; flex-direction: column; }
+    .tl-item { display: grid; grid-template-columns: 58px minmax(0,1fr) auto; gap: 12px; padding: 9px 0; border-top: 1px solid var(--rule-hair); align-items: center; }
+    .tl-item:first-child { border-top: 0; }
+    .tl-item .tl-date { font-family: var(--ff-mono); font-size: 10px; color: var(--ash-2); }
+    .tl-item .tl-text { font-size: 12.5px; color: var(--ink); }
+    .train-row { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--rule-hair); align-items: center; }
+    .train-row:last-child { border-bottom: 0; }
+    .train-row .tr-name { font-size: 12.5px; color: var(--ink); font-weight: 500; }
+    .train-row .tr-period { font-size: 10.5px; color: var(--ash); margin-top: 1px; }
+
+    /* finance money summary (6-up) + production status (5-up) */
+    .fin-grid { display: grid; grid-template-columns: repeat(6, minmax(0,1fr)); gap: 10px; }
+    .prod-grid { display: grid; grid-template-columns: repeat(5, minmax(0,1fr)); gap: 10px; }
+    .prod-card { background: var(--canvas); border: 1px solid var(--rule-soft); border-radius: var(--r-5); padding: 14px 16px 13px; position: relative; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+    .prod-card::before { content: ""; position: absolute; top: -1px; left: 16px; width: 26px; height: 3px; background: var(--ash-2); border-radius: 0 0 2px 2px; }
+    .prod-card.acc-moss::before { background: var(--moss); }
+    .prod-card.acc-rust::before { background: var(--rust); }
+    .prod-card.acc-amber::before { background: var(--amber); }
+    .prod-card.acc-steel::before { background: var(--steel); }
+    .prod-card.acc-signal::before { background: var(--signal); }
+    .prod-card .pc-lbl { font-family: var(--ff-mono); font-size: 9px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ash); }
+    .prod-card .pc-count { font-size: 24px; font-weight: 500; color: var(--ink); line-height: 1; font-variant-numeric: tabular-nums; margin-top: 2px; }
+    .prod-card .pc-count small { font-size: 12px; color: var(--ash); font-weight: 400; }
+    .prod-card .pc-val { font-size: 14px; font-weight: 600; color: var(--rust-deep); font-variant-numeric: tabular-nums; }
+    .prod-card .pc-sub { font-size: 10.5px; color: var(--ash); }
+
+    /* layout grids */
+    .grid-12 { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 10px; }
+    .grid-2 { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 10px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 10px; }
+    .sales-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr) minmax(0, 1fr); gap: 10px; }
+
+    /* responsive */
+    @media (max-width: 1280px) {
+      .kpi-row { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .machine-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .sales-grid { grid-template-columns: 1fr 1fr; }
+      .grid-3 { grid-template-columns: 1fr 1fr; }
+      .stat-tiles { grid-template-columns: 1fr 1fr; }
+      .emp-grid { grid-template-columns: repeat(3, minmax(0,1fr)); }
+      .fin-grid { grid-template-columns: repeat(3, minmax(0,1fr)); }
+      .prod-grid { grid-template-columns: repeat(3, minmax(0,1fr)); }
+    }
+    @media (max-width: 1024px) {
+      .pipeline { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .grid-12, .grid-2, .grid-3, .sales-grid { grid-template-columns: 1fr; }
+      .kpi-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .emp-grid { grid-template-columns: 1fr 1fr; }
+      .fin-grid, .prod-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
+    }
+    @media (max-width: 720px) {
+      .dash-hero { flex-direction: column; align-items: stretch; gap: 14px; padding: 16px; }
+      .dash-hero .h-clock { align-self: flex-start; padding-top: 0; }
+      .dash-hero .h-actions { width: 100%; }
+      .dash-hero .h-actions .btn { flex: 1; justify-content: center; }
+      .dtab { padding: 10px 12px; font-size: 12px; }
+      .kpi-row { grid-template-columns: 1fr 1fr; }
+      .machine-grid { grid-template-columns: 1fr; }
+      .pipeline { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .quad, .hr-quad { grid-template-columns: 1fr 1fr; }
+      .stat-tiles { grid-template-columns: 1fr 1fr; }
+      .fin-grid, .prod-grid { grid-template-columns: 1fr 1fr; }
+      .emp-grid { grid-template-columns: 1fr; }
+      .emp-info-grid { grid-template-columns: 1fr; }
+      .emp-task-head { display: none; }
+      .emp-task { grid-template-columns: minmax(0,1fr) auto; gap: 6px 10px; }
+      .alert-item { grid-template-columns: 80px minmax(0, 1fr); }
+      .alert-item .a-arrow { display: none; }
+    }
+
+    /* ============================================================
+       Cột cảnh báo chọn lọc + anchor liên kết bản ghi
+       ============================================================ */
+    .w-bad  { color: #8a1f1f; font-weight: 600; font-size: 11.5px; line-height: 1.35; }
+    .w-good { color: #1f6b3a; font-weight: 600; font-size: 11.5px; line-height: 1.35; }
+    .w-none { color: var(--ash-2, #b8b2a2); font-size: 11.5px; }
+    .cell-sub { display: block; font-size: 10px; color: var(--ash); margin-top: 3px; font-variant-numeric: tabular-nums; }
+    .lnk {
+      color: var(--rust); font-weight: 600; text-decoration: none;
+      border-bottom: 1px dashed rgba(197, 64, 10, 0.45); cursor: pointer;
+      font-variant-numeric: tabular-nums;
+    }
+    .lnk:hover { color: var(--rust-deep); border-bottom-style: solid; }
+    .tbl { font-size: 13px; }
+    .tbl tbody tr { height: 40px; }
+    @media (max-width: 1100px) {
+      .grid-12, .grid-2 { grid-template-columns: 1fr; }
+      .stat-tiles { grid-template-columns: repeat(2, minmax(0,1fr)); }
+    }
+  </style>
+</head>
+<body>
+
+<div id="app-shell" data-active="dashboard" data-title="Dashboard điều hành" data-crumb="<b>Dashboard</b> · Bảng điều hành nhà máy cửa nhôm Owin">
+
+  <!-- ===== Hero strip (dark) ===== -->
+  <div class="dash-hero">
+    <div class="h-greet">
+      <h1>Chào, Phạm Văn Thành.</h1>
+      <div class="h-sub">
+        <span>Thứ 4 · 20/05/2026</span>
+        <span class="shift-pill">CA 2 · 14:30 — 22:30</span>
+        <span>Doanh thu T5 <b>2.847M ₫</b></span>
+        <span style="opacity:0.4">·</span>
+        <span class="good">Lãi gộp <b>648M ₫</b></span>
+        <span style="opacity:0.4">·</span>
+        <span class="danger">3 đơn quá hạn · 248M nợ quá hạn</span>
+      </div>
+    </div>
+    <div class="h-clock">Giờ hiện tại<b id="liveClock">16:48</b></div>
+    <div class="h-actions">
+      <button class="btn btn-secondary" data-toast-msg="Đang chuẩn bị báo cáo điều hành tháng 5" data-toast-type="info" data-no-interact="true"><i data-lucide="download" style="width:14px;height:14px"></i> Xuất báo cáo</button>
+      <button class="btn btn-primary" data-toast-msg="<b>Tạo đơn mới</b> — mở form nhập đơn" data-toast-type="success" data-no-interact="true"><i data-lucide="plus" style="width:14px;height:14px"></i> Tạo đơn mới</button>
+    </div>
+  </div>
+
+  <!-- ===== 4 ô số ===== -->
+  <div class="stat-tiles" style="margin-bottom:14px">
+    <div class="stat-tile good">
+      <span class="st-lbl">Doanh thu tháng 5</span>
+      <span class="st-val">2.847<span class="unit">M ₫</span></span>
+      <span class="st-sub up"><i data-lucide="trending-up" style="width:11px;height:11px"></i> 114% mục tiêu · +12% so T4</span>
+      <div class="st-bar"><div style="width:100%"></div></div>
+    </div>
+    <div class="stat-tile">
+      <span class="st-lbl">Đơn hàng trong tháng</span>
+      <span class="st-val">142<span class="unit"> đơn</span></span>
+      <span class="st-sub">80 đã giao · 41 backlog · 12 đang giao</span>
+      <div class="st-bar"><div style="width:70%"></div></div>
+    </div>
+    <div class="stat-tile warn">
+      <span class="st-lbl">Tỷ lệ đạt KCS</span>
+      <span class="st-val">96.2<span class="unit">%</span></span>
+      <span class="st-sub down"><i data-lucide="alert-triangle" style="width:11px;height:11px"></i> Uốn vòm chỉ 91.4% — kéo tụt cả tháng</span>
+      <div class="st-bar"><div style="width:96%"></div></div>
+    </div>
+    <div class="stat-tile bad">
+      <span class="st-lbl">Công nợ quá hạn</span>
+      <span class="st-val">248<span class="unit">M ₫</span></span>
+      <span class="st-sub down"><i data-lucide="alert-triangle" style="width:11px;height:11px"></i> 4 khách · cao nhất 140M quá 65 ngày</span>
+      <div class="st-bar"><div style="width:20%"></div></div>
+    </div>
+  </div>
+
+  <!-- ===== KHỐI 1 + 2: Doanh thu theo hệ nhôm · Top đại lý ===== -->
+  <div class="grid-12" style="margin-bottom:12px">
+
+    <div class="card">
+      <div class="card-h">
+        <div>
+          <div class="title">Doanh thu &amp; đơn hàng theo hệ nhôm</div>
+          <div class="sub" style="margin-top:4px">Tháng 4 so tháng 5/2026 · triệu ₫</div>
+        </div>
+        <a class="btn-link" href="08-bao-cao.html">Mở báo cáo →</a>
+      </div>
+      <div id="chartRevLine" style="min-height:250px"></div>
+      <div class="chart-legend">
+        <span class="cl"><span class="cl-sw" style="background:#b8b2a2"></span> Tháng 4/2026</span>
+        <span class="cl"><span class="cl-sw" style="background:#14130f"></span> Tháng 5/2026</span>
+      </div>
+      <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--rule-soft)">
+        <div class="kv">
+          <div class="kv-row"><span class="kv-name">Cửa thuỷ lực (hệ 120 · 180)</span><span class="kv-a">720M</span><span class="kv-b">42 đơn</span></div>
+          <div class="kv-row"><span class="kv-name">Cửa trượt quay 93</span><span class="kv-a">680M</span><span class="kv-b">38 đơn</span></div>
+          <div class="kv-row"><span class="kv-name">Cửa sổ Luxanode 121 · 76</span><span class="kv-a">560M</span><span class="kv-b">31 đơn</span></div>
+          <div class="kv-row"><span class="kv-name">Nhôm thanh bán xá (đại lý)</span><span class="kv-a">520M</span><span class="kv-b">19 đơn</span></div>
+          <div class="kv-row"><span class="kv-name">Uốn vòm nhôm &amp; gia công</span><span class="kv-a">240M</span><span class="kv-b">12 đơn</span></div>
+        </div>
+        <div class="bd-foot"><span>Tổng doanh thu tháng 5</span><b>2.847M ₫ · 142 đơn</b></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-h">
+        <div>
+          <div class="title">Top đại lý &amp; khách hàng</div>
+          <div class="sub" style="margin-top:4px">Doanh số 12 tháng</div>
+        </div>
+        <a class="btn-link" href="07-crm.html">Tất cả →</a>
+      </div>
+      <div>
+        <div class="lb-row top"><span class="lb-rank">01</span><span class="lb-name">VINHOMES OCEAN PARK</span><span class="lb-bar"><div style="width:100%"></div></span><span class="lb-val">1.200M</span></div>
+        <div class="lb-row"><span class="lb-rank">02</span><span class="lb-name">ĐL Owin Hoàng Long</span><span class="lb-bar"><div style="width:82%"></div></span><span class="lb-val">980M</span></div>
+        <div class="lb-row"><span class="lb-rank">03</span><span class="lb-name">SUN GROUP HẠ LONG</span><span class="lb-bar"><div style="width:53%"></div></span><span class="lb-val">640M</span></div>
+        <div class="lb-row"><span class="lb-rank">04</span><span class="lb-name">ĐL Nhôm kính Minh Anh</span><span class="lb-bar"><div style="width:52%"></div></span><span class="lb-val">620M</span></div>
+        <div class="lb-row"><span class="lb-rank">05</span><span class="lb-name">Nhôm kính Đại Phát</span><span class="lb-bar"><div style="width:48%"></div></span><span class="lb-val">580M</span></div>
+        <div class="lb-row"><span class="lb-rank">06</span><span class="lb-name">Cty Xây dựng ABC</span><span class="lb-bar"><div style="width:32%"></div></span><span class="lb-val">380M</span></div>
+        <div class="lb-row"><span class="lb-rank">07</span><span class="lb-name">NHÔM KÍNH NAM TIẾN</span><span class="lb-bar"><div style="width:27%"></div></span><span class="lb-val">320M</span></div>
+      </div>
+      <div class="bd-foot"><span>38 đại lý uỷ quyền · 12 đã nhận dàn máy chuyển giao</span><b>20,7 tỷ ₫ luỹ kế</b></div>
+    </div>
+  </div>
+
+  <!-- ===== KHỐI 3 + 4: Tiến độ lệnh sản xuất · Tỷ lệ đạt/lỗi theo công đoạn ===== -->
+  <div class="grid-12" style="margin-bottom:12px">
+
+    <div class="card">
+      <div class="card-h">
+        <div>
+          <div class="title">Tiến độ lệnh sản xuất</div>
+          <div class="sub" style="margin-top:4px">12 lệnh đang chạy · bấm mã LSX để mở phiếu công nghệ</div>
+        </div>
+        <a class="btn-link" href="19-lsx-san-xuat.html">Tất cả lệnh →</a>
+      </div>
+      <div class="table-wrap" style="border:none">
+        <table class="tbl">
+          <thead>
+            <tr><th>Lệnh SX</th><th>Sản phẩm</th><th>Công đoạn hiện tại</th><th>Máy</th><th style="width:140px">Tiến độ</th><th>Hạn giao</th><th>Cảnh báo</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><a class="lnk" href="06-lsx-phieu-cong-nghe.html?id=LSX-0319">LSX-0319</a></td>
+              <td>Cửa thuỷ lực hệ 120 · 2 cánh <span style="color:var(--ash)">· 40 bộ</span></td>
+              <td>Lắp kính &amp; phụ kiện</td>
+              <td>LAP-01</td>
+              <td><div class="bd-bar" style="height:6px;background:var(--paper-2);border-radius:9999px;overflow:hidden"><div style="width:86%;height:100%;background:var(--moss)"></div></div><span class="cell-sub">86%</span></td>
+              <td>22/05</td>
+              <td class="w-good">Vượt tiến độ 1 ngày</td>
+            </tr>
+            <tr>
+              <td><a class="lnk" href="06-lsx-phieu-cong-nghe.html?id=LSX-0322">LSX-0322</a></td>
+              <td>Cửa trượt quay 93 · 4 cánh <span style="color:var(--ash)">· 20 bộ</span></td>
+              <td>Ép góc &amp; lắp khung cánh</td>
+              <td>EP-02</td>
+              <td><div class="bd-bar" style="height:6px;background:var(--paper-2);border-radius:9999px;overflow:hidden"><div style="width:62%;height:100%;background:var(--ink)"></div></div><span class="cell-sub">62%</span></td>
+              <td>24/05</td>
+              <td class="w-none">—</td>
+            </tr>
+            <tr>
+              <td><a class="lnk" href="06-lsx-phieu-cong-nghe.html?id=LSX-0335">LSX-0335</a></td>
+              <td>Cửa sổ mở quay Luxanode 121 <span style="color:var(--ash)">· 50 m²</span></td>
+              <td>Cắt &amp; phay đố (CNC)</td>
+              <td>CNC-03</td>
+              <td><div class="bd-bar" style="height:6px;background:var(--paper-2);border-radius:9999px;overflow:hidden"><div style="width:38%;height:100%;background:var(--ink)"></div></div><span class="cell-sub">38%</span></td>
+              <td>27/05</td>
+              <td class="w-none">—</td>
+            </tr>
+            <tr>
+              <td><a class="lnk" href="06-lsx-phieu-cong-nghe.html?id=LSX-0370">LSX-0370</a></td>
+              <td>Cửa vòm nhôm uốn hệ 120 <span style="color:var(--ash)">· 15 bộ</span></td>
+              <td>Uốn vòm / định hình</td>
+              <td>UON-02</td>
+              <td><div class="bd-bar" style="height:6px;background:var(--paper-2);border-radius:9999px;overflow:hidden"><div style="width:44%;height:100%;background:var(--signal)"></div></div><span class="cell-sub">44%</span></td>
+              <td>21/05</td>
+              <td class="w-bad">Trễ 2 ngày · 4 thanh nứt phải làm lại</td>
+            </tr>
+            <tr>
+              <td><a class="lnk" href="06-lsx-phieu-cong-nghe.html?id=LSX-0340">LSX-0340</a></td>
+              <td>Vách kính khung nhôm Luxanode <span style="color:var(--ash)">· 86 m²</span></td>
+              <td>Tiếp nhận &amp; kiểm nhôm thanh</td>
+              <td>—</td>
+              <td><div class="bd-bar" style="height:6px;background:var(--paper-2);border-radius:9999px;overflow:hidden"><div style="width:12%;height:100%;background:var(--ink)"></div></div><span class="cell-sub">12%</span></td>
+              <td>02/06</td>
+              <td class="w-none">—</td>
+            </tr>
+            <tr>
+              <td><a class="lnk" href="06-lsx-phieu-cong-nghe.html?id=LSX-0331">LSX-0331</a></td>
+              <td>Cửa trượt quay 93 · 6 cánh <span style="color:var(--ash)">· 12 bộ</span></td>
+              <td>Bọc màng, QC &amp; đóng kiện</td>
+              <td>—</td>
+              <td><div class="bd-bar" style="height:6px;background:var(--paper-2);border-radius:9999px;overflow:hidden"><div style="width:100%;height:100%;background:var(--moss)"></div></div><span class="cell-sub">100%</span></td>
+              <td>20/05</td>
+              <td class="w-good">Xong trước hạn · đạt 99.6%</td>
+            </tr>
+            <tr>
+              <td><a class="lnk" href="06-lsx-phieu-cong-nghe.html?id=LSX-0350">LSX-0350</a></td>
+              <td>Cửa thuỷ lực hệ 180 · 4 cánh vân gỗ hương <span style="color:var(--ash)">· 8 bộ</span></td>
+              <td>Ép góc &amp; lắp khung cánh</td>
+              <td>EP-02</td>
+              <td><div class="bd-bar" style="height:6px;background:var(--paper-2);border-radius:9999px;overflow:hidden"><div style="width:55%;height:100%;background:var(--amber)"></div></div><span class="cell-sub">55%</span></td>
+              <td>23/05</td>
+              <td class="w-bad">Chờ EP-02 xong LSX-0322 · chết 6 giờ máy</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="bd-foot">
+        <span>Đơn hàng gốc: <a class="lnk" href="03-don-hang.html?order=DH-0319">DH-0319</a> · <a class="lnk" href="03-don-hang.html?order=DH-0370">DH-0370</a> · hợp đồng <a class="lnk" href="18-hop-dong.html?hd=HD-2026-001">HD-2026-001</a></span>
+        <b>12 lệnh đang chạy · 4/6 máy hoạt động</b>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-h">
+        <div>
+          <div class="title">Tỷ lệ đạt / lỗi theo công đoạn</div>
+          <div class="sub" style="margin-top:4px">Tháng 5/2026 · %</div>
+        </div>
+        <a class="btn-link" href="31-bao-cao-thiet-hai.html">Thiệt hại →</a>
+      </div>
+      <div id="chartQCStage" style="min-height:230px"></div>
+      <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--rule-soft)">
+        <div class="kv">
+          <div class="kv-row"><span class="kv-name">Uốn vòm / định hình</span><span class="kv-a" style="color:#8a1f1f">91.4%</span><span class="kv-b over">phế 11.2%</span></div>
+          <div class="kv-row"><span class="kv-name">Lắp kính &amp; phụ kiện</span><span class="kv-a" style="color:#8a1f1f">96.1%</span><span class="kv-b over">18 tấm kính vỡ</span></div>
+          <div class="kv-row"><span class="kv-name">Cắt &amp; phay đố (CNC)</span><span class="kv-a">97.8%</span><span class="kv-b">—</span></div>
+          <div class="kv-row"><span class="kv-name">Bọc màng, QC &amp; đóng kiện</span><span class="kv-a" style="color:#1f6b3a">99.3%</span><span class="kv-b">đạt ≥99%</span></div>
+        </div>
+        <div class="bd-foot"><span>Thiệt hại quy ra tiền tháng 5</span><b style="color:#8a1f1f">184.6M ₫</b></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== KHỐI 5 + 6: Tồn kho nhôm &amp; kính · Công nợ ===== -->
+  <div class="grid-2">
+
+    <div class="card">
+      <div class="card-h">
+        <div>
+          <div class="title">Tồn kho nhôm &amp; kính</div>
+          <div class="sub" style="margin-top:4px">So với tồn tối thiểu · 20/05/2026</div>
+        </div>
+        <a class="btn-link" href="05-kho.html">Mở kho →</a>
+      </div>
+      <div>
+        <div class="bd-row ok">
+          <div>
+            <div class="bd-head"><span class="bd-name">Thanh nhôm hệ thuỷ lực 120 (6063-T5)</span><span class="t-caption">min 20.000 kg</span></div>
+            <div class="bd-bar"><div style="width:100%"></div></div>
+          </div>
+          <div class="bd-val">82.500 kg</div>
+        </div>
+        <div class="bd-row danger">
+          <div>
+            <div class="bd-head"><span class="bd-name">Thanh nhôm hệ thuỷ lực 180</span><span class="t-caption">min 15.000 kg</span></div>
+            <div class="bd-bar"><div style="width:80%"></div></div>
+          </div>
+          <div class="bd-val">12.000 kg</div>
+        </div>
+        <div class="bd-row ok">
+          <div>
+            <div class="bd-head"><span class="bd-name">Thanh nhôm hệ trượt quay 93</span><span class="t-caption">min 12.000 kg</span></div>
+            <div class="bd-bar"><div style="width:100%"></div></div>
+          </div>
+          <div class="bd-val">26.000 kg</div>
+        </div>
+        <div class="bd-row ok">
+          <div>
+            <div class="bd-head"><span class="bd-name">Thanh nhôm Luxanode Anodized-ED 121</span><span class="t-caption">min 10.000 kg</span></div>
+            <div class="bd-bar"><div style="width:100%"></div></div>
+          </div>
+          <div class="bd-val">45.200 kg</div>
+        </div>
+        <div class="bd-row danger">
+          <div>
+            <div class="bd-head"><span class="bd-name">Thanh nhôm hệ chấn song + phào</span><span class="t-caption">min 8.000 kg</span></div>
+            <div class="bd-bar"><div style="width:48%"></div></div>
+          </div>
+          <div class="bd-val">3.800 kg</div>
+        </div>
+        <div class="bd-row rust">
+          <div>
+            <div class="bd-head"><span class="bd-name">Kính hộp 5-9-5 cường lực</span><span class="t-caption">min 15.000 m²</span></div>
+            <div class="bd-bar"><div style="width:100%"></div></div>
+          </div>
+          <div class="bd-val">28.600 m²</div>
+        </div>
+        <div class="bd-row rust">
+          <div>
+            <div class="bd-head"><span class="bd-name">Kính cường lực 8mm</span><span class="t-caption">min 10.000 m²</span></div>
+            <div class="bd-bar"><div style="width:100%"></div></div>
+          </div>
+          <div class="bd-val">15.400 m²</div>
+        </div>
+      </div>
+      <div class="bd-foot">
+        <span><b style="color:#8a1f1f">2 mã dưới tồn tối thiểu</b> — đã lập đề xuất mua</span>
+        <a class="btn-link" href="13-de-xuat-mua.html">Đề xuất mua →</a>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-h">
+        <div>
+          <div class="title">Công nợ</div>
+          <div class="sub" style="margin-top:4px">Phải thu 1.245M · phải trả NCC 248M</div>
+        </div>
+        <a class="btn-link" href="15-ke-toan.html">Mở kế toán →</a>
+      </div>
+      <div class="table-wrap" style="border:none">
+        <table class="tbl">
+          <thead><tr><th>Đối tượng</th><th>Chứng từ</th><th class="num">Dư nợ</th><th>Cảnh báo</th></tr></thead>
+          <tbody>
+            <tr><td><b>ĐL Nhôm kính Minh Anh</b></td><td><a class="lnk" href="18-hop-dong.html?hd=HD-2026-002">HD-2026-002</a></td><td class="num">312M</td><td class="w-bad">Quá hạn 31 ngày · 68 tr</td></tr>
+            <tr><td><b>Nhôm kính Đại Phát</b></td><td><a class="lnk" href="03-don-hang.html?order=DH-0319">DH-0319</a></td><td class="num">248M</td><td class="w-good">Trả đúng hạn 12 tháng</td></tr>
+            <tr><td><b>Cty Xây dựng ABC</b></td><td><span class="w-none">—</span></td><td class="num">185M</td><td class="w-bad">Quá hạn 12 ngày · 40 tr</td></tr>
+            <tr><td><b>NT XÂY DỰNG HOÀNG GIA</b></td><td><span class="w-none">—</span></td><td class="num">156M</td><td class="w-bad">Quá hạn 65 ngày · 140 tr</td></tr>
+            <tr><td><b>VINHOMES OCEAN PARK</b></td><td><a class="lnk" href="03-don-hang.html?order=DH-0370">DH-0370</a></td><td class="num">144M</td><td class="w-none">—</td></tr>
+            <tr><td><b>ĐL Owin Hoàng Long</b></td><td><a class="lnk" href="18-hop-dong.html?hd=HD-2026-003">HD-2026-003</a></td><td class="num">96M</td><td class="w-good">Trả trước hạn 3 kỳ liền</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--rule-soft)">
+        <div class="card-h" style="margin-bottom:8px"><div><div class="title" style="font-size:13px">Phải trả nhà cung cấp</div></div></div>
+        <div class="kv">
+          <div class="kv-row"><span class="kv-name">Đùn ép Nhôm Đông Anh · PO-2026-0768</span><span class="kv-a">62M</span><span class="kv-b over">hạn 22/05</span></div>
+          <div class="kv-row"><span class="kv-name">Kính Việt Nhật Hải Long · PO-2026-0778</span><span class="kv-a">58M</span><span class="kv-b">hạn 02/06</span></div>
+          <div class="kv-row"><span class="kv-name">Nhôm Luxanode nhập khẩu · PO-2026-0780</span><span class="kv-a">50M</span><span class="kv-b">hạn 08/06</span></div>
+          <div class="kv-row"><span class="kv-name">Bao bì Phú Mỹ · PO-2026-0772</span><span class="kv-a">44M</span><span class="kv-b">hạn 15/06</span></div>
+          <div class="kv-row"><span class="kv-name">Phụ kiện Kinlong VN · PO-2026-0752</span><span class="kv-a">34M</span><span class="kv-b over">hạn 24/05</span></div>
+        </div>
+        <div class="bd-foot">
+          <span>Đến hạn trong tuần <b style="color:#8a1f1f">96M ₫</b></span>
+          <a class="btn-link" href="21-cong-no-ncc.html">Công nợ NCC →</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script src="../assets/js/layout.js"></script>
+<script src="../assets/js/loss-data.js"></script>
+<script src="../assets/js/loss-ui.js"></script>
+<script src="../assets/js/pricing-engine.js"></script>
+<script src="../assets/js/quote-data.js"></script>
+<script src="../assets/js/stock-data.js"></script>
+<script src="../assets/js/bom-data.js"></script>
+<script src="../assets/js/inventory.js"></script>
+<script src="../assets/js/purchase-data.js"></script>
+<script>
+  /* ============================================================
+     Dashboard điều hành — 6 khối, mọi biểu đồ nằm trong khối HIỆN.
+     Không dùng tab ẩn ⇒ container luôn có bề rộng thật.
+     Vẫn chặn sàn 320px + chặn chia 0 phòng trường hợp container
+     bị ẩn (ví dụ in ấn, màn rất hẹp) khiến clientWidth = 0.
+     ============================================================ */
+  function chartWidthOK(id) {
+    var el = document.getElementById(id);
+    if (!el) return 0;
+    var w = el.clientWidth || (el.parentElement ? el.parentElement.clientWidth : 0) || 0;
+    return Math.max(w, 320);
+  }
+
+  function renderCharts() {
+    if (!window.ERPCharts) return;
+
+    if (chartWidthOK('chartRevLine') > 0) {
+      ERPCharts.groupedBar('chartRevLine', {
+        labels: ['Thuỷ lực', 'Trượt quay', 'Luxanode', 'Nhôm thanh', 'Uốn vòm'],
+        datasets: [
+          { name: 'Tháng 4/2026', values: [620, 580, 480, 420, 200], color: '#b8b2a2' },
+          { name: 'Tháng 5/2026', values: [720, 680, 560, 520, 240], color: '#14130f' },
+        ],
+      }, { height: 250, unit: 'M' });
+    }
+
+    if (chartWidthOK('chartQCStage') > 0) {
+      ERPCharts.bar('chartQCStage', {
+        labels: ['Kiểm nhôm', 'Cắt CNC', 'Uốn vòm', 'Ép góc', 'Lắp kính', 'Đóng kiện'],
+        values: [99.6, 97.8, 91.4, 98.2, 96.1, 99.3],
+      }, {
+        height: 230, max: 100,
+        colors: ['#2f5d3a', '#14130f', '#8a1f1f', '#14130f', '#8a1f1f', '#2f5d3a'],
+      });
+    }
+  }
+
+  document.addEventListener('erp:ready', function () {
+    renderCharts();
+
+    // Đồng hồ
+    function tick() {
+      var el = document.getElementById('liveClock');
+      if (!el) return;
+      var d = new Date();
+      el.textContent = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+    }
+    tick();
+    setInterval(tick, 30000);
+
+    // Vẽ lại biểu đồ khi đổi bề rộng cửa sổ
+    var rt;
+    window.addEventListener('resize', function () {
+      clearTimeout(rt);
+      rt = setTimeout(renderCharts, 220);
+    });
+  });
+</script>
+</body>
+</html>

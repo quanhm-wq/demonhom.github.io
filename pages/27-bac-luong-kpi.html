@@ -1,0 +1,1009 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bậc lương & KPI — ERP NHÔM OWIN</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/css/style.css" />
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+  <style>
+    /* Master-detail */
+    .hr-split { display:grid; grid-template-columns: minmax(0,2fr) minmax(0,1fr); gap:16px; align-items:start; }
+    @media (max-width:1024px){ .hr-split{ grid-template-columns:1fr; } }
+
+    /* Formula box (lương) */
+    .formula { background:var(--paper-2,#fff); border:1px solid var(--rule-soft); border-radius:10px; overflow:hidden; }
+    .formula-row { display:flex; align-items:center; gap:12px; padding:11px 14px; border-bottom:1px solid var(--rule-hair); font-size:13px; }
+    .formula-row:last-child { border-bottom:0; }
+    .formula-row .op { width:22px; height:22px; border-radius:6px; display:inline-flex; align-items:center; justify-content:center; font-weight:700; font-size:14px; flex-shrink:0; background:var(--paper-3); color:var(--ash); }
+    .formula-row .op.plus { background:var(--moss-soft); color:var(--moss-deep); }
+    .formula-row .op.minus { background:var(--signal-soft); color:var(--signal); }
+    .formula-row .nm { font-weight:500; }
+    .formula-row .sub { color:var(--ash); font-size:11.5px; margin-top:1px; }
+    .formula-row .amt { margin-left:auto; font-weight:600; font-variant-numeric:tabular-nums; }
+    .formula-row.row-kpi { background:var(--amber-soft); box-shadow:inset 3px 0 0 var(--amber); }
+    .formula-row.total { background:var(--ink); color:var(--paper); }
+    .formula-row.total .amt { color:var(--paper); font-size:15px; }
+
+    /* KPI source list */
+    .ksrc { display:flex; align-items:flex-start; gap:10px; padding:9px 10px; border:1px solid var(--rule-soft); border-radius:8px; margin-bottom:6px; font-size:12.5px; }
+    .ksrc .ki { width:30px; height:30px; border-radius:7px; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0; }
+    .ksrc .ki.prod { background:var(--moss-soft); color:var(--moss-deep); }
+    .ksrc .ki.qa   { background:var(--steel-soft); color:var(--steel); }
+    .ksrc .ki.time { background:var(--amber-soft); color:var(--amber); }
+    .ksrc .ki.disc { background:var(--signal-soft); color:var(--signal); }
+    .ksrc .kt { color:var(--ash); font-size:11px; }
+    .ksrc .kv { font-weight:600; margin-top:1px; }
+    .ksrc .ksrc-src { margin-left:auto; text-align:right; font-size:10.5px; color:var(--ash-2,#918b7e); white-space:nowrap; }
+
+    /* KPI mini cards (kinh doanh) */
+    .kpi-mini { border:1px solid var(--rule-soft); border-radius:9px; padding:12px 14px; }
+    .kpi-mini .lab { font-size:10px; font-weight:600; letter-spacing:.1em; text-transform:uppercase; color:var(--ash); }
+    .kpi-mini .val { font-size:20px; font-weight:600; margin-top:3px; }
+    .kpi-mini .delta { font-size:11px; margin-top:2px; }
+
+    .lvl-pill { display:inline-flex; align-items:center; justify-content:center; min-width:26px; height:26px; border-radius:7px; background:var(--ink); color:var(--paper); font-weight:600; font-size:13px; }
+
+    /* View tabs */
+    .tab.active { background:var(--canvas); color:var(--ink); box-shadow:0 1px 0 var(--rule); }
+    .tbl tbody tr[data-nv] { cursor:pointer; }
+    .tbl tbody tr[data-kpinv] { cursor:pointer; }
+
+    /* Hạn chế xuống dòng — Bảng lương: Mã NV & Họ tên luôn 1 dòng, Bộ phận tối đa 2 dòng */
+    [data-tab-pane="tab-bangluong"] .tbl { min-width:1080px; }
+    [data-tab-pane="tab-bangluong"] .tbl td:nth-child(1),
+    [data-tab-pane="tab-bangluong"] .tbl td:nth-child(2) { white-space:nowrap; }
+    [data-tab-pane="tab-bangluong"] .tbl td:nth-child(3) { min-width:150px; }
+    /* Bảng bậc lương: cột mô tả tối đa 2 dòng, cuộn ngang nếu hẹp */
+    #bac-table table { min-width:720px; }
+    #bac-table td:nth-child(2) { min-width:150px; }
+    #bac-table td:nth-child(5) { min-width:230px; }
+
+    /* Config param grid (đồng bộ trang Quy chế & Cấu hình) */
+    .cfg-grid { display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:12px 22px; }
+    @media (max-width:760px){ .cfg-grid{ grid-template-columns:1fr; } }
+    .cfg-row { display:flex; flex-direction:column; gap:5px; padding-bottom:11px; border-bottom:1px solid var(--rule-hair); }
+    .cfg-row .cfg-k { font-size:12.5px; color:var(--ash); display:flex; align-items:center; gap:6px; }
+    .cfg-row .cfg-k i { width:13px; height:13px; color:var(--ash-2); }
+    .cfg-row .cfg-in { display:flex; align-items:center; gap:7px; }
+    .cfg-row .cfg-in .input { flex:1; }
+    .cfg-row .cfg-suf { font-size:12px; color:var(--ash); white-space:nowrap; }
+
+    /* Toggle switch */
+    .sw { position:relative; display:inline-block; width:38px; height:21px; flex-shrink:0; }
+    .sw input { opacity:0; width:0; height:0; }
+    .sw .slider { position:absolute; inset:0; background:var(--paper-3); border-radius:999px; transition:.2s; cursor:pointer; }
+    .sw .slider::before { content:""; position:absolute; height:15px; width:15px; left:3px; top:3px; background:#fff; border-radius:50%; transition:.2s; box-shadow:0 1px 2px rgba(0,0,0,.2); }
+    .sw input:checked + .slider { background:var(--moss); }
+    .sw input:checked + .slider::before { transform:translateX(17px); }
+
+    /* Cơ chế lương: dòng thành phần có toggle + input */
+    .mech-row { display:flex; align-items:center; gap:12px; padding:11px 0; border-bottom:1px solid var(--rule-hair); }
+    .mech-row:last-child { border-bottom:0; }
+    .mech-row .mech-ic { width:32px; height:32px; border-radius:8px; background:var(--paper-3); color:var(--steel); display:inline-flex; align-items:center; justify-content:center; flex-shrink:0; }
+    .mech-row .mech-body { min-width:0; flex:1; }
+    .mech-row .mech-nm { font-size:13px; font-weight:600; }
+    .mech-row .mech-sub { font-size:11.5px; color:var(--ash); margin-top:1px; }
+    .mech-row .mech-in { display:flex; align-items:center; gap:6px; flex-shrink:0; }
+    .mech-row .mech-in .input { width:130px; }
+    .mech-row .mech-in .cfg-suf { font-size:11.5px; color:var(--ash); white-space:nowrap; }
+    @media (max-width:680px){ .mech-row{ flex-wrap:wrap; } .mech-row .mech-in .input{ width:110px; } }
+
+    /* nút chọn bộ phận (Tab 3) */
+    .deptbar { display:flex; gap:6px; flex-wrap:wrap; }
+    .dept-btn { display:inline-flex; align-items:center; gap:5px; padding:4px 9px; border:1px solid var(--rule); border-radius:7px; background:var(--canvas); cursor:pointer; font-size:11.5px; font-weight:500; color:var(--ash); transition:.15s; }
+    .dept-btn:hover { border-color:var(--rust); color:var(--ink); }
+    .dept-btn.active { background:var(--ink); color:var(--paper); border-color:var(--ink); font-weight:600; }
+    .dept-btn i { width:12px; height:12px; }
+
+    /* Detail drawer — trượt từ phải, cuộn dọc */
+    .drawer-overlay { position:fixed; inset:0; background:rgba(20,19,15,.42); backdrop-filter:blur(2px); z-index:80; opacity:0; pointer-events:none; transition:opacity .2s ease; }
+    .drawer-overlay.open { opacity:1; pointer-events:auto; }
+    .drawer { position:fixed; top:0; right:0; height:100vh; width:466px; max-width:94vw; background:var(--canvas); border-left:1px solid var(--rule); box-shadow:-12px 0 32px rgba(20,19,15,.16); z-index:81; transform:translateX(100%); transition:transform .26s cubic-bezier(.2,.8,.2,1); overflow-y:auto; padding:20px 22px 36px; }
+    .drawer.open { transform:translateX(0); }
+    .drawer::-webkit-scrollbar { width:8px; }
+    .drawer::-webkit-scrollbar-thumb { background:var(--rule); border-radius:9999px; }
+    .drawer-close { position:absolute; top:14px; right:14px; z-index:2; }
+  </style>
+</head>
+<body>
+
+<div id="app-shell" data-active="hr-kpi" data-title="Bậc lương & KPI" data-crumb="<b>Nhân sự</b> · Bậc lương & KPI">
+
+  <div class="page-header">
+    <div>
+      <h1>Bậc lương & KPI</h1>
+      <p>Bảng lương kỳ T6/2026 · Hệ thống 7 bậc · cơ chế lương theo bộ phận · KPI tự động từ LSX / QC / Chấm công GPS</p>
+    </div>
+    <div class="actions">
+      <button class="btn btn-secondary" id="btn-add-level"><i data-lucide="plus" style="width:14px;height:14px"></i> Thêm bậc lương</button>
+      <button class="btn btn-primary" id="btn-calc-kpi"><i data-lucide="target" style="width:14px;height:14px"></i> Tính KPI kỳ này</button>
+    </div>
+  </div>
+
+  <!-- KPI grid-4 (ngoài tab) -->
+  <div class="grid grid-4 mb-4">
+    <div class="card-feature-blue">
+      <div class="t-micro-u" style="color:var(--steel)">QUỸ LƯƠNG KỲ T6</div>
+      <div class="t-h2 mt-1">430M</div>
+      <div class="t-caption" style="color:var(--steel)">42 NV · thực lĩnh</div>
+    </div>
+    <div class="card-feature-teal">
+      <div class="t-micro-u" style="color:var(--moss-deep)">KPI TRUNG BÌNH T6</div>
+      <div class="t-h2 mt-1">88<span style="font-size:14px;color:var(--ash)"> /100</span></div>
+      <div class="t-caption" style="color:var(--moss-deep)">+3 điểm so với T5</div>
+    </div>
+    <div class="card-feature-orange">
+      <div class="t-micro-u" style="color:var(--amber)">NV ĐẠT KPI</div>
+      <div class="t-h2 mt-1">31<span style="font-size:14px;color:var(--ash)"> /42</span></div>
+      <div class="t-caption" style="color:var(--amber)">74% nhân sự · ≥85 điểm</div>
+    </div>
+    <div class="card-feature-yellow">
+      <div class="t-micro-u" style="color:var(--rust-deep)">QUỸ THƯỞNG NĂNG SUẤT</div>
+      <div class="t-h2 mt-1">42M</div>
+      <div class="t-caption" style="color:var(--rust-deep)">Chi theo điểm KPI T6</div>
+    </div>
+  </div>
+
+  <!-- ============================ VIEW TABS ============================ -->
+  <div data-tab-group>
+  <div class="tabs view-tabs mb-4">
+    <button class="tab active" data-tab="tab-bac-kpi"><i data-lucide="layers" style="width:14px;height:14px;vertical-align:-2px"></i> Bậc lương & KPI</button>
+    <button class="tab" data-tab="tab-coche"><i data-lucide="sliders-horizontal" style="width:14px;height:14px;vertical-align:-2px"></i> Cơ chế lương theo bộ phận</button>
+    <button class="tab" data-tab="tab-phucap"><i data-lucide="shield-plus" style="width:14px;height:14px;vertical-align:-2px"></i> Phụ cấp & Bảo hiểm</button>
+  </div>
+
+  <!-- (Đã bỏ tab "Bảng lương" — bảng lương theo kỳ nằm ở trang Chấm công & Lương) -->
+
+  <!-- ===================== TAB 2: BẬC LƯƠNG & KPI (giữ nội dung cũ) ===================== -->
+  <div data-tab-pane="tab-bac-kpi">
+
+  <!-- Hệ thống bậc lương theo nhóm / bộ phận -->
+  <div class="card mb-4">
+    <div class="flex-between mb-2" style="flex-wrap:wrap;gap:10px">
+      <div>
+        <div class="t-h5">Hệ thống bậc lương</div>
+        <div class="t-caption">Chọn nhóm/bộ phận để xem & chỉnh thang bậc riêng — hoặc dùng chung một thang cho toàn công ty.</div>
+      </div>
+      <button class="btn btn-secondary btn-sm" id="btn-add-bac"><i data-lucide="plus" style="width:13px;height:13px"></i> Thêm bậc</button>
+    </div>
+
+    <!-- Chọn nhóm áp dụng -->
+    <div class="deptbar mb-3" id="bacbar">
+      <button class="dept-btn active" data-bac="sx"><i data-lucide="printer"></i> Cắt CNC / Sản xuất</button>
+      <button class="dept-btn" data-bac="kt"><i data-lucide="wrench"></i> Kỹ thuật / Cơ điện</button>
+      <button class="dept-btn" data-bac="qa"><i data-lucide="shield-check"></i> KCS</button>
+      <button class="dept-btn" data-bac="vp"><i data-lucide="building-2"></i> Văn phòng</button>
+      <button class="dept-btn" data-bac="kd"><i data-lucide="briefcase"></i> Kinh doanh</button>
+      <button class="dept-btn" data-bac="chung"><i data-lucide="layers"></i> Dùng chung</button>
+    </div>
+
+    <div id="bac-card"><!-- render động theo nhóm --></div>
+
+    <!-- Cấu trúc công thức lương (chung, không gắn 1 người cụ thể) -->
+    <div class="mt-3" style="background:var(--paper-2);border:1px solid var(--rule-soft);border-radius:10px;padding:12px 14px">
+      <div class="t-micro-u mb-2">Cấu trúc tính lương (áp dụng cho mọi nhân viên)</div>
+      <div class="flex" style="gap:8px;flex-wrap:wrap;align-items:center;font-size:13px">
+        <span class="badge badge-steel">Lương cơ bản (theo bậc)</span>
+        <b style="color:var(--moss-deep)">+</b>
+        <span class="badge badge-steel">Phụ cấp</span>
+        <b style="color:var(--moss-deep)">+</b>
+        <span class="badge badge-orange">Thưởng KPI</span>
+        <b style="color:var(--signal)">−</b>
+        <span class="badge badge-steel">BHXH/YT/TN 10,5%</span>
+        <b>=</b>
+        <span class="badge badge-moss">Thực lĩnh</span>
+      </div>
+      <div class="t-caption mt-2" style="display:flex;align-items:flex-start;gap:6px">
+        <i data-lucide="info" style="width:13px;height:13px;color:var(--steel);flex-shrink:0;margin-top:1px"></i>
+        <span>Phần biến đổi theo bộ phận (hoa hồng, lương theo thời gian…) cấu hình ở tab <b>Cơ chế lương theo bộ phận</b>. Bảng tính chi tiết từng người xem ở tab <b>Bảng lương</b> — bấm vào một dòng để mở phiếu lương.</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- KPI CÁ NHÂN (master-detail) -->
+  <div class="card mb-2" style="padding:14px 16px">
+    <div class="flex-between" style="flex-wrap:wrap;gap:10px">
+      <div>
+        <div class="t-h5">KPI cá nhân · Tháng 6/2026</div>
+        <div class="t-caption">Tổng hợp tự động: Năng suất + Chất lượng + Đúng hạn + Chấp hành → Điểm KPI → Thưởng năng suất</div>
+      </div>
+      <div class="flex" style="gap:8px;flex-wrap:wrap">
+        <span class="filter-pill"><i data-lucide="building-2" style="width:13px;height:13px"></i> Bộ phận <i data-lucide="chevron-down" style="width:13px;height:13px"></i></span>
+        <span class="filter-pill"><i data-lucide="calendar" style="width:13px;height:13px"></i> Kỳ T6/2026 <i data-lucide="chevron-down" style="width:13px;height:13px"></i></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="hr-split mb-4">
+
+    <!-- LEFT: bảng KPI cá nhân -->
+    <div class="table-wrap">
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th>Mã NV</th>
+            <th>Họ tên</th>
+            <th>Bộ phận</th>
+            <th class="num">Năng suất</th>
+            <th class="num">Chất lượng</th>
+            <th class="num">Đúng hạn</th>
+            <th class="num">Chấp hành</th>
+            <th class="num">Điểm KPI</th>
+            <th class="num">Thưởng KPI</th>
+            <th>Hao hụt / Lỗi</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="row-selected" data-kpinv="NV-018">
+            <td><a href="22-nhan-su-ho-so.html?nv=NV-018" class="lnk"><b>NV-018</b></a></td><td>Trần Văn Tú</td><td>Cắt CNC</td>
+            <td class="num">96</td><td class="num">95</td><td class="num">92</td><td class="num">100</td>
+            <td class="num"><span class="badge badge-moss">94</span></td><td class="num"><b>1.700.000</b></td>
+            <td><span style="color:#1f6b3a;font-weight:700">Hao nhôm 4,2% · dưới định mức</span></td>
+          </tr>
+          <tr data-kpinv="NV-022">
+            <td><a href="22-nhan-su-ho-so.html?nv=NV-022" class="lnk"><b>NV-022</b></a></td><td>Đỗ Văn Minh</td><td>Cắt CNC</td>
+            <td class="num">88</td><td class="num">90</td><td class="num">86</td><td class="num">95</td>
+            <td class="num"><span class="badge badge-moss">89</span></td><td class="num">1.250.000</td>
+            <td><span style="color:#8a1f1f;font-weight:700">Hao nhôm 7,8% · vượt định mức 6%</span></td>
+          </tr>
+          <tr data-kpinv="NV-031">
+            <td><a href="22-nhan-su-ho-so.html?nv=NV-031" class="lnk"><b>NV-031</b></a></td><td>Nguyễn Thị Mai</td><td>KCS</td>
+            <td class="num">90</td><td class="num">96</td><td class="num">94</td><td class="num">98</td>
+            <td class="num"><span class="badge badge-moss">93</span></td><td class="num">1.550.000</td>
+            <td><span style="color:var(--rule)">—</span></td>
+          </tr>
+          <tr data-kpinv="NV-035">
+            <td><a href="22-nhan-su-ho-so.html?nv=NV-035" class="lnk"><b>NV-035</b></a></td><td>Hoàng Văn Sơn</td><td>Uốn vòm</td>
+            <td class="num">82</td><td class="num">84</td><td class="num">80</td><td class="num">90</td>
+            <td class="num"><span class="badge status-warning">83</span></td><td class="num">650.000</td>
+            <td><span style="color:var(--rule)">—</span></td>
+          </tr>
+          <tr data-kpinv="CN-020">
+            <td><a href="22-nhan-su-ho-so.html?nv=CN-020" class="lnk"><b>CN-020</b></a></td><td>Phạm Văn Nam</td><td>Hoàn thiện</td>
+            <td class="num">93</td><td class="num">88</td><td class="num">90</td><td class="num">92</td>
+            <td class="num"><span class="badge badge-moss">91</span></td><td class="num">1.400.000</td>
+            <td><span style="color:#1f6b3a;font-weight:700">0 bộ cửa phải đóng kiện lại</span></td>
+          </tr>
+          <tr data-kpinv="CN-021">
+            <td><a href="22-nhan-su-ho-so.html?nv=CN-021" class="lnk"><b>CN-021</b></a></td><td>Nguyễn Văn Hải</td><td>Hoàn thiện</td>
+            <td class="num">78</td><td class="num">80</td><td class="num">76</td><td class="num">85</td>
+            <td class="num"><span class="badge status-warning">79</span></td><td class="num">420.000</td>
+            <td><span style="color:var(--rule)">—</span></td>
+          </tr>
+          <tr data-kpinv="CN-019">
+            <td><a href="22-nhan-su-ho-so.html?nv=CN-019" class="lnk"><b>CN-019</b></a></td><td>Lê Văn Bình</td><td>Uốn vòm</td>
+            <td class="num">85</td><td class="num">82</td><td class="num">88</td><td class="num">88</td>
+            <td class="num"><span class="badge status-warning">84</span></td><td class="num">700.000</td>
+            <td><span style="color:#8a1f1f;font-weight:700">UON-NUT 6 cây · 480.000₫</span></td>
+          </tr>
+          <tr data-kpinv="NV-040">
+            <td><a href="22-nhan-su-ho-so.html?nv=NV-040" class="lnk"><b>NV-040</b></a></td><td>Võ Minh Khôi</td><td>Hoàn thiện</td>
+            <td class="num">70</td><td class="num">72</td><td class="num">68</td><td class="num">75</td>
+            <td class="num"><span class="badge status-overdue">68</span></td><td class="num">—</td>
+            <td><span style="color:#8a1f1f;font-weight:700">EP-HO-MOI 26 khung · 850.000₫</span></td>
+          </tr>
+        </tbody>
+        <tfoot>
+          <tr style="background:var(--ink);color:#fff">
+            <td colspan="7"><b style="color:#fff">KPI trung bình toàn xưởng (42 NV)</b></td>
+            <td class="num" style="color:var(--paper-3,#fff)"><b style="color:#fff">88</b></td>
+            <td class="num" style="color:var(--rust)"><b>42.000.000</b></td>
+            <td style="color:#fff">Tổng trừ lỗi: −1.330.000₫</td>
+          </tr>
+        </tfoot>
+      </table>
+      <div class="t-caption mt-2" style="display:flex;gap:14px;flex-wrap:wrap">
+        <span><span class="badge badge-moss">≥85</span> Đạt tốt</span>
+        <span><span class="badge status-warning">70–84</span> Đạt</span>
+        <span><span class="badge status-overdue">&lt;70</span> Chưa đạt · không thưởng</span>
+      </div>
+    </div>
+
+    <!-- RIGHT: chi tiết KPI (render động theo người được chọn) -->
+    <div class="card" id="kpiDetailCard">
+      <div class="flex-between mb-1">
+        <div>
+          <div class="t-h4">Trần Văn Tú</div>
+          <div class="t-caption">NV-018 · Cắt CNC · Thợ cắt CNC chính · Bậc 5/7</div>
+        </div>
+        <span class="badge badge-moss">KPI 94 · Đạt tốt</span>
+      </div>
+
+      <div class="t-micro-u mt-3 mb-1">Biểu đồ KPI 5 trục</div>
+      <div id="kpiRadar" style="min-height:240px"></div>
+
+      <hr class="hr-soft">
+
+      <div class="t-micro-u mb-2">Nguồn dữ liệu KPI (tự động)</div>
+
+      <div class="ksrc">
+        <span class="ki prod"><i data-lucide="qr-code" style="width:16px;height:16px"></i></span>
+        <div><div class="kt">Sản lượng & năng suất</div><div class="kv">86.500 kg nhôm cắt</div></div>
+        <div class="ksrc-src">← Quét QR<br>Job ticket (LSX)</div>
+      </div>
+      <div class="ksrc">
+        <span class="ki qa"><i data-lucide="shield-check" style="width:16px;height:16px"></i></span>
+        <div><div class="kt">Chất lượng</div><div class="kv">Đạt KCS 98.6% · ΔE 1.4</div></div>
+        <div class="ksrc-src">← KCS<br>Lớp anod ≥15µm / tỷ lệ lỗi lô</div>
+      </div>
+      <div class="ksrc">
+        <span class="ki time"><i data-lucide="map-pin" style="width:16px;height:16px"></i></span>
+        <div><div class="kt">Đúng giờ – chuyên cần</div><div class="kv">Công 24/26 · 0 đi muộn</div></div>
+        <div class="ksrc-src">← Chấm công<br>GPS</div>
+      </div>
+      <div class="ksrc">
+        <span class="ki disc"><i data-lucide="file-check" style="width:16px;height:16px"></i></span>
+        <div><div class="kt">Chấp hành nội quy</div><div class="kv">0 biên bản · 0 phiếu lỗi</div></div>
+        <div class="ksrc-src">← Biên bản /<br>phiếu lỗi</div>
+      </div>
+
+      <div class="formula" style="margin-top:12px">
+        <div class="formula-row" style="background:var(--moss-soft)">
+          <span class="op plus"><i data-lucide="target" style="width:14px;height:14px"></i></span>
+          <div><div class="nm">Điểm KPI tổng</div><div class="sub">Trung bình có trọng số 5 trục</div></div>
+          <span class="amt">94 / 100</span>
+        </div>
+        <div class="formula-row total">
+          <span class="op" style="background:var(--rust);color:#fff">₫</span>
+          <div><div class="nm">Thưởng năng suất T6</div></div>
+          <span class="amt">1.700.000₫</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- KPI Kinh doanh -->
+  <div class="grid grid-12 mb-4">
+    <div class="card">
+      <div class="flex-between mb-1">
+        <div class="t-h5">KPI Kinh doanh · NV-009 Bùi Thị Lan</div>
+        <span class="badge badge-moss">Vượt target</span>
+      </div>
+      <div class="t-caption mb-3">Phòng Kinh doanh · Khu vực HCM · KPI tính theo doanh số → hoa hồng vào lương</div>
+      <div class="grid grid-4">
+        <div class="kpi-mini">
+          <div class="lab">Doanh số T6</div>
+          <div class="val">1.18 tỷ</div>
+          <div class="delta text-success">▲ 12% so với T5</div>
+        </div>
+        <div class="kpi-mini">
+          <div class="lab">% đạt target</div>
+          <div class="val">118%</div>
+          <div class="delta text-success">Target 1.0 tỷ</div>
+        </div>
+        <div class="kpi-mini">
+          <div class="lab">Đơn chốt</div>
+          <div class="val">17</div>
+          <div class="delta" style="color:var(--ash)">/ 21 báo giá gửi</div>
+        </div>
+        <div class="kpi-mini" style="background:var(--amber-soft);border-color:rgba(156,119,20,.2)">
+          <div class="lab" style="color:var(--amber)">Hoa hồng + thưởng</div>
+          <div class="val" style="color:var(--rust-deep)">9.4M ₫</div>
+          <div class="delta" style="color:var(--amber)">→ cộng vào lương T6</div>
+        </div>
+      </div>
+      <div class="t-caption mt-3" style="display:flex;align-items:flex-start;gap:6px">
+        <i data-lucide="info" style="width:13px;height:13px;color:var(--steel);flex-shrink:0;margin-top:1px"></i>
+        <span>Hoa hồng = 0.6% doanh số đạt target + 1.0% phần vượt target. Số liệu lấy tự động từ Đơn hàng bán & Báo giá.</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="t-h5 mb-3">KPI trung bình theo bộ phận · T6</div>
+      <div id="kpiDept" style="min-height:240px"></div>
+    </div>
+  </div>
+
+  </div><!-- /TAB 2 -->
+
+  <!-- ===================== TAB 3: CƠ CHẾ LƯƠNG THEO BỘ PHẬN ===================== -->
+  <div data-tab-pane="tab-coche" style="display:none">
+
+    <div class="card mb-4" style="padding:14px 16px">
+      <div class="flex-between mb-2" style="flex-wrap:wrap;gap:10px">
+        <div>
+          <div class="t-h5">Cơ chế lương theo bộ phận</div>
+          <div class="t-caption">Mỗi bộ phận có cơ chế tính lương riêng — bật/tắt từng thành phần và nhập giá trị.</div>
+        </div>
+      </div>
+      <div class="deptbar" id="deptbar">
+        <button class="dept-btn active" data-dept="kd"><i data-lucide="briefcase"></i> Kinh doanh</button>
+        <button class="dept-btn" data-dept="sx"><i data-lucide="printer"></i> Cắt CNC / Sản xuất</button>
+        <button class="dept-btn" data-dept="qa"><i data-lucide="shield-check"></i> KCS</button>
+        <button class="dept-btn" data-dept="vp"><i data-lucide="building-2"></i> Văn phòng</button>
+        <button class="dept-btn" data-dept="kho"><i data-lucide="package"></i> Kho</button>
+      </div>
+    </div>
+
+    <div class="card" id="mech-card"><!-- render động theo bộ phận --></div>
+
+  </div><!-- /TAB 3 -->
+
+  <!-- ===================== TAB 4: PHỤ CẤP & BẢO HIỂM ===================== -->
+  <div data-tab-pane="tab-phucap" style="display:none">
+
+    <div class="grid grid-12 mb-4">
+
+      <!-- Card Phụ cấp -->
+      <div class="card">
+        <div class="flex-between mb-1">
+          <div class="t-h5">Phụ cấp</div>
+          <span class="badge badge-orange"><i data-lucide="zap" style="width:11px;height:11px"></i> Cộng vào lương</span>
+        </div>
+        <div class="t-caption mb-3">Bật/tắt từng loại phụ cấp · nhập mức áp dụng.</div>
+
+        <div class="mech-row">
+          <span class="mech-ic"><i data-lucide="moon" style="width:16px;height:16px"></i></span>
+          <div class="mech-body"><div class="mech-nm">Phụ cấp ca đêm</div><div class="mech-sub">% lương cơ bản theo giờ làm đêm (22h–6h)</div></div>
+          <div class="mech-in"><input class="input" value="30"/><span class="cfg-suf">%</span><label class="sw"><input type="checkbox" checked/><span class="slider"></span></label></div>
+        </div>
+        <div class="mech-row">
+          <span class="mech-ic"><i data-lucide="award" style="width:16px;height:16px"></i></span>
+          <div class="mech-body"><div class="mech-nm">Phụ cấp thâm niên</div><div class="mech-sub">Cộng dồn mỗi 6 tháng làm việc</div></div>
+          <div class="mech-in"><input class="input" value="150.000"/><span class="cfg-suf">đ / 6 tháng</span><label class="sw"><input type="checkbox" checked/><span class="slider"></span></label></div>
+        </div>
+        <div class="mech-row">
+          <span class="mech-ic"><i data-lucide="utensils" style="width:16px;height:16px"></i></span>
+          <div class="mech-body"><div class="mech-nm">Phụ cấp cơm</div><div class="mech-sub">Ăn tại công ty · theo suất / ngày công</div></div>
+          <div class="mech-in"><input class="input" value="30.000"/><span class="cfg-suf">đ / suất</span><label class="sw"><input type="checkbox" checked/><span class="slider"></span></label></div>
+        </div>
+        <div class="mech-row">
+          <span class="mech-ic"><i data-lucide="user-check" style="width:16px;height:16px"></i></span>
+          <div class="mech-body"><div class="mech-nm">Phụ cấp trách nhiệm</div><div class="mech-sub">Tổ trưởng / quản lý trực tiếp</div></div>
+          <div class="mech-in"><input class="input" value="1.000.000"/><span class="cfg-suf">đ / tháng</span><label class="sw"><input type="checkbox" checked/><span class="slider"></span></label></div>
+        </div>
+        <div class="mech-row">
+          <span class="mech-ic"><i data-lucide="calendar-check" style="width:16px;height:16px"></i></span>
+          <div class="mech-body"><div class="mech-nm">Thưởng chuyên cần</div><div class="mech-sub">Đủ công · không đi muộn trong kỳ</div></div>
+          <div class="mech-in"><input class="input" value="300.000"/><span class="cfg-suf">đ / tháng</span><label class="sw"><input type="checkbox" checked/><span class="slider"></span></label></div>
+        </div>
+      </div>
+
+      <!-- Card Bảo hiểm bắt buộc -->
+      <div class="card">
+        <div class="flex-between mb-1">
+          <div class="t-h5">Bảo hiểm bắt buộc</div>
+          <span class="badge badge-steel">Tỷ lệ đóng</span>
+        </div>
+        <div class="t-caption mb-3">Đóng trên lương cơ bản khi ký HĐ chính thức.</div>
+        <div class="table-wrap" style="border:none">
+          <table class="tbl">
+            <thead>
+              <tr><th>Khoản</th><th class="num">NSDLĐ (%)</th><th class="num">NLĐ (%)</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>BHXH</td><td class="num"><input class="input" value="17,5" style="width:74px;text-align:right"/></td><td class="num"><input class="input" value="8" style="width:74px;text-align:right"/></td></tr>
+              <tr><td>BHYT</td><td class="num"><input class="input" value="3" style="width:74px;text-align:right"/></td><td class="num"><input class="input" value="1,5" style="width:74px;text-align:right"/></td></tr>
+              <tr><td>BHTN</td><td class="num"><input class="input" value="1" style="width:74px;text-align:right"/></td><td class="num"><input class="input" value="1" style="width:74px;text-align:right"/></td></tr>
+            </tbody>
+            <tfoot>
+              <tr style="background:var(--ink);color:#fff">
+                <td><b style="color:#fff">Tổng cộng</b></td>
+                <td class="num"><b style="color:#fff">21,5%</b></td>
+                <td class="num" style="color:var(--rust)"><b>10,5%</b></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+        <div class="t-caption mt-3" style="display:flex;align-items:flex-start;gap:6px">
+          <i data-lucide="info" style="width:13px;height:13px;color:var(--steel);flex-shrink:0;margin-top:1px"></i>
+          <span>Phần NLĐ <b>10,5%</b> là khoản khấu trừ trong công thức thực lĩnh. Thử việc chưa đóng — đóng khi ký HĐ chính thức.</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card Tham số kỳ lương -->
+    <div class="card mb-4">
+      <div class="flex-between mb-2" style="flex-wrap:wrap;gap:10px">
+        <div class="t-h5">Tham số kỳ lương</div>
+        <span class="badge badge-orange"><i data-lucide="zap" style="width:11px;height:11px"></i> Dùng chung Chấm công–Lương & Phiếu lỗi–Biên bản</span>
+      </div>
+      <div class="t-caption mb-3">Đồng bộ với các trang Chấm công–Lương (16), Phiếu lỗi–Biên bản (28) và Quy chế & Cấu hình (29).</div>
+      <div class="cfg-grid">
+        <div class="cfg-row">
+          <div class="cfg-k"><i data-lucide="landmark"></i> Lương tối thiểu vùng (vùng I)</div>
+          <div class="cfg-in"><input class="input" value="4.960.000"/><span class="cfg-suf">đ/tháng</span></div>
+        </div>
+        <div class="cfg-row">
+          <div class="cfg-k"><i data-lucide="calendar-days"></i> Ngày công chuẩn</div>
+          <div class="cfg-in"><input class="input" value="26"/><span class="cfg-suf">công / tháng</span></div>
+        </div>
+        <div class="cfg-row">
+          <div class="cfg-k"><i data-lucide="calendar-check"></i> Ngày chốt công</div>
+          <div class="cfg-in"><input class="input" value="25"/><span class="cfg-suf">hàng tháng</span></div>
+        </div>
+        <div class="cfg-row">
+          <div class="cfg-k"><i data-lucide="banknote"></i> Ngày trả lương</div>
+          <div class="cfg-in"><input class="input" value="10"/><span class="cfg-suf">tháng sau</span></div>
+        </div>
+        <div class="cfg-row">
+          <div class="cfg-k"><i data-lucide="file-warning"></i> Ngưỡng phạt biên bản</div>
+          <div class="cfg-in"><input class="input" value="300.000"/><span class="cfg-suf">đ</span></div>
+        </div>
+        <div class="cfg-row">
+          <div class="cfg-k"><i data-lucide="percent"></i> Trần khấu trừ kỷ luật / kỳ</div>
+          <div class="cfg-in"><input class="input" value="30"/><span class="cfg-suf">% thực lĩnh</span></div>
+        </div>
+      </div>
+      <div class="flex-between mt-3" style="background:var(--moss-soft);border:1px solid rgba(47,93,58,.18);border-radius:9px;padding:10px 12px">
+        <div style="min-width:0">
+          <div style="font-size:13px;font-weight:600;color:var(--moss-deep)">Nguyên tắc thực lĩnh ≥ 0</div>
+          <div class="t-caption" style="color:var(--moss-deep)">Lương thực lĩnh không âm — phần khấu trừ vượt được dồn sang kỳ sau.</div>
+        </div>
+        <label class="sw"><input type="checkbox" checked/><span class="slider"></span></label>
+      </div>
+    </div>
+
+    <div class="flex" style="gap:8px;justify-content:flex-end;margin-bottom:8px">
+      <button class="btn btn-secondary" id="btn-reset-allow"><i data-lucide="rotate-ccw" style="width:14px;height:14px"></i> Khôi phục mặc định</button>
+      <button class="btn btn-primary" id="btn-save-allow"><i data-lucide="save" style="width:14px;height:14px"></i> Lưu cấu hình phụ cấp & bảo hiểm</button>
+    </div>
+
+  </div><!-- /TAB 4 -->
+  </div><!-- /tab-group -->
+
+  <!-- Drawer phiếu lương chi tiết -->
+  <div class="drawer-overlay" id="pay-overlay"></div>
+  <aside class="drawer" id="pay-drawer" aria-hidden="true">
+    <button class="btn-icon drawer-close" id="pay-close" title="Đóng"><i data-lucide="x" style="width:18px;height:18px"></i></button>
+    <div id="pay-body"></div>
+  </aside>
+
+  <!-- Sticky note -->
+  <div style="text-align:center;padding:16px">
+    <div class="sticky teal"><i data-lucide="link" style="width:14px;height:14px"></i> KPI & lương tự động tổng hợp từ LSX/QR, QC và Chấm công GPS · cơ chế lương cấu hình theo bộ phận · số liệu nhất quán (NV-018 sản lượng 86.500 kg nhôm cắt)</div>
+  </div>
+
+</div>
+
+<script src="../assets/js/layout.js"></script>
+<script src="../assets/js/pricing-engine.js"></script>
+<script src="../assets/js/quote-data.js"></script>
+<script src="../assets/js/loss-data.js"></script>
+<script src="../assets/js/loss-ui.js"></script>
+<script>
+  document.addEventListener('erp:ready', () => {
+    const toast = (m,t) => window.ERPInteract && window.ERPInteract.showToast(m, t||'info');
+
+    /* ===== Page-header actions ===== */
+    const addLv = document.getElementById('btn-add-level');
+    if(addLv) addLv.addEventListener('click', ()=> toast('Mở form <b>Thêm bậc lương</b> (mockup)', 'info'));
+    const calc = document.getElementById('btn-calc-kpi');
+    if(calc) calc.addEventListener('click', ()=> toast('Đang tính lại KPI kỳ <b>T6/2026</b> từ LSX/QR, QC, Chấm công…', 'success'));
+
+    /* ===== Charts vẽ lười khi mở tab "Bậc lương & KPI" ===== */
+    let chartsDrawn = false;
+    function drawCharts(){
+      if(chartsDrawn) return; chartsDrawn = true;
+      ERPCharts.groupedBar('kpiDept', {
+        labels: ['Cắt CNC','KCS','Uốn vòm','Hoàn thiện','Ép góc','KD'],
+        datasets: [
+          { name: 'KPI TB T5', values: [89, 90, 81, 84, 82, 86], color: '#b8b2a2' },
+          { name: 'KPI TB T6', values: [92, 93, 84, 86, 85, 91], color: '#c5400a' },
+        ],
+      }, { height: 240, max: 100, unit: 'điểm' });
+    }
+    const bacTab = document.querySelector('[data-tab="tab-bac-kpi"]');
+    if(bacTab) bacTab.addEventListener('click', ()=> setTimeout(drawCharts, 40));
+    drawCharts(); // tab "Bậc lương & KPI" hiển thị mặc định → vẽ ngay
+
+    /* ===== Hệ thống bậc lương theo nhóm/bộ phận (render động) ===== */
+    /* mỗi hàng: [bậc, nhóm áp dụng, lương cơ bản, hệ số, điều kiện thăng bậc, số NV, (highlight?)] */
+    const BAC = {
+      sx: { name:'Cắt CNC / Sản xuất', badge:'badge-moss', note:'Lương cơ bản theo bậc · áp dụng cho công nhân xưởng cửa nhôm.', rows:[
+        [1,'CN sản xuất · mới vào','6.000.000','1.00','Hết thử việc · đạt tay nghề cơ bản',5],
+        [2,'CN sản xuất','6.600.000','1.10','≥ 12 tháng · KPI ≥ 75',7],
+        [3,'CN sản xuất','7.200.000','1.20','≥ 24 tháng · KPI ≥ 80 · sát hạch tay nghề',9],
+        [4,'CN sản xuất · thợ chính','8.000.000','1.33','≥ 36 tháng · KPI ≥ 82 · vận hành độc lập',8],
+        [5,'Thợ vận hành chính','8.800.000','1.47','≥ 48 tháng · KPI ≥ 85 · kèm phụ máy',6,true],
+        [6,'Thợ bậc cao','9.800.000','1.63','≥ 60 tháng · KPI ≥ 88 · xử lý sự cố máy',4],
+        [7,'Tổ trưởng kỹ thuật','11.000.000','1.83','KPI ≥ 90 · đào tạo được thợ mới',3],
+      ]},
+      kt: { name:'Kỹ thuật / Cơ điện', badge:'badge-steel', note:'Thang bậc tổ bảo trì – cơ điện.', rows:[
+        [1,'Phụ máy / học việc','6.200.000','1.00','Hết thử việc',2],
+        [2,'KT cơ điện','7.000.000','1.13','≥ 12 tháng · KPI ≥ 78',3],
+        [3,'KT chính','8.200.000','1.32','≥ 24 tháng · sửa chữa độc lập',2,true],
+        [4,'KT bậc cao','9.500.000','1.53','≥ 48 tháng · xử lý sự cố lớn',1],
+        [5,'Tổ trưởng KT','11.500.000','1.85','Quản lý bảo trì toàn xưởng',1],
+      ]},
+      qa: { name:'KCS', badge:'badge-steel', note:'Thang bậc khối kiểm soát chất lượng.', rows:[
+        [1,'NV kiểm hàng · mới','6.400.000','1.00','Hết thử việc',1],
+        [2,'NV kiểm hàng','7.200.000','1.13','≥ 12 tháng · KPI ≥ 80',2,true],
+        [3,'KCS chính','8.400.000','1.31','≥ 24 tháng · đo được lớp anod &amp; dung sai ≤2mm',1],
+        [4,'Trưởng ca KCS','9.800.000','1.53','Điều phối kiểm toàn xưởng',1],
+        [5,'Trưởng KCS','11.000.000','1.72','KPI ≥ 90',1],
+      ]},
+      vp: { name:'Văn phòng', badge:'badge-steel', note:'Thang bậc khối hành chính – kế toán – văn phòng.', rows:[
+        [1,'NV văn phòng · mới','6.500.000','1.00','Hết thử việc',1],
+        [2,'NV văn phòng','7.800.000','1.20','≥ 12 tháng',2],
+        [3,'Chuyên viên','9.000.000','1.38','≥ 24 tháng · chủ trì nghiệp vụ',1],
+        [4,'Kế toán / CV chính','9.800.000','1.51','≥ 36 tháng',1,true],
+        [5,'Trưởng bộ phận','11.000.000','1.69','Quản lý phòng',2],
+      ]},
+      kd: { name:'Kinh doanh', badge:'badge-orange', note:'Lương cứng theo bậc + hoa hồng (cấu hình ở tab Cơ chế lương theo bộ phận).', rows:[
+        [1,'NV kinh doanh · mới','6.500.000','1.00','Hết thử việc',1],
+        [2,'NV kinh doanh','7.500.000','1.15','≥ 12 tháng · đạt 80% target',1],
+        [3,'NV kinh doanh chính','8.000.000','1.23','≥ 24 tháng · đạt 100% target',1,true],
+        [4,'Trưởng nhóm KD','9.500.000','1.46','Dẫn dắt nhóm · vượt target',0],
+      ]},
+      chung: { name:'Dùng chung (toàn công ty)', badge:'badge-orange', shared:true, note:'Một thang bậc duy nhất cho mọi bộ phận. Khi bật, các thang riêng theo bộ phận sẽ bị bỏ qua khi tính lương.', rows:[
+        [1,'Bậc khởi điểm','6.000.000','1.00','Hết thử việc',9],
+        [2,'Bậc 2','6.800.000','1.13','≥ 12 tháng · KPI ≥ 75',11],
+        [3,'Bậc 3','7.600.000','1.27','≥ 24 tháng · KPI ≥ 80',12],
+        [4,'Bậc 4','8.600.000','1.43','≥ 36 tháng · KPI ≥ 82',6],
+        [5,'Bậc 5','9.800.000','1.63','≥ 48 tháng · KPI ≥ 85',3],
+        [6,'Bậc 6 · quản lý','11.500.000','1.92','Quản lý bộ phận · KPI ≥ 90',1],
+      ]},
+    };
+    const bacCard = document.getElementById('bac-card');
+    function renderBac(g){
+      const b = BAC[g]; if(!b || !bacCard) return;
+      const rows = b.rows.map(([bac,nhom,luong,heso,dk,sonv,sel])=>{
+        const pill = sel
+          ? `<span class="lvl-pill">${bac}</span>`
+          : `<span class="lvl-pill" style="background:var(--paper-3);color:var(--ash)">${bac}</span>`;
+        return `<tr${sel?' class="row-selected"':''}>
+          <td>${pill}</td>
+          <td>${sel?`<b>${nhom}</b>`:nhom}</td>
+          <td class="num">${sel?`<b>${luong}</b>`:luong}</td>
+          <td class="num">${sel?`<b>${heso}</b>`:heso}</td>
+          <td>${dk}</td>
+          <td class="num">${sonv}</td>
+        </tr>`;
+      }).join('');
+      bacCard.innerHTML = `
+        <div class="flex-between mb-1">
+          <div class="t-h6" style="font-weight:600">Thang bậc · ${b.name}</div>
+          <span class="badge ${b.badge}">${b.shared?'Áp dụng toàn công ty':b.rows.length+' bậc'}</span>
+        </div>
+        <div class="t-caption mb-2">${b.note}</div>
+        <div class="table-wrap" id="bac-table" style="border:none">
+          <table class="tbl">
+            <thead><tr><th>Bậc</th><th>Nhóm áp dụng</th><th class="num">Lương cơ bản</th><th class="num">Hệ số</th><th>Điều kiện thăng bậc</th><th class="num">Số NV</th></tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>
+        <div class="flex-between mt-3" style="flex-wrap:wrap;gap:10px">
+          <div class="t-caption" style="display:flex;align-items:flex-start;gap:6px;max-width:560px">
+            <i data-lucide="info" style="width:13px;height:13px;color:var(--steel);flex-shrink:0;margin-top:1px"></i>
+            <span>Mỗi 6 tháng xét tăng 1% lương cơ bản + 0,5% phụ cấp thâm niên · thăng bậc theo đánh giá KPI + sát hạch tay nghề.</span>
+          </div>
+          <button class="btn btn-primary btn-sm" data-save-bac><i data-lucide="save" style="width:13px;height:13px"></i> Lưu thang bậc ${b.name}</button>
+        </div>`;
+      if(window.lucide) window.lucide.createIcons();
+      const sv = bacCard.querySelector('[data-save-bac]');
+      if(sv) sv.addEventListener('click', ()=> toast(`Đã lưu thang bậc <b>${b.name}</b>`, 'success'));
+    }
+    document.querySelectorAll('#bacbar .dept-btn').forEach(b=>{
+      b.addEventListener('click', ()=>{
+        document.querySelectorAll('#bacbar .dept-btn').forEach(x=>x.classList.remove('active'));
+        b.classList.add('active');
+        renderBac(b.dataset.bac);
+      });
+    });
+    renderBac('sx');
+    const addBac = document.getElementById('btn-add-bac');
+    if(addBac) addBac.addEventListener('click', ()=> toast('Mở form <b>Thêm bậc lương</b> cho nhóm đang chọn (mockup)', 'info'));
+
+    /* ===== TAB 3: Cơ chế lương theo bộ phận (render động) ===== */
+    const mechRow = (ic,nm,sub,val,suf,on=true) =>
+      `<div class="mech-row">
+        <span class="mech-ic"><i data-lucide="${ic}" style="width:16px;height:16px"></i></span>
+        <div class="mech-body"><div class="mech-nm">${nm}</div><div class="mech-sub">${sub}</div></div>
+        <div class="mech-in"><input class="input" value="${val}"/><span class="cfg-suf">${suf}</span><label class="sw"><input type="checkbox" ${on?'checked':''}/><span class="slider"></span></label></div>
+      </div>`;
+
+    const tierTable = (head, rows) =>
+      `<div class="table-wrap" style="border:none;margin-top:8px"><table class="tbl"><thead><tr>${head.map(h=>`<th${h.num?' class="num"':''}>${h.t}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table></div>`;
+
+    const MECH = {
+      kd: { name:'Kinh doanh', badge:'badge-orange', desc:'Lương cứng + lương theo KPI + hoa hồng theo đơn hàng + thưởng đạt target.',
+        rows:[
+          mechRow('wallet','Lương cứng','Cố định hàng tháng theo bậc KD','8.000.000','đ / tháng'),
+          mechRow('target','Lương theo KPI','Theo điểm KPI cá nhân kỳ này','1.000.000','đ (mức trần)'),
+          mechRow('trophy','Thưởng đạt target tháng','Khi đạt ≥ 100% doanh số mục tiêu','2.000.000','đ / tháng'),
+        ],
+        extra:`<div class="t-h6 mt-3 mb-1" style="font-weight:600">Hoa hồng theo bậc thang doanh số</div>
+          <div class="t-caption mb-1">% hoa hồng tính trên doanh số đơn hàng đã chốt.</div>
+          ${tierTable([{t:'Bậc doanh số / tháng'},{t:'% hoa hồng',num:true}],
+            `<tr><td>Đạt phần ≤ target (≤ 1,0 tỷ)</td><td class="num"><input class="input" value="0,6" style="width:74px;text-align:right"/></td></tr>
+             <tr><td>Phần vượt 1,0 – 1,5 tỷ</td><td class="num"><input class="input" value="1,0" style="width:74px;text-align:right"/></td></tr>
+             <tr><td>Phần vượt &gt; 1,5 tỷ</td><td class="num"><input class="input" value="1,5" style="width:74px;text-align:right"/></td></tr>`)}` },
+
+      sx: { name:'Cắt CNC / Sản xuất', badge:'badge-moss', desc:'Lương theo bậc (7 bậc) + thưởng năng suất theo KPI + phụ cấp ca đêm + phụ cấp trách nhiệm. Không tính lương khoán.',
+        rows:[
+          mechRow('layers','Lương theo bậc','Liên kết bảng 7 bậc lương · bậc 1→7','6.000.000','đ (bậc 1)'),
+          mechRow('target','Thưởng năng suất (KPI)','Theo điểm KPI sản xuất kỳ này','1.700.000','đ (mức trần)'),
+          mechRow('moon','Phụ cấp ca đêm','% lương cơ bản giờ làm đêm','30','%'),
+          mechRow('user-check','Phụ cấp trách nhiệm','Tổ trưởng / phụ trách máy','800.000','đ / tháng'),
+        ], extra:'' },
+
+      qa: { name:'KCS', badge:'badge-steel', desc:'Lương theo bậc + lương theo thời gian (công chuẩn 26) + thưởng KPI + phụ cấp trách nhiệm.',
+        rows:[
+          mechRow('layers','Lương theo bậc','Thang bậc khối KCS','7.200.000','đ (bậc 3)'),
+          mechRow('clock','Lương theo thời gian','Lương bậc ÷ 26 × ngày công thực tế','26','ngày công chuẩn'),
+          mechRow('target','Thưởng KPI','Theo điểm KPI kiểm hàng','1.550.000','đ (mức trần)'),
+          mechRow('user-check','Phụ cấp trách nhiệm','Trưởng KCS / tổ trưởng kiểm','800.000','đ / tháng'),
+        ], extra:'' },
+
+      vp: { name:'Văn phòng', badge:'badge-steel', desc:'Lương theo bậc + lương theo thời gian (công chuẩn 26) + thưởng KPI + phụ cấp trách nhiệm.',
+        rows:[
+          mechRow('layers','Lương theo bậc','Thang bậc khối văn phòng','9.800.000','đ (bậc 6)'),
+          mechRow('clock','Lương theo thời gian','Lương bậc ÷ 26 × ngày công thực tế','26','ngày công chuẩn'),
+          mechRow('target','Thưởng KPI','Theo điểm KPI bộ phận','1.300.000','đ (mức trần)'),
+          mechRow('user-check','Phụ cấp trách nhiệm','Trưởng phòng / kế toán trưởng','1.200.000','đ / tháng'),
+        ], extra:'' },
+
+      kho: { name:'Kho', badge:'badge-steel', desc:'Lương theo bậc + lương theo thời gian (công chuẩn 26) + thưởng KPI + phụ cấp trách nhiệm thủ kho.',
+        rows:[
+          mechRow('layers','Lương theo bậc','Thang bậc khối kho','7.200.000','đ (bậc 3)'),
+          mechRow('clock','Lương theo thời gian','Lương bậc ÷ 26 × ngày công thực tế','26','ngày công chuẩn'),
+          mechRow('target','Thưởng KPI','Độ chính xác tồn kho · tốc độ xuất nhập','900.000','đ (mức trần)'),
+          mechRow('user-check','Phụ cấp trách nhiệm','Thủ kho','700.000','đ / tháng'),
+        ], extra:'' },
+    };
+
+    const mechCard = document.getElementById('mech-card');
+    function renderMech(dept){
+      const m = MECH[dept]; if(!m || !mechCard) return;
+      mechCard.innerHTML = `
+        <div class="flex-between mb-1">
+          <div class="t-h5">Cơ chế lương · ${m.name}</div>
+          <span class="badge ${m.badge}">Bộ phận ${m.name}</span>
+        </div>
+        <div class="t-caption mb-2">${m.desc}</div>
+        ${m.rows.join('')}
+        ${m.extra}
+        <div class="t-caption mt-3" style="display:flex;align-items:flex-start;gap:6px">
+          <i data-lucide="info" style="width:13px;height:13px;color:var(--steel);flex-shrink:0;margin-top:1px"></i>
+          <span>Bật/tắt từng thành phần bằng công tắc · giá trị nhập áp dụng cho toàn bộ NV thuộc bộ phận khi tính lương kỳ.</span>
+        </div>
+        <div class="flex" style="gap:8px;justify-content:flex-end;margin-top:14px">
+          <button class="btn btn-primary btn-sm" id="btn-save-mech"><i data-lucide="save" style="width:13px;height:13px"></i> Lưu cơ chế lương ${m.name}</button>
+        </div>`;
+      if(window.lucide) window.lucide.createIcons();
+      const sv = document.getElementById('btn-save-mech');
+      if(sv) sv.addEventListener('click', ()=> toast(`Đã lưu cơ chế lương <b>${m.name}</b>`, 'success'));
+    }
+    document.querySelectorAll('#deptbar .dept-btn').forEach(b=>{
+      b.addEventListener('click', ()=>{
+        document.querySelectorAll('#deptbar .dept-btn').forEach(x=>x.classList.remove('active'));
+        b.classList.add('active');
+        renderMech(b.dataset.dept);
+      });
+    });
+    renderMech('kd');
+
+    /* ===== TAB 4: nút lưu ===== */
+    const saveAllow = document.getElementById('btn-save-allow');
+    if(saveAllow) saveAllow.addEventListener('click', ()=> toast('Đã lưu <b>cấu hình phụ cấp & bảo hiểm</b> · đồng bộ Chấm công–Lương', 'success'));
+    const resetAllow = document.getElementById('btn-reset-allow');
+    if(resetAllow) resetAllow.addEventListener('click', ()=> toast('Đã khôi phục tham số mặc định', 'info'));
+
+    /* ===== TAB 1: Drawer phiếu lương chi tiết (render động) ===== */
+    const PAY = {
+      'NV-018': { ten:'Trần Văn Tú', sub:'NV-018 · Cắt CNC · Thợ cắt CNC chính · Bậc 5/7', mech:'Theo bậc + KPI', net:'10.500.000',
+        rows:[['=','Lương cơ bản (bậc 5/7)','Hệ số 1.47','8.800.000','plus0'],
+              ['+','Phụ cấp','Ca đêm 2 ngày + thâm niên 5 năm','1.150.000','plus'],
+              ['+','Thưởng KPI','KPI 94/100 → bậc thưởng cao nhất','1.700.000','kpi'],
+              ['−','Khấu trừ BHXH/YT/TN 10,5%','Không biên bản phạt','−1.150.000','minus']],
+        src:[['qr-code','prod','Năng suất (KPI)','86.500 kg nhôm cắt','← LSX / QR'],
+             ['shield-check','qa','Chất lượng','KCS 98.6% · ΔE 1.4','← QC'],
+             ['map-pin','time','Chuyên cần','Công 24/26 · 0 muộn','← Chấm công GPS'],
+             ['file-check','disc','Chấp hành','0 biên bản phạt','← Biên bản / phiếu lỗi']] },
+      'NV-022': { ten:'Đỗ Văn Minh', sub:'NV-022 · Cắt CNC · Thợ vận hành / Tổ trưởng · Bậc 4/7', mech:'Theo bậc + KPI', net:'9.750.000',
+        rows:[['=','Lương cơ bản (bậc 4/7)','Hệ số 1.33','8.000.000','plus0'],
+              ['+','Phụ cấp','Trách nhiệm tổ trưởng + ca đêm','1.500.000','plus'],
+              ['+','Thưởng KPI','KPI 89/100','1.250.000','kpi'],
+              ['−','Khấu trừ BHXH/YT/TN 10,5%','Không biên bản phạt','−1.000.000','minus']],
+        src:[['qr-code','prod','Năng suất (KPI)','74.200 kg nhôm cắt','← LSX / QR'],
+             ['shield-check','qa','Chất lượng','KCS 97.2%','← QC'],
+             ['map-pin','time','Chuyên cần','Công 26/26','← Chấm công GPS'],
+             ['file-check','disc','Chấp hành','0 biên bản','← Biên bản / phiếu lỗi']] },
+      'NV-031': { ten:'Nguyễn Thị Mai', sub:'NV-031 · KCS · KCS nhôm kính · Bậc 3/7', mech:'Theo bậc + thời gian', net:'9.620.000',
+        rows:[['=','Lương cơ bản (bậc 3/7)','Hệ số 1.20','7.200.000','plus0'],
+              ['+','Lương theo thời gian','Công 25/26 → cộng bù công','920.000','plus'],
+              ['+','Phụ cấp','Cơm + chuyên cần','800.000','plus'],
+              ['+','Thưởng KPI','KPI 93/100 (chất lượng kiểm)','1.550.000','kpi'],
+              ['−','Khấu trừ BHXH/YT/TN 10,5%','Không biên bản phạt','−850.000','minus']],
+        src:[['shield-check','qa','Tỷ lệ phát hiện lỗi','98.4% chính xác','← QC'],
+             ['map-pin','time','Chuyên cần','Công 25/26','← Chấm công GPS'],
+             ['file-check','disc','Chấp hành','0 biên bản','← Biên bản / phiếu lỗi']] },
+      'NV-035': { ten:'Hoàng Văn Sơn', sub:'NV-035 · Uốn vòm · Công nhân · Bậc 2/7', mech:'Theo bậc + KPI', net:'7.117.000',
+        rows:[['=','Lương cơ bản (bậc 2/7)','Hệ số 1.10','6.600.000','plus0'],
+              ['+','Phụ cấp','Cơm + chuyên cần','560.000','plus'],
+              ['+','Thưởng KPI','KPI 83/100','650.000','kpi'],
+              ['−','Khấu trừ BHXH/YT/TN 10,5%','Không biên bản phạt','−693.000','minus']],
+        src:[['qr-code','prod','Năng suất (KPI)','1.860 md uốn vòm','← LSX / QR'],
+             ['shield-check','qa','Chất lượng','Lỗi lọc 1.4%','← QC'],
+             ['map-pin','time','Chuyên cần','Công 26/26','← Chấm công GPS'],
+             ['file-check','disc','Chấp hành','0 biên bản','← Biên bản / phiếu lỗi']] },
+      'NV-009': { ten:'Bùi Thị Lan', sub:'NV-009 · Kinh doanh · NV bán hàng · Bậc 4/7', mech:'Lương cứng + Hoa hồng', net:'18.160.000',
+        rows:[['=','Lương cứng','Cố định theo bậc KD','8.000.000','plus0'],
+              ['+','Hoa hồng theo đơn hàng','0,6% target + 1,0% phần vượt · DS 1,18 tỷ','8.400.000','plus'],
+              ['+','Lương theo KPI','KPI 96/100 · đạt mức trần','1.000.000','kpi'],
+              ['+','Phụ cấp + thưởng target','Đạt 118% target tháng','600.000','plus'],
+              ['+','Thưởng KPI vượt target','Bonus vượt target','1.000.000','kpi'],
+              ['−','Khấu trừ BHXH/YT/TN 10,5%','Trên lương cơ bản 8.000.000','−840.000','minus']],
+        src:[['file-text','qa','Doanh số T6','1,18 tỷ · 118% target','← Đơn hàng bán'],
+             ['check-circle-2','prod','Đơn chốt','17 / 21 báo giá','← Báo giá'],
+             ['map-pin','time','Chuyên cần','Công 24/26','← Chấm công GPS']] },
+      'CN-020': { ten:'Phạm Văn Nam', sub:'CN-020 · Hoàn thiện · Tổ trưởng · Bậc 4/7', mech:'Theo bậc + KPI', net:'9.660.000',
+        rows:[['=','Lương cơ bản (bậc 4/7)','Hệ số 1.33','8.000.000','plus0'],
+              ['+','Phụ cấp','Trách nhiệm tổ trưởng + cơm','1.100.000','plus'],
+              ['+','Thưởng KPI','KPI 91/100','1.400.000','kpi'],
+              ['−','Khấu trừ BHXH/YT/TN 10,5%','Không biên bản phạt','−840.000','minus']],
+        src:[['qr-code','prod','Năng suất (KPI)','612 bộ cửa đóng kiện','← LSX / QR'],
+             ['map-pin','time','Chuyên cần','Công 26/26','← Chấm công GPS'],
+             ['file-check','disc','Chấp hành','0 biên bản','← Biên bản / phiếu lỗi']] },
+      'CN-021': { ten:'Nguyễn Văn Hải', sub:'CN-021 · Hoàn thiện · Công nhân · Bậc 3/7', mech:'Theo bậc + KPI', net:'7.384.000',
+        rows:[['=','Lương cơ bản (bậc 3/7)','Hệ số 1.20','7.200.000','plus0'],
+              ['+','Phụ cấp','Cơm + chuyên cần','520.000','plus'],
+              ['+','Thưởng KPI','KPI 79/100','420.000','kpi'],
+              ['−','Khấu trừ BHXH/YT/TN 10,5%','Không biên bản phạt','−756.000','minus']],
+        src:[['qr-code','prod','Năng suất (KPI)','458 khung cánh ép góc','← LSX / QR'],
+             ['map-pin','time','Chuyên cần','Công 24/26','← Chấm công GPS'],
+             ['file-check','disc','Chấp hành','0 biên bản','← Biên bản / phiếu lỗi']] },
+      'CN-019': { ten:'Lê Văn Bình', sub:'CN-019 · Uốn vòm · Công nhân · Bậc 3/7', mech:'Theo bậc + KPI', net:'7.704.000',
+        rows:[['=','Lương cơ bản (bậc 3/7)','Hệ số 1.20','7.200.000','plus0'],
+              ['+','Phụ cấp','Cơm + chuyên cần','560.000','plus'],
+              ['+','Thưởng KPI','KPI 84/100','700.000','kpi'],
+              ['−','Khấu trừ BHXH/YT/TN 10,5%','Không biên bản phạt','−756.000','minus']],
+        src:[['qr-code','prod','Năng suất (KPI)','1.640 md uốn vòm','← LSX / QR'],
+             ['map-pin','time','Chuyên cần','Công 25/26','← Chấm công GPS'],
+             ['file-check','disc','Chấp hành','0 biên bản','← Biên bản / phiếu lỗi']] },
+      'NV-027': { ten:'Lê Thị Ngọc', sub:'NV-027 · Văn phòng · Kế toán trưởng · Bậc 6/7', mech:'Theo bậc + thời gian', net:'11.751.000',
+        rows:[['=','Lương cơ bản (bậc 6/7)','Hệ số 1.63','9.800.000','plus0'],
+              ['+','Lương theo thời gian','Công 26/26','980.000','plus'],
+              ['+','Phụ cấp','Trách nhiệm + cơm','700.000','plus'],
+              ['+','Thưởng KPI','KPI 90/100','1.300.000','kpi'],
+              ['−','Khấu trừ BHXH/YT/TN 10,5%','Không biên bản phạt','−1.029.000','minus']],
+        src:[['map-pin','time','Chuyên cần','Công 26/26','← Chấm công GPS'],
+             ['file-check','disc','Chấp hành','0 biên bản','← Biên bản / phiếu lỗi']] },
+      'NV-033': { ten:'Trần Thị Hồng', sub:'NV-033 · Văn phòng · Trưởng KCS · Bậc 7/7', mech:'Theo bậc + thời gian', net:'13.745.000',
+        rows:[['=','Lương cơ bản (bậc 7/7)','Hệ số 1.83','11.000.000','plus0'],
+              ['+','Lương theo thời gian','Công 26/26','1.100.000','plus'],
+              ['+','Phụ cấp','Trách nhiệm trưởng bộ phận','1.200.000','plus'],
+              ['+','Thưởng KPI','KPI 92/100','1.600.000','kpi'],
+              ['−','Khấu trừ BHXH/YT/TN 10,5%','Không biên bản phạt','−1.155.000','minus']],
+        src:[['map-pin','time','Chuyên cần','Công 26/26','← Chấm công GPS'],
+             ['file-check','disc','Chấp hành','0 biên bản','← Biên bản / phiếu lỗi']] },
+      'NV-042': { ten:'Lê Hoàng Nam', sub:'NV-042 · Dán nhãn · Thử việc', mech:'Thử việc · theo thời gian', net:'6.300.000',
+        rows:[['=','Lương thử việc','85% bậc 1 · theo thời gian','6.000.000','plus0'],
+              ['+','Phụ cấp cơm','Ăn tại công ty','300.000','plus'],
+              ['+','Thưởng KPI','Thử việc · chưa tính thưởng','—','kpi'],
+              ['−','Khấu trừ','Thử việc chưa đóng BHXH','—','minus']],
+        src:[['map-pin','time','Chuyên cần','Công 22/26','← Chấm công GPS'],
+             ['info','disc','Trạng thái','Đang thử việc','← Hồ sơ nhân sự']] },
+      'NV-040': { ten:'Võ Minh Khôi', sub:'NV-040 · Hoàn thiện · Thử việc', mech:'Thử việc · theo thời gian', net:'5.900.000',
+        rows:[['=','Lương thử việc','85% bậc 1 · theo thời gian','5.600.000','plus0'],
+              ['+','Phụ cấp cơm','Ăn tại công ty','300.000','plus'],
+              ['+','Thưởng KPI','Thử việc · chưa tính thưởng','—','kpi'],
+              ['−','Khấu trừ','Thử việc chưa đóng BHXH','—','minus']],
+        src:[['map-pin','time','Chuyên cần','Công 20/26','← Chấm công GPS'],
+             ['info','disc','Trạng thái','Đang thử việc','← Hồ sơ nhân sự']] },
+    };
+
+    const opIcon = t => t==='minus' ? '<span class="op minus">−</span>' : (t==='plus0' ? '<span class="op">=</span>' : '<span class="op plus">+</span>');
+    function payRows(rows){
+      return rows.map(([op,nm,sub,amt,cls])=>{
+        const rowCls = cls==='kpi' ? ' row-kpi' : '';
+        return `<div class="formula-row${rowCls}">${opIcon(cls)}<div><div class="nm">${nm}</div><div class="sub">${sub}</div></div><span class="amt">${amt}</span></div>`;
+      }).join('');
+    }
+    function paySrc(src){
+      return src.map(([ic,kind,t,v,s])=>
+        `<div class="ksrc"><span class="ki ${kind}"><i data-lucide="${ic}" style="width:16px;height:16px"></i></span><div><div class="kt">${t}</div><div class="kv">${v}</div></div><div class="ksrc-src">${s}</div></div>`).join('');
+    }
+
+    const payBody = document.getElementById('pay-body');
+    const payDrawer = document.getElementById('pay-drawer');
+    const payOverlay = document.getElementById('pay-overlay');
+    function openPay(){ payDrawer.classList.add('open'); payOverlay.classList.add('open'); payDrawer.setAttribute('aria-hidden','false'); }
+    function closePay(){ payDrawer.classList.remove('open'); payOverlay.classList.remove('open'); payDrawer.setAttribute('aria-hidden','true'); document.querySelectorAll('[data-tab-pane="tab-bangluong"] .tbl tbody tr[data-nv]').forEach(r=>r.classList.remove('row-selected')); }
+    function renderPay(ma){
+      const e = PAY[ma]; if(!e || !payBody) return;
+      payBody.innerHTML = `
+        <div class="mb-3">
+          <div class="flex-between">
+            <div class="t-h4">${e.ten}</div>
+            <span class="badge badge-steel">${e.mech}</span>
+          </div>
+          <div class="t-caption">${e.sub}</div>
+          <div class="t-caption" style="color:var(--ash-2);margin-top:2px">Phiếu lương kỳ Tháng 6/2026</div>
+        </div>
+        <div class="t-micro-u mb-1">Chi tiết các thành phần</div>
+        <div class="formula">
+          ${payRows(e.rows)}
+          <div class="formula-row total"><span class="op" style="background:var(--rust);color:#fff">=</span><div><div class="nm">Thực lĩnh kỳ T6/2026</div></div><span class="amt">${e.net}₫</span></div>
+        </div>
+        <hr class="hr-soft">
+        <div class="t-micro-u mb-2">Nguồn dữ liệu (tự động)</div>
+        ${paySrc(e.src)}
+        <div class="t-caption mt-2" style="display:flex;align-items:flex-start;gap:6px">
+          <i data-lucide="info" style="width:13px;height:13px;color:var(--steel);flex-shrink:0;margin-top:1px"></i>
+          <span>Sản lượng từ quét QR/LSX · doanh số từ Đơn hàng bán · chuyên cần từ Chấm công GPS · khấu trừ theo Phiếu lỗi–Biên bản.</span>
+        </div>
+        <div class="flex" style="gap:8px;margin-top:14px">
+          <button class="btn btn-secondary btn-sm" style="flex:1" id="pay-print"><i data-lucide="printer" style="width:13px;height:13px"></i> In phiếu lương</button>
+          <a href="22-nhan-su-ho-so.html" class="btn btn-primary btn-sm" style="flex:1"><i data-lucide="external-link" style="width:13px;height:13px"></i> Xem hồ sơ NV</a>
+        </div>`;
+      if(window.lucide) window.lucide.createIcons();
+      const pr = document.getElementById('pay-print');
+      if(pr) pr.addEventListener('click', ()=> toast(`Đang in <b>phiếu lương ${ma}</b> kỳ T6/2026`, 'success'));
+      payDrawer.scrollTop = 0;
+    }
+
+    document.querySelectorAll('[data-tab-pane="tab-bangluong"] .tbl tbody tr[data-nv]').forEach(tr=>{
+      tr.addEventListener('click', (ev)=>{
+        if(ev.target.closest('button, a, input')) return;
+        document.querySelectorAll('[data-tab-pane="tab-bangluong"] .tbl tbody tr[data-nv]').forEach(r=>r.classList.remove('row-selected'));
+        tr.classList.add('row-selected');
+        renderPay(tr.dataset.nv);
+        openPay();
+      });
+    });
+    payOverlay.addEventListener('click', closePay);
+    document.getElementById('pay-close').addEventListener('click', closePay);
+    document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closePay(); });
+
+    /* ===== KPI cá nhân: click 1 dòng → cập nhật thẻ chi tiết bên phải ===== */
+    /* radar: [Năng suất, Chất lượng, Đúng hạn, Chấp hành, Sản lượng] */
+    const KPIP = {
+      'NV-018': { score:94, badge:'badge-moss',     lab:'Đạt tốt',  radar:[96,95,92,100,93], thuong:'1.700.000' },
+      'NV-022': { score:89, badge:'badge-moss',     lab:'Đạt tốt',  radar:[88,90,86,95,85],  thuong:'1.250.000' },
+      'NV-031': { score:93, badge:'badge-moss',     lab:'Đạt tốt',  radar:[90,96,94,98,92],  thuong:'1.550.000' },
+      'NV-035': { score:83, badge:'status-warning', lab:'Đạt',      radar:[82,84,80,90,80],  thuong:'650.000' },
+      'CN-020': { score:91, badge:'badge-moss',     lab:'Đạt tốt',  radar:[93,88,90,92,90],  thuong:'1.400.000' },
+      'CN-021': { score:79, badge:'status-warning', lab:'Đạt',      radar:[78,80,76,85,77],  thuong:'420.000' },
+      'CN-019': { score:84, badge:'status-warning', lab:'Đạt',      radar:[85,82,88,88,83],  thuong:'700.000' },
+      'NV-040': { score:68, badge:'status-overdue', lab:'Chưa đạt', radar:[70,72,68,75,66],  thuong:'—' },
+    };
+    const kpiDetailCard = document.getElementById('kpiDetailCard');
+    function renderKpiDetail(ma){
+      const k = KPIP[ma], p = PAY[ma];
+      if(!k || !p || !kpiDetailCard) return;
+      const thuongRow = k.thuong==='—'
+        ? `<div class="formula-row total"><span class="op" style="background:var(--ash);color:#fff">₫</span><div><div class="nm">Thưởng năng suất T6</div><div class="sub">KPI &lt; 70 · không thưởng</div></div><span class="amt">—</span></div>`
+        : `<div class="formula-row total"><span class="op" style="background:var(--rust);color:#fff">₫</span><div><div class="nm">Thưởng năng suất T6</div></div><span class="amt">${k.thuong}₫</span></div>`;
+      kpiDetailCard.innerHTML = `
+        <div class="flex-between mb-1">
+          <div>
+            <div class="t-h4">${p.ten}</div>
+            <div class="t-caption">${p.sub}</div>
+          </div>
+          <span class="badge ${k.badge}">KPI ${k.score} · ${k.lab}</span>
+        </div>
+        <div class="t-micro-u mt-3 mb-1">Biểu đồ KPI 5 trục</div>
+        <div id="kpiRadar" style="min-height:240px"></div>
+        <hr class="hr-soft">
+        <div class="t-micro-u mb-2">Nguồn dữ liệu KPI (tự động)</div>
+        ${paySrc(p.src)}
+        <div class="formula" style="margin-top:12px">
+          <div class="formula-row" style="background:var(--moss-soft)">
+            <span class="op plus"><i data-lucide="target" style="width:14px;height:14px"></i></span>
+            <div><div class="nm">Điểm KPI tổng</div><div class="sub">Trung bình có trọng số 5 trục</div></div>
+            <span class="amt">${k.score} / 100</span>
+          </div>
+          ${thuongRow}
+        </div>`;
+      if(window.lucide) window.lucide.createIcons();
+      ERPCharts.radar('kpiRadar', {
+        labels: ['Năng suất','Chất lượng','Đúng hạn','Chấp hành nội quy','Sản lượng'],
+        values: k.radar,
+      }, { max: 100, size: 250 });
+    }
+    document.querySelectorAll('.tbl tbody tr[data-kpinv]').forEach(tr=>{
+      tr.addEventListener('click', ()=>{
+        document.querySelectorAll('.tbl tbody tr[data-kpinv]').forEach(r=>r.classList.remove('row-selected'));
+        tr.classList.add('row-selected');
+        renderKpiDetail(tr.dataset.kpinv);
+      });
+    });
+    renderKpiDetail('NV-018');
+  });
+</script>
+</body>
+</html>

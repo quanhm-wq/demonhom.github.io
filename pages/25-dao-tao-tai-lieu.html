@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tài liệu & Quy chế — ERP NHÔM OWIN</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/css/style.css" />
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+  <style>
+    .doc-ico { width:34px; height:34px; border-radius:8px; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0; background:var(--rust-soft); color:var(--rust-deep); }
+    .doc-name { display:flex; align-items:center; gap:11px; }
+    .doc-name .nm { font-weight:600; }
+    .actions-cell { white-space:nowrap; }
+
+    /* Cột Đã phổ biến */
+    .spread-cell { display:flex; align-items:center; gap:8px; min-width:118px; }
+    .spread-cell .progress { width:60px; }
+    .spread-cell .sv { font-size:11.5px; color:var(--ash); white-space:nowrap; }
+
+    /* Drawer form upload */
+    .drawer-overlay { position:fixed; inset:0; background:rgba(20,19,15,.42); backdrop-filter:blur(2px); z-index:80; opacity:0; pointer-events:none; transition:opacity .2s ease; }
+    .drawer-overlay.open { opacity:1; pointer-events:auto; }
+    .drawer { position:fixed; top:0; right:0; height:100vh; width:452px; max-width:94vw; background:var(--canvas); border-left:1px solid var(--rule); box-shadow:-12px 0 32px rgba(20,19,15,.16); z-index:81; transform:translateX(100%); transition:transform .26s cubic-bezier(.2,.8,.2,1); overflow-y:auto; padding:20px 22px 36px; }
+    .drawer.open { transform:translateX(0); }
+    .drawer-close { position:absolute; top:14px; right:14px; z-index:2; }
+    .dropzone { border:1.5px dashed var(--rule); border-radius:10px; padding:26px 16px; text-align:center; color:var(--ash); background:var(--paper); cursor:pointer; transition:border-color .15s ease, background .15s ease; }
+    .dropzone:hover { border-color:var(--rust); background:var(--rust-soft); color:var(--rust-deep); }
+
+    /* Trình xem tài liệu */
+    .viewer-overlay { position:fixed; inset:0; background:rgba(20,19,15,.55); backdrop-filter:blur(2px); z-index:90; display:none; align-items:center; justify-content:center; padding:32px; }
+    .viewer-overlay.open { display:flex; }
+    .viewer-box { background:var(--canvas); border-radius:12px; width:880px; max-width:96vw; max-height:90vh; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 20px 60px rgba(20,19,15,.3); }
+    .viewer-head { display:flex; align-items:center; gap:12px; padding:13px 16px; border-bottom:1px solid var(--rule); flex-shrink:0; }
+    .viewer-head .vh-ico { width:34px; height:34px; border-radius:8px; background:var(--rust-soft); color:var(--rust-deep); display:inline-flex; align-items:center; justify-content:center; flex-shrink:0; }
+    .viewer-body { padding:24px; overflow-y:auto; background:var(--paper-3); flex:1; }
+    .viewer-paper { background:#fff; max-width:680px; margin:0 auto; padding:40px 48px; border-radius:3px; box-shadow:0 6px 20px rgba(20,19,15,.12); min-height:420px; font-family:'Times New Roman', Georgia, serif; color:#14130f; line-height:1.6; }
+    .viewer-paper h2 { text-align:center; font-size:18px; margin-bottom:6px; }
+    .viewer-paper p { margin:8px 0; }
+    @media (max-width:768px){ .viewer-paper{ padding:24px 20px; } }
+  </style>
+</head>
+<body>
+
+<div id="app-shell" data-active="hr-daotao" data-title="Tài liệu & Quy chế" data-crumb="<b>Nhân sự</b> · Tài liệu & Quy chế">
+
+  <div class="page-header">
+    <div>
+      <h1>Tài liệu & Quy chế</h1>
+      <p>Kho tài liệu công ty: nội quy, quy chế, thang bảng lương, tài liệu đào tạo, an toàn — tập trung một nơi · 24 tài liệu · cập nhật 18/06/2026</p>
+    </div>
+    <div class="actions">
+      <button class="btn btn-primary" id="upload-btn"><i data-lucide="upload" style="width:14px;height:14px"></i> Tải tài liệu lên</button>
+    </div>
+  </div>
+
+  <!-- KPI gọn -->
+  <div class="grid grid-4 mb-4">
+    <div class="card-feature-blue">
+      <div class="t-micro-u" style="color:var(--steel)">TỔNG TÀI LIỆU</div>
+      <div class="t-h2 mt-1">24</div>
+      <div class="t-caption" style="color:var(--steel)">Đang hiệu lực</div>
+    </div>
+    <div class="card-feature-teal">
+      <div class="t-micro-u" style="color:var(--moss-deep)">NỘI QUY & QUY CHẾ</div>
+      <div class="t-h2 mt-1">9</div>
+      <div class="t-caption" style="color:var(--moss-deep)">Áp dụng toàn công ty</div>
+    </div>
+    <div class="card-feature-yellow">
+      <div class="t-micro-u" style="color:var(--rust-deep)">TÀI LIỆU ĐÀO TẠO</div>
+      <div class="t-h2 mt-1">9</div>
+      <div class="t-caption" style="color:var(--rust-deep)">Quy trình & hướng dẫn nghề</div>
+    </div>
+    <div class="card-feature-orange">
+      <div class="t-micro-u" style="color:var(--amber)">ĐÃ PHỔ BIẾN TB</div>
+      <div class="t-h2 mt-1">94%</div>
+      <div class="t-caption" style="color:var(--amber)">trung bình toàn kho</div>
+    </div>
+  </div>
+
+  <!-- Filter bar -->
+  <div class="card mb-4" style="padding:12px 14px">
+    <div class="flex-between" style="flex-wrap:wrap;gap:10px">
+      <div class="tabs" id="lib-tabs">
+        <button class="tab tab-active" data-filter="">Tất cả (24)</button>
+        <button class="tab" data-filter="Nội quy & Quy chế">Nội quy & Quy chế (9)</button>
+        <button class="tab" data-filter="Thang bảng lương">Thang bảng lương (1)</button>
+        <button class="tab" data-filter="Đào tạo theo vị trí">Đào tạo theo vị trí (9)</button>
+        <button class="tab" data-filter="An toàn">An toàn (3)</button>
+        <button class="tab" data-filter="Biểu mẫu">Biểu mẫu (2)</button>
+      </div>
+      <div class="flex" style="gap:8px;flex-wrap:wrap">
+        <span class="filter-pill"><i data-lucide="building-2" style="width:13px;height:13px"></i> Phạm vi áp dụng <i data-lucide="chevron-down" style="width:13px;height:13px"></i></span>
+        <div style="position:relative">
+          <i data-lucide="search" style="width:14px;height:14px;position:absolute;left:10px;top:9px;color:var(--ash-2)"></i>
+          <input class="input" placeholder="Tìm tài liệu…" style="padding-left:30px;width:200px"/>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bảng tài liệu hợp nhất -->
+  <div class="table-wrap">
+    <table class="tbl">
+      <thead>
+        <tr>
+          <th>Tên tài liệu</th>
+          <th>Nhóm</th>
+          <th>Phạm vi áp dụng</th>
+          <th class="center">Định dạng</th>
+          <th class="num">Cập nhật</th>
+          <th>Đã phổ biến</th>
+          <th>Cảnh báo</th>
+          <th class="center">Thao tác</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- ===== Nội quy & Quy chế ===== -->
+        <tr>
+          <td><div class="doc-name"><span class="doc-ico"><i data-lucide="file-text" style="width:18px;height:18px"></i></span><span class="nm">Nội quy lao động công ty</span></div></td>
+          <td><span class="badge badge-moss">Nội quy & Quy chế</span></td>
+          <td>Toàn công ty</td>
+          <td class="center"><span class="badge">PDF</span></td>
+          <td class="num">02/01/2026</td>
+          <td><div class="spread-cell"><span class="progress success"><div style="width:95%"></div></span><span class="sv">40/42</span></div></td>
+          <td><span style="color:var(--rule)">—</span></td>
+          <td class="center actions-cell"><button class="btn-link open-doc" data-no-interact="true">Mở</button> · <button class="btn-link" data-toast-msg="Đang tải tài liệu (mô phỏng)">Tải</button></td>
+        </tr>
+        <tr>
+          <td><div class="doc-name"><span class="doc-ico"><i data-lucide="file-badge" style="width:18px;height:18px"></i></span><span class="nm">Quy chế trả lương & phụ cấp</span></div></td>
+          <td><span class="badge badge-moss">Nội quy & Quy chế</span></td>
+          <td>Toàn công ty</td>
+          <td class="center"><span class="badge">PDF</span></td>
+          <td class="num">01/01/2026</td>
+          <td><div class="spread-cell"><span class="progress success"><div style="width:95%"></div></span><span class="sv">40/42</span></div></td>
+          <td><span style="color:var(--rule)">—</span></td>
+          <td class="center actions-cell"><button class="btn-link open-doc" data-no-interact="true">Mở</button> · <button class="btn-link" data-toast-msg="Đang tải tài liệu (mô phỏng)">Tải</button></td>
+        </tr>
+        <tr>
+          <td><div class="doc-name"><span class="doc-ico"><i data-lucide="file-badge" style="width:18px;height:18px"></i></span><span class="nm">Quy chế thưởng năng suất – KPI</span></div></td>
+          <td><span class="badge badge-moss">Nội quy & Quy chế</span></td>
+          <td>Toàn công ty</td>
+          <td class="center"><span class="badge">PDF</span></td>
+          <td class="num">01/04/2026</td>
+          <td><div class="spread-cell"><span class="progress success"><div style="width:90%"></div></span><span class="sv">38/42</span></div></td>
+          <td><span style="color:var(--rule)">—</span></td>
+          <td class="center actions-cell"><button class="btn-link open-doc" data-no-interact="true">Mở</button> · <button class="btn-link" data-toast-msg="Đang tải tài liệu (mô phỏng)">Tải</button></td>
+        </tr>
+        <tr>
+          <td><div class="doc-name"><span class="doc-ico"><i data-lucide="gavel" style="width:18px;height:18px"></i></span><span class="nm">Quy chế khen thưởng – kỷ luật</span></div></td>
+          <td><span class="badge badge-moss">Nội quy & Quy chế</span></td>
+          <td>Toàn công ty</td>
+          <td class="center"><span class="badge">PDF</span></td>
+          <td class="num">01/01/2026</td>
+          <td><div class="spread-cell"><span class="progress success"><div style="width:95%"></div></span><span class="sv">40/42</span></div></td>
+          <td><span style="color:var(--rule)">—</span></td>
+          <td class="center actions-cell"><button class="btn-link open-doc" data-no-interact="true">Mở</button> · <button class="btn-link" data-toast-msg="Đang tải tài liệu (mô phỏng)">Tải</button></td>
+        </tr>
+        <tr>
+          <td><div class="doc-name"><span class="doc-ico"><i data-lucide="file-text" style="width:18px;height:18px"></i></span><span class="nm">Quy định bồi thường phế phẩm nhôm – kính</span></div></td>
+          <td><span class="badge badge-moss">Nội quy & Quy chế</span></td>
+          <td>Toàn công ty</td>
+          <td class="center"><span class="badge">PDF</span></td>
+          <td class="num">01/04/2026</td>
+          <td><div class="spread-cell"><span class="progress success"><div style="width:90%"></div></span><span class="sv">38/42</span></div></td>
+          <td><span style="color:#8a1f1f;font-weight:700">Còn 4 NV chưa ký xác nhận</span></td>
+          <td class="center actions-cell"><button class="btn-link open-doc" data-no-interact="true">Mở</button> · <button class="btn-link" data-toast-msg="Đang tải tài liệu (mô phỏng)">Tải</button></td>
+        </tr>
+        <tr>
+          <td><div class="doc-name"><span class="doc-ico"><i data-lucide="file-text" style="width:18px;height:18px"></i></span><span class="nm">Quy định 5S & vệ sinh máy</span></div></td>
+          <td><span class="badge badge-moss">Nội quy & Quy chế</span></td>
+          <td>Khối sản xuất</td>
+          <td class="center"><span class="badge">PDF</span></td>
+          <td class="num">01/03/2026</td>
+          <td><div class="spread-cell"><span class="progress success"><div style="width:81%"></div></span><span class="sv">34/42</span></div></td>
+          <td><span style="color:#8a1f1f;font-weight:700">Còn 8 NV chưa phổ biến</span></td>
+          <td class="center actions-cell"><button class="btn-link open-doc" data-no-interact="true">Mở</button> · <button class="btn-link" data-toast-msg="Đang tải tài liệu (mô phỏng)">Tải</button></td>
+        </tr>
+        <tr>
+          <td><div class="doc-name"><span class="doc-ico"><i data-lucide="file-text" style="width:18px;height:18px"></i></span><span class="nm">Văn hóa & quy tắc ứng xử</span></div></td>
+          <td><span class="badge badge-moss">Nội quy & Quy chế</span></td>
+          <td>Toàn công ty</td>
+          <td class="center"><span class="badge">PDF</span></td>
+          <td class="num">15/03/2026</td>
+          <td><div class="spread-cell"><span class="progress success"><div style="width:93%"></div></span><span class="sv">39/42</span></div></td>
+          <td><span style="color:var(--rule)">—</span></td>
+          <td class="center actions-cell"><button class="btn-link open-doc" data-no-interact="true">Mở</button> · <button class="btn-link" data-toast-msg="Đang tải tài liệu (mô phỏng)">Tải</button></td>
+        </tr>
+        <tr>
+          <td><div class="doc-name"><span class="doc-ico"><i data-lucide="file-text" style="width:18px;height:18px"></i></span><span class="nm">Quy định an toàn – vệ sinh lao động</span></div></td>
+          <td><span class="badge badge-moss">Nội quy & Quy chế</span></td>
+          <td>Toàn công ty</td>
+          <td class="center"><span class="badge">PDF</span></td>
+          <td class="num">02/01/2026</td>
+          <td><div class="spread-cell"><span class="progress success"><div style="width:95%"></div></span><span class="sv">40/42</span></div></td>
+          <td><span style="color:var(--rule)">—</span></td>
+          <td class="center actions-cell"><button class="btn-link open-doc" data-no-interact="true">Mở</button> · <button class="btn-link" data-toast-msg="Đang tải tài liệu (mô phỏng)">Tải</button></td>
+        </tr>
+        <tr>
+          <td><div class="doc-name"><span class="doc-ico"><i data-lucide="file-type" style="width:18px;height:18px"></i></span><span class="nm">Bộ mô tả công việc các vị trí</span></div></td>
+          <td><span class="badge badge-moss">Nội quy & Quy chế</span></td>
+          <td>Toàn công ty</td>
+          <td class="center"><span class="badge">DOCX</span></td>
+          <td class="num">20/04/2026</td>
+          <td><div class="spread-cell"><span class="progress success"><div style="width:88%"></div></span><span class="sv">37/42</span></div></td>
+          <td><span style="color:var(--rule)">—</span></td>
+          <td class="center actions-cell"><button class="btn-link open-doc" data-no-interact="true">Mở</button> · <button class="btn-link" data-toast-msg="Đang tải tài liệu (mô phỏng)">Tải</button></td>
+        </tr>
+
+        <!-- ===== Thang bảng lương ===== -->
+        <tr>
+          <td><div class="doc-name"><span class="doc-ico"><i data-lucide="table-2" style="width:18px;height:18px"></i></span><span class="nm">Thang bảng lương 7 bậc (đăng ký)</span></div></td>
+          <td><span class="badge badge-steel">Thang bảng lương</span></td>
+          <td>Toàn công ty</td>
+          <td class="center"><span class="badge">XLSX</span></td>
+          <td class="num">01/01/2026</td>
+          <td><div class="spread-cell"><span class="progress success"><div style="width:88%"></div></span><span class="sv">37/42</span></div></td>
+          <td><span style="color:#8a1f1f;font-weight:700">Quá 6 tháng chưa rà soát</span></td>
+          <td class="center actions-cell"><button class="btn-link open-doc" data-no-interact="true">Mở</button> · <button class="btn-link" data-toast-msg="Đang tải tài liệu (mô phỏng)">Tải</button></td>
+        </tr>
+
+        <!-- ===== Đào tạo theo vị trí ===== -->
+        <tr>
+          <td><div class="doc-name"><span class="doc-ico"><i data-lucide="file-text" style="width:18px;height:18px"></i></span><span class="nm">An toàn vận hành máy cắt nhôm lưỡi Ø500 (CAT-01/02)</span></div></td>
+          <td><span class="badge badge-rust">Đào tạo theo vị trí</span></td>
+          <td>Cắt CNC · Tổ trưởng &amp; thợ cắt CNC</td>
+          <td class="center"><span class="badge">PDF</span></td>
+          <td class="num">12/05/2026</td>
+          <td><div class="spread-cell"><span class="progress success"><div style="width:100%"></div></span><span class="sv">8/8</span></div></td>
+          <td><span style="color:#1f6b3a;font-weight:700">Phổ biến đủ 8/8 · mới cập nhật</span></td>
+          <td class="center actions-cell"><button class="btn-link open-doc" data-no-interact="true">Mở</button> · <button class="btn-link" data-toast-msg="Đang tải tài liệu (mô phỏng)">Tải</button></td>
+        </tr>
+        <tr>
+          <td><div class="doc-name"><span class="doc-ico"><i data-lucide="video" style="width:18px;height:18px"></i></span><span class="nm">Video hướng dẫn bọc màng &amp; đóng kiện bộ cửa đúng quy cách</span></div></td>
+          <td><span class="badge badge-rust">Đào tạo theo vị trí</span></td>
+          <td>Hoàn thiện · Thợ đóng kiện</td>
+          <td class="center"><span class="badge">MP4</span></td>
+          <td class="num">08/05/2026</td>
+          <td><div class="spread-cell"><span class="progress success"><div style="width:92%"></div></span><span class="sv">11/12</span></div></td>
+          <td><span style="color:#8a1f1f;font-weight:700">Còn 1 thợ đóng kiện chưa xem</span></td>
+          <td class="center actions-cell"><button class="btn-link open-doc" data-no-interact="true">Mở</button> · <button class="btn-link" data-toast-msg="Đang tải tài liệu (mô phỏng)">Tải</button></td>
+        </tr>
+        <tr>
+          <td><div class="doc-name"><span class="doc-ico"><i data-lucide="file-text" style="width:18px;height:18px"></i></span><span class="nm">Kỹ thuật ép góc &amp; lắp khung cánh đạt chuẩn</span></div></td>
+          <td><span class="badge badge-rust">Đào tạo theo vị trí</span></td>
+          <td>Ép góc · Thợ ép góc – lắp ráp</td>
+          <td class="center"><span class="badge">PDF</span></td>
+          <td class="num">08/05/2026</td>
+          <td><div class="spread-cell"><span class="progress success"><div style="width:100%"></div></span><span class="sv">6/6</span></div></td>
+          <td><span style="color:#1f6b3a;font-weight:700">Phổ biến đủ 6/6</span></td>
+          <td class="center actions-cell"><button class="btn-link open-doc" data-no-interact="true">Mở</button> · <button class="btn-link" data-toast-msg="Đang tải tài liệu (mô phỏng)">Tải</button></td>
+        </tr>
+        <tr>
+          <td><div class="doc-name"><span class="doc-ico"><i data-lucide="file-text" style="width:18px;height:18px"></i></span><span class="nm">Vận hành máy uốn vòm nhôm CNC 3 trục (UON-01/02)</span></div></td>
+          <td><span class="badge badge-rust">Đào tạo theo vị trí</span></td>
+          <td>Uốn vòm · Thợ uốn vòm</td>
+          <td class="center"><span class="badge">PDF</span></td>
+          <td class="num">22/04/2026</td>
+          <td><div class="spread-cell"><span class="progress success"><div style="width:100%"></div></span><span class="sv">5/5</span></div></td>
+          <td><span style="color:#1f6b3a;font-weight:700">Phổ biến đủ 5/5</span></td>
+          <td class="center actions-cell"><button class="btn-link open-doc" data-no-interact="true">Mở</button> · <button class="btn-link" data-toast-msg="Đang tải tài liệu (mô phỏng)">Tải</button></td>
+        </tr>
+        <tr>
+          <td><div class="doc-name"><span class="doc-ico"><i data-lucide="file-text" style="width:18px;height:18px"></i></span><span class="nm">Tiêu chuẩn nhôm 6063-T5 &amp; lớp anod ≥15µm (ISO 9001:2015)</span></div></td>
+          <td><span class="badge badge-rust">Đào tạo theo vị trí</span></td>
+          <td>KCS · KCS nhôm kính</td>
+          <td class="center"><span class="badge">PDF</span></td>
+          <td class="num">30/03/2026</td>
+          <td><div class="spread-cell"><span class="progress success"><div style="width:100%"></div></span><span class="sv">4/4</span></div></td>
+          <td><span style="color:var(--rule)">—</span></td>
+          <td class="center actions-cell"><button class="btn-link open-doc" data-no-interact="true">Mở</button> · <button class="btn-link" data-toast-msg="Đang tải tài liệu (mô phỏng)">Tải</button></td>
+        </tr>
+        <tr>
+          <td><div class="doc-name"><span class="doc-ico"><i data-lucide="file-text" style="width:18px;height:18px"></i></span><span class="nm">Quy trình kiểm hàng & ghi nhận lỗi</span></div></td>
+          <td><span class="badge badge-rust">Đào tạo theo vị trí</span></td>
+          <td>KCS · KCS nhôm kính</td>
+          <td class="center"><span class="badge">PDF</span></td>
+          <td class="num">30/03/2026</td>
+          <td><div class="spread-cell"><span class="progress success"><div style="width:100%"></div></span><span class="sv">4/4</span></div></td>
+          <td><span style="color:var(--rule)">—</span></td>
+          <td class="center actions-cell"><button class="btn-link open-doc" data-no-interact="true">Mở</button> · <button class="btn-link" data-toast-msg="Đang tải tài liệu (mô phỏng)">Tải</button></td>
+        </tr>
+        <tr>
+          <td><div class="doc-name"><span class="doc-ico"><i data-lucide="file-text" style="width:18px;height:18px"></i></span><span class="nm">Nghiệp vụ thủ kho & xuất nhập tồn</span></div></td>
+          <td><span class="badge badge-rust">Đào tạo theo vị trí</span></td>
+          <td>Kho · Thủ kho nhôm – kính</td>
+          <td class="center"><span class="badge">PDF</span></td>
+          <td class="num">18/02/2026</td>
+          <td><div class="spread-cell"><span class="progress success"><div style="width:100%"></div></span><span class="sv">3/3</span></div></td>
+          <td><span style="color:var(--rule)">—</span></td>
+          <td class="center actions-cell"><button class="btn-link open-doc" data-no-interact="true">Mở</button> · <button class="btn-link" data-toast-msg="Đang tải tài liệu (mô phỏng)">Tải</button></td>
+        </tr>
+        <tr>
+          <td><div class="doc-name"><span class="doc-ico"><i data-lucide="file-text" style="width:18px;height:18px"></i></span><span class="nm">Kỹ năng bán hàng & chăm sóc khách</span></div></td>
+          <td><span class="badge badge-rust">Đào tạo theo vị trí</span></td>
+          <td>Kinh doanh dự án · NV phát triển đại lý</td>
+          <td class="center"><span class="badge">PDF</span></td>
+          <td class="num">10/02/2026</td>
+          <td><div class="spread-cell"><span class="progress success"><div style="width:100%"></div></span><span class="sv">5/5</span></div></td>
+          <td><span style="color:#8a1f1f;font-weight:700">Quá hạn rà soát 6 tháng</span></td>
+          <td class="center actions-cell"><button class="btn-link open-doc" data-no-interact="true">Mở</button> · <button class="btn-link" data-toast-msg="Đang tải tài liệu (mô phỏng)">Tải</button></td>
+        </tr>
+        <tr>
+          <td><div class="doc-name"><span class="doc-ico"><i data-lucide="file-text" style="width:18px;height:18px"></i></span><span class="nm">Quy trình lắp kính an toàn tại công trình</span></div></td>
+          <td><span class="badge badge-rust">Đào tạo theo vị trí</span></td>
+          <td>Lắp đặt công trình · Kỹ thuật viên</td>
+          <td class="center"><span class="badge">PDF</span></td>
+          <td class="num">14/01/2026</td>
+          <td><div class="spread-cell"><span class="progress success"><div style="width:100%"></div></span><span class="sv">2/2</span></div></td>
+          <td><span style="color:#8a1f1f;font-weight:700">Quá hạn rà soát · ban hành 01/2026</span></td>
+          <td class="center actions-cell"><button class="btn-link open-doc" data-no-interact="true">Mở</button> · <button class="btn-link" data-toast-msg="Đang tải tài liệu (mô phỏng)">Tải</button></td>
+        </tr>
+
+        <!-- ===== An toàn ===== -->
+        <tr>
+          <td><div class="doc-name"><span class="doc-ico"><i data-lucide="hard-hat" style="width:18px;height:18px"></i></span><span class="nm">Quy định an toàn lao động xưởng cửa nhôm</span></div></td>
+          <td><span class="badge badge-orange">An toàn</span></td>
+          <td>Khối sản xuất</td>
+          <td class="center"><span class="badge">PDF</span></td>
+          <td class="num">15/02/2026</td>
+          <td><div class="spread-cell"><span class="progress success"><div style="width:95%"></div></span><span class="sv">40/42</span></div></td>
+          <td><span style="color:var(--rule)">—</span></td>
+          <td class="center actions-cell"><button class="btn-link open-doc" data-no-interact="true">Mở</button> · <button class="btn-link" data-toast-msg="Đang tải tài liệu (mô phỏng)">Tải</button></td>
+        </tr>
+        <tr>
+          <td><div class="doc-name"><span class="doc-ico"><i data-lucide="shield" style="width:18px;height:18px"></i></span><span class="nm">Hướng dẫn PCCC & thoát hiểm</span></div></td>
+          <td><span class="badge badge-orange">An toàn</span></td>
+          <td>Toàn công ty</td>
+          <td class="center"><span class="badge">PDF</span></td>
+          <td class="num">05/01/2026</td>
+          <td><div class="spread-cell"><span class="progress success"><div style="width:95%"></div></span><span class="sv">40/42</span></div></td>
+          <td><span style="color:var(--rule)">—</span></td>
+          <td class="center actions-cell"><button class="btn-link open-doc" data-no-interact="true">Mở</button> · <button class="btn-link" data-toast-msg="Đang tải tài liệu (mô phỏng)">Tải</button></td>
+        </tr>
+        <tr>
+          <td><div class="doc-name"><span class="doc-ico"><i data-lucide="video" style="width:18px;height:18px"></i></span><span class="nm">Video hướng dẫn sử dụng đồ bảo hộ</span></div></td>
+          <td><span class="badge badge-orange">An toàn</span></td>
+          <td>Khối sản xuất</td>
+          <td class="center"><span class="badge">MP4</span></td>
+          <td class="num">05/01/2026</td>
+          <td><div class="spread-cell"><span class="progress success"><div style="width:90%"></div></span><span class="sv">38/42</span></div></td>
+          <td><span style="color:#8a1f1f;font-weight:700">Còn 4 NV chưa xem HD bảo hộ</span></td>
+          <td class="center actions-cell"><button class="btn-link open-doc" data-no-interact="true">Mở</button> · <button class="btn-link" data-toast-msg="Đang tải tài liệu (mô phỏng)">Tải</button></td>
+        </tr>
+
+        <!-- ===== Biểu mẫu ===== -->
+        <tr>
+          <td><div class="doc-name"><span class="doc-ico"><i data-lucide="file-text" style="width:18px;height:18px"></i></span><span class="nm">Biểu mẫu kiểm soát chất lượng cửa nhôm (KCS)</span></div></td>
+          <td><span class="badge badge-steel">Biểu mẫu</span></td>
+          <td>KCS · KCS nhôm kính</td>
+          <td class="center"><span class="badge">PDF</span></td>
+          <td class="num">28/03/2026</td>
+          <td><div class="spread-cell"><span class="progress success"><div style="width:100%"></div></span><span class="sv">4/4</span></div></td>
+          <td><span style="color:var(--rule)">—</span></td>
+          <td class="center actions-cell"><button class="btn-link open-doc" data-no-interact="true">Mở</button> · <button class="btn-link" data-toast-msg="Đang tải tài liệu (mô phỏng)">Tải</button></td>
+        </tr>
+        <tr>
+          <td><div class="doc-name"><span class="doc-ico"><i data-lucide="sheet" style="width:18px;height:18px"></i></span><span class="nm">Bộ biểu mẫu đánh giá & ghi nhận đào tạo</span></div></td>
+          <td><span class="badge badge-steel">Biểu mẫu</span></td>
+          <td>Nhân sự</td>
+          <td class="center"><span class="badge">XLSX</span></td>
+          <td class="num">20/04/2026</td>
+          <td><div class="spread-cell"><span class="progress success"><div style="width:100%"></div></span><span class="sv">3/3</span></div></td>
+          <td><span style="color:#1f6b3a;font-weight:700">Phổ biến đủ 3/3</span></td>
+          <td class="center actions-cell"><button class="btn-link open-doc" data-no-interact="true">Mở</button> · <button class="btn-link" data-toast-msg="Đang tải tài liệu (mô phỏng)">Tải</button></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div style="text-align:center;padding:16px">
+    <div class="sticky teal"><i data-lucide="link" style="width:14px;height:14px"></i> Tham số lương, bảo hiểm & cơ chế thưởng–phạt được cấu hình tại trang <b>Bậc lương & KPI</b> · nội quy / quy chế tại đây áp dụng toàn công ty</div>
+  </div>
+
+</div>
+
+<!-- Drawer form: Tải tài liệu lên -->
+<div class="drawer-overlay" id="up-overlay"></div>
+<aside class="drawer" id="up-drawer" aria-hidden="true">
+  <button class="btn-icon drawer-close" id="up-close" title="Đóng"><i data-lucide="x" style="width:18px;height:18px"></i></button>
+  <div class="mb-3" style="padding-right:28px">
+    <div class="t-h4">Tải tài liệu lên</div>
+    <div class="t-caption">Thêm tài liệu / nội quy / quy chế vào kho chung</div>
+  </div>
+  <div style="margin-bottom:11px">
+    <label class="t-caption-b" style="display:block;margin-bottom:4px">Tên tài liệu *</label>
+    <input class="input" placeholder="VD: Quy trình vận hành máy uốn vòm CNC">
+  </div>
+  <div style="margin-bottom:11px">
+    <label class="t-caption-b" style="display:block;margin-bottom:4px">Nhóm tài liệu</label>
+    <select class="input">
+      <option>Nội quy & Quy chế</option>
+      <option>Thang bảng lương</option>
+      <option>Đào tạo theo vị trí</option>
+      <option>An toàn</option>
+      <option>Biểu mẫu</option>
+    </select>
+  </div>
+  <div style="margin-bottom:11px">
+    <label class="t-caption-b" style="display:block;margin-bottom:4px">Phạm vi áp dụng</label>
+    <select class="input">
+      <option>Toàn công ty</option>
+      <option>Khối sản xuất</option>
+      <option>Cắt CNC · Thợ vận hành</option>
+      <option>KCS · KCS nhôm kính</option>
+      <option>Hoàn thiện · Thợ đóng kiện</option>
+      <option>Hoàn thiện · Công nhân</option>
+      <option>Uốn vòm · Công nhân</option>
+      <option>Lắp đặt công trình · Kỹ thuật viên</option>
+      <option>Kho · Thủ kho</option>
+      <option>Kinh doanh · NV bán hàng</option>
+      <option>Nhân sự</option>
+    </select>
+  </div>
+  <div style="margin-bottom:11px">
+    <label class="t-caption-b" style="display:block;margin-bottom:4px">Tệp tài liệu *</label>
+    <div class="dropzone"><i data-lucide="upload-cloud" style="width:26px;height:26px"></i><div style="margin-top:6px;font-size:13px">Kéo thả tệp vào đây hoặc <b>bấm để chọn</b></div><div class="t-caption mt-1">Hỗ trợ PDF, DOCX, XLSX, MP4 · tối đa 100 MB</div></div>
+  </div>
+  <div style="margin-bottom:11px">
+    <label class="t-caption-b" style="display:block;margin-bottom:4px">Mô tả ngắn</label>
+    <textarea class="input" rows="2" placeholder="Ghi chú nội dung tài liệu…"></textarea>
+  </div>
+  <div class="flex" style="gap:8px;margin-top:14px">
+    <button class="btn btn-secondary btn-sm" style="flex:1" id="up-cancel"><i data-lucide="x" style="width:13px;height:13px"></i> Hủy</button>
+    <button class="btn btn-primary btn-sm" style="flex:1" id="up-save"><i data-lucide="check" style="width:13px;height:13px"></i> Lưu tài liệu</button>
+  </div>
+</aside>
+
+<!-- Trình xem tài liệu -->
+<div class="viewer-overlay" id="viewer">
+  <div class="viewer-box">
+    <div class="viewer-head">
+      <span class="vh-ico"><i data-lucide="file-text" style="width:18px;height:18px"></i></span>
+      <div style="min-width:0;flex:1">
+        <div class="t-h5" id="vw-title" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Tài liệu</div>
+        <div class="t-caption" id="vw-meta">—</div>
+      </div>
+      <button class="btn btn-secondary btn-sm" data-toast-msg="Đang tải tài liệu (mô phỏng)"><i data-lucide="download" style="width:13px;height:13px"></i> Tải</button>
+      <button class="btn-icon" id="vw-close" title="Đóng"><i data-lucide="x" style="width:18px;height:18px"></i></button>
+    </div>
+    <div class="viewer-body" id="vw-body"></div>
+  </div>
+</div>
+
+<script src="../assets/js/layout.js"></script>
+<script src="../assets/js/pricing-engine.js"></script>
+<script src="../assets/js/quote-data.js"></script>
+<script src="../assets/js/loss-data.js"></script>
+<script src="../assets/js/loss-ui.js"></script>
+<script>
+  document.addEventListener('erp:ready', () => {
+    const drawer = document.getElementById('up-drawer');
+    const overlay = document.getElementById('up-overlay');
+    function openUp(){ drawer.classList.add('open'); overlay.classList.add('open'); drawer.setAttribute('aria-hidden','false'); }
+    function closeUp(){ drawer.classList.remove('open'); overlay.classList.remove('open'); drawer.setAttribute('aria-hidden','true'); }
+    document.getElementById('upload-btn').addEventListener('click', openUp);
+    document.getElementById('up-close').addEventListener('click', closeUp);
+    document.getElementById('up-cancel').addEventListener('click', closeUp);
+    overlay.addEventListener('click', closeUp);
+    document.getElementById('up-save').addEventListener('click', ()=>{ if(window.ERPInteract&&ERPInteract.showToast) ERPInteract.showToast('Đã tải tài liệu lên kho (mô phỏng)','success'); closeUp(); });
+
+    /* Lọc tài liệu theo tab nhóm */
+    document.querySelectorAll('#lib-tabs .tab').forEach(tab=>{
+      tab.addEventListener('click', ()=>{
+        const f = tab.dataset.filter || '';
+        document.querySelectorAll('.tbl tbody tr').forEach(tr=>{
+          const b = tr.querySelector('td:nth-child(2) .badge');
+          const txt = b ? b.textContent.trim() : '';
+          tr.style.display = (!f || txt===f) ? '' : 'none';
+        });
+      });
+    });
+
+    /* Trình xem tài liệu */
+    const viewer = document.getElementById('viewer');
+    function closeViewer(){ viewer.classList.remove('open'); }
+    function openViewer(name, group, applies, fmt){
+      document.getElementById('vw-title').textContent = name;
+      document.getElementById('vw-meta').textContent = group + ' · Áp dụng: ' + applies + ' · ' + fmt;
+      const vb = document.getElementById('vw-body');
+      if(fmt==='MP4'){
+        vb.innerHTML = `<div style="background:var(--ink);border-radius:10px;aspect-ratio:16/9;max-width:680px;margin:0 auto;display:flex;align-items:center;justify-content:center;color:#fff">
+          <div style="text-align:center"><i data-lucide="play-circle" style="width:60px;height:60px"></i><div style="margin-top:10px;font-size:13px">${name}</div><div style="font-size:11px;opacity:.7;margin-top:4px">Video hướng dẫn — bản xem trước mô phỏng</div></div></div>`;
+      } else if(fmt==='XLSX'){
+        let rows=''; for(let i=1;i<=6;i++){ rows+=`<tr><td>Tiêu chí ${i}</td><td>Nội dung mô tả ${i}</td><td>—</td></tr>`; }
+        vb.innerHTML = `<div class="viewer-paper" style="font-family:var(--ff-sans);max-width:720px">
+          <h2 style="font-family:var(--ff-sans)">${name}</h2>
+          <div style="text-align:center;color:#666;margin-bottom:16px">${group} · ${applies}</div>
+          <table class="tbl" style="min-width:auto"><thead><tr><th>Tiêu chí</th><th>Mô tả</th><th>Ghi chú</th></tr></thead><tbody>${rows}</tbody></table>
+          <div style="text-align:center;color:#999;margin-top:18px;font-size:12px">— Bản xem trước mô phỏng —</div></div>`;
+      } else {
+        vb.innerHTML = `<div class="viewer-paper">
+          <h2>${name}</h2>
+          <div style="text-align:center;color:#666;font-style:italic;margin-bottom:18px">${group} · Áp dụng: ${applies}</div>
+          <p><b>1. Mục đích</b><br>Tài liệu nhằm chuẩn hóa công việc, đảm bảo an toàn và chất lượng tại Công ty TNHH ERP NHÔM OWIN.</p>
+          <p><b>2. Phạm vi áp dụng</b><br>Áp dụng cho: ${applies}.</p>
+          <p><b>3. Nội dung chính</b><br>3.1. Yêu cầu chung và trách nhiệm của người thực hiện.<br>3.2. Trình tự các bước thực hiện công việc.<br>3.3. Lưu ý an toàn lao động và kiểm soát chất lượng.<br>3.4. Xử lý sự cố và báo cáo.</p>
+          <p><b>4. Hiệu lực</b><br>Tài liệu có hiệu lực kể từ ngày ban hành và được cập nhật theo quy định của công ty.</p>
+          <div style="text-align:center;color:#999;margin-top:26px;font-size:12px">— Bản xem trước mô phỏng · mở tệp gốc để xem đầy đủ —</div>
+        </div>`;
+      }
+      if(window.lucide) window.lucide.createIcons();
+      viewer.classList.add('open');
+    }
+    document.querySelectorAll('.open-doc').forEach(btn=>{
+      btn.addEventListener('click', (e)=>{
+        e.stopPropagation();
+        const tr = btn.closest('tr');
+        const name = tr.querySelector('.doc-name .nm').textContent.trim();
+        const group = tr.querySelector('td:nth-child(2) .badge').textContent.trim();
+        const applies = tr.querySelector('td:nth-child(3)').textContent.trim();
+        const fmt = tr.querySelector('td:nth-child(4) .badge').textContent.trim();
+        openViewer(name, group, applies, fmt);
+      });
+    });
+    document.getElementById('vw-close').addEventListener('click', closeViewer);
+    viewer.addEventListener('click', (e)=>{ if(e.target===viewer) closeViewer(); });
+
+    document.addEventListener('keydown', (e)=>{ if(e.key==='Escape'){ closeUp(); closeViewer(); } });
+  });
+</script>
+</body>
+</html>

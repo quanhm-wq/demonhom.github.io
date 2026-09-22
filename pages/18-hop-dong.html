@@ -1,0 +1,1604 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hợp đồng — ERP NHÔM OWIN</title>
+  <link rel="stylesheet" href="../assets/css/style.css" />
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+  <style>
+    /* ============ List view ============ */
+    .filter-bar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 14px; }
+    .search-wrap {
+      display: flex; align-items: center; gap: 8px; flex: 1; min-width: 220px;
+      padding: 8px 12px; background: var(--canvas);
+      border: 1px solid var(--rule); border-radius: var(--r-pill); color: var(--ash);
+    }
+    .search-wrap input { border: 0; background: transparent; outline: none; width: 100%; font-size: 13px; color: var(--ink); }
+    .tbl tbody tr.clickable { cursor: pointer; }
+    .id-mono { font-family: var(--ff-mono); font-weight: 600; color: var(--ink); letter-spacing: -0.01em; }
+    .sub-soft { color: var(--ash); font-size: 11px; margin-top: 2px; }
+    .list-empty { padding: 48px 20px; text-align: center; color: var(--ash); }
+    .num-mono { font-variant-numeric: tabular-nums; }
+    .link-order { font-family: var(--ff-mono); font-weight: 600; color: var(--rust); text-decoration: none; }
+    .link-order:hover { text-decoration: underline; }
+    .file-cell { display: flex; align-items: center; gap: 8px; }
+    .file-name { font-size: 12px; color: var(--ink); display: inline-flex; align-items: center; gap: 5px; }
+    .btn-mini {
+      display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; font-size: 11px;
+      font-family: var(--ff-mono); letter-spacing: 0.06em; text-transform: uppercase;
+      background: var(--canvas); border: 1px solid var(--rule); border-radius: var(--r-2);
+      color: var(--ash); cursor: pointer; transition: border-color 140ms ease, color 140ms ease;
+    }
+    .btn-mini:hover { border-color: var(--ash-2); color: var(--ink); }
+    .tab .tab-count { display: inline-flex; align-items: center; justify-content: center; min-width: 16px; height: 16px; padding: 0 5px; margin-left: 6px; border-radius: 9999px; background: var(--rust); color: var(--paper); font-family: var(--ff-mono); font-size: 10px; font-weight: 600; line-height: 1; }
+
+    /* ============ Modal form ============ */
+    .hd-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .hd-form-grid .full { grid-column: 1 / -1; }
+    .hd-lbl { font-family: var(--ff-mono); font-size: 10px; font-weight: 500; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ash); margin-bottom: 4px; display: block; }
+    .hd-input { width: 100%; padding: 8px 10px; font-size: 13px; background: var(--canvas); border: 1px solid var(--rule); border-radius: var(--r-3); color: var(--ink); }
+    .hd-input:focus { outline: none; border-color: var(--ink); }
+    select.hd-input { appearance: none; background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' stroke='%236b665b' stroke-width='2' viewBox='0 0 24 24'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; padding-right: 28px; }
+    textarea.hd-input { resize: vertical; font-family: inherit; line-height: 1.5; }
+    .cf-drop { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: var(--canvas); border: 1px dashed var(--rule); border-radius: var(--r-3); cursor: pointer; transition: border-color 120ms ease, background 120ms ease; }
+    .cf-drop:hover { border-color: var(--rust); background: var(--rust-soft); }
+    .cf-drop .cf-drop-ic { width: 30px; height: 30px; flex: none; display: inline-flex; align-items: center; justify-content: center; background: var(--ink); color: #f5f1e8; border-radius: var(--r-2); }
+    .cf-drop .cf-drop-name { font-size: 12.5px; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    /* thanh lũy kế HĐ nguyên tắc */
+    .ct-bar { height: 6px; border-radius: 3px; background: var(--paper-2); overflow: hidden; margin-top: 6px; }
+    .ct-bar > i { display: block; height: 100%; background: var(--moss); }
+    .hidden { display: none !important; }
+
+    /* ============ Linked-order summary ============ */
+    .hd-order-card { background: var(--canvas); border: 1px solid var(--rule); border-radius: var(--r-3); padding: 12px 14px; }
+    .hd-order-card .hoc-head { font-size: 12px; color: var(--ash); display: flex; align-items: center; gap: 6px; margin-bottom: 10px; }
+    .hd-order-card .hoc-head .link-order { margin-left: 2px; }
+    .hd-order-card .hoc-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+    .hd-order-card .hoc-grid > div { display: flex; flex-direction: column; gap: 2px; }
+    .hd-order-card .hoc-grid span { font-family: var(--ff-mono); font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ash); }
+    .hd-order-card .hoc-grid b { font-size: 13px; color: var(--ink); font-variant-numeric: tabular-nums; }
+    .hd-order-card .hoc-note { font-size: 11px; color: var(--ash); margin-top: 10px; line-height: 1.45; }
+    .st-cell { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+    /* ============ Form nâng cao ============ */
+    .erp-modal:has(.hd-form-grid) { width: min(880px, 94vw); max-width: 94vw; }
+    .hd-form-grid { max-height: 64vh; overflow-y: auto; padding-right: 6px; }
+    .hd-sec { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; margin-top: 6px; padding-top: 12px; border-top: 1px dashed var(--rule); font-family: var(--ff-mono); font-size: 10px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink); }
+    .hd-sec:first-child { margin-top: 0; padding-top: 0; border-top: 0; }
+    .hd-sec i { color: var(--rust); }
+    .hd-3col { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+    /* bảng dòng hàng */
+    .hd-items-wrap { border: 1px solid var(--rule); border-radius: var(--r-3); overflow: hidden; background: var(--canvas); }
+    .hd-items { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+    .hd-items th { font-family: var(--ff-mono); font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ash); text-align: left; padding: 8px 8px 6px; border-bottom: 1px solid var(--rule); background: var(--paper-2); }
+    .hd-items td { padding: 4px 4px; border-bottom: 1px solid var(--rule); vertical-align: middle; }
+    .hd-items tr:last-child td { border-bottom: 0; }
+    .hd-items input, .hd-items select { width: 100%; padding: 6px 8px; font-size: 12.5px; background: transparent; border: 1px solid transparent; border-radius: var(--r-2); color: var(--ink); }
+    .hd-items input:focus, .hd-items select:focus { outline: none; border-color: var(--ink); background: var(--paper); }
+    .hd-items .it-total { font-variant-numeric: tabular-nums; font-weight: 600; text-align: right; padding-right: 10px; white-space: nowrap; }
+    .hd-items .it-del { width: 26px; text-align: center; }
+    .hd-items .it-del button { border: 0; background: none; color: var(--ash); cursor: pointer; padding: 4px; border-radius: var(--r-2); line-height: 0; }
+    .hd-items .it-del button:hover { color: var(--rust); background: var(--rust-soft); }
+    .hd-items-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 10px; background: var(--paper-2); border-top: 1px solid var(--rule); flex-wrap: wrap; }
+    .hd-add-row { display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; font-size: 11px; font-family: var(--ff-mono); letter-spacing: 0.06em; text-transform: uppercase; background: var(--paper); border: 1px solid var(--rule); border-radius: var(--r-pill); color: var(--ink); cursor: pointer; }
+    .hd-add-row:hover { border-color: var(--rust); color: var(--rust); }
+    .hd-totals { display: flex; align-items: center; gap: 14px; font-size: 12px; color: var(--ash); flex-wrap: wrap; }
+    .hd-totals .vat-w { display: inline-flex; align-items: center; gap: 5px; }
+    .hd-totals .vat-w select { padding: 3px 22px 3px 8px; font-size: 12px; background: var(--paper); border: 1px solid var(--rule); border-radius: var(--r-2); color: var(--ink); }
+    .hd-totals b { color: var(--ink); font-size: 14px; font-variant-numeric: tabular-nums; }
+    .hd-totals .grand { color: var(--rust); }
+
+    /* ============ Dải 4 ô số nhỏ (≤64px) ============ */
+    .stat-strip { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 14px; }
+    .stat-tile { display: flex; flex-direction: column; justify-content: center; min-height: 64px; padding: 10px 14px;
+      background: var(--canvas); border: 1px solid var(--rule); border-radius: var(--r-3); }
+    .stat-tile span { font-family: var(--ff-mono); font-size: 9.5px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ash); }
+    .stat-tile b { font-size: 19px; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; line-height: 1.2; margin-top: 2px; }
+    .stat-tile b small { font-size: 11px; font-weight: 500; color: var(--ash); margin-left: 3px; }
+    @media (max-width: 900px) { .stat-strip { grid-template-columns: repeat(2, 1fr); } }
+
+    /* ============ Liên kết dạng trường ============ */
+    a.lnk { font-family: var(--ff-mono); font-weight: 600; color: var(--rust); text-decoration: none; border-bottom: 1px dotted var(--rust); }
+    a.lnk:hover { background: var(--rust-soft); }
+
+    /* ============ Cột cảnh báo ============ */
+    .warn-bad { color: #8a1f1f; font-weight: 600; font-size: 12px; }
+    .warn-good { color: #1f6b3a; font-weight: 600; font-size: 12px; }
+    .warn-none { color: var(--ash-2); }
+    .tbl tbody tr td { font-size: 13px; }
+    .tbl tbody tr { height: 42px; }
+
+    /* ============ Drawer bản ghi (dùng lại khung .pk-* của ERPPeek) ============ */
+    .hd-dr .pk-panel { width: min(760px, 96vw); }
+    .hd-dr .pk-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--rule); }
+    .hd-dr .pk-actions .btn { min-height: 36px; }
+    .hd-dr .pk-cell input, .hd-dr .pk-cell select, .hd-dr .pk-cell textarea {
+      width: 100%; padding: 4px 6px; font-size: 13px; font-family: inherit; color: var(--ink);
+      background: var(--paper); border: 1px solid var(--rule); border-radius: var(--r-2); }
+    .hd-dr .pk-items input { width: 100%; padding: 4px 6px; font-size: 12.5px; background: var(--paper); border: 1px solid var(--rule); border-radius: var(--r-2); color: var(--ink); }
+    .hd-dr .dr-flag { display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; border-radius: 999px; font-size: 11px; font-weight: 600; }
+    .hd-dr .dr-flag.bad { background: #f6e3e3; color: #8a1f1f; }
+    .hd-dr .dr-flag.good { background: #e2efe6; color: #1f6b3a; }
+
+    /* ============ Bản in luôn nổi trên cùng ============ */
+    .erp-print-overlay { z-index: 9000 !important; }
+
+    /* ============ Tài liệu hợp đồng (bản in) ============ */
+    .cdoc { font-size: 12.5px; line-height: 1.6; color: #14130f; }
+    .cdoc .tpl-switch { display: flex; gap: 8px; align-items: center; margin: -6px 0 16px; padding: 8px 10px; background: #f3efe6; border: 1px dashed #c9c4b8; border-radius: 8px; font-size: 11.5px; }
+    .cdoc .tpl-switch button { padding: 5px 11px; font-size: 11.5px; border: 1px solid #c9c4b8; background: #fff; border-radius: 999px; cursor: pointer; color: #14130f; }
+    .cdoc .tpl-switch button.on { background: #14130f; color: #fff; border-color: #14130f; }
+    .cdoc .c-national { text-align: center; line-height: 1.45; margin-bottom: 4px; }
+    .cdoc .c-national b { font-size: 12.5px; letter-spacing: .02em; }
+    .cdoc .c-national i { display: block; font-style: normal; font-weight: 700; font-size: 13px; text-decoration: underline; margin-top: 2px; }
+    .cdoc .c-title { text-align: center; font-size: 19px; font-weight: 800; letter-spacing: .06em; margin: 18px 0 2px; }
+    .cdoc .c-sub { text-align: center; font-size: 12px; color: #55524a; margin-bottom: 14px; }
+    .cdoc .c-base { font-size: 12px; font-style: italic; color: #3d3a33; margin: 10px 0 14px; }
+    .cdoc .c-base div { margin-bottom: 2px; }
+    .cdoc .c-party { margin: 12px 0; }
+    .cdoc .c-party > b { display: block; font-size: 13px; letter-spacing: .04em; margin-bottom: 4px; }
+    .cdoc .c-party table { width: 100%; border-collapse: collapse; }
+    .cdoc .c-party td { padding: 2px 6px 2px 0; vertical-align: top; }
+    .cdoc .c-party td:first-child { width: 34%; color: #3d3a33; }
+    .cdoc .c-art { font-weight: 700; font-size: 13px; margin: 16px 0 6px; text-transform: uppercase; letter-spacing: .03em; }
+    .cdoc ol, .cdoc ul { margin: 4px 0 4px 18px; padding: 0; }
+    .cdoc li { margin-bottom: 3px; }
+    .cdoc .c-tot { margin: 8px 0; }
+    .cdoc .c-tot table { width: 60%; margin-left: auto; border-collapse: collapse; }
+    .cdoc .c-tot td { padding: 3px 8px; border: 1px solid #c9c4b8; }
+    .cdoc .c-tot td:last-child { text-align: right; font-variant-numeric: tabular-nums; }
+    .cdoc .c-words { font-style: italic; margin-top: 4px; }
+    @media print { .cdoc .tpl-switch { display: none !important; } }
+  </style>
+</head>
+<body>
+
+<div id="app-shell" data-active="hop-dong" data-title="Hợp đồng" data-crumb="<b>Kinh doanh</b> · Hợp đồng">
+
+  <div class="page-header">
+    <div>
+      <h1>Hợp đồng <span style="font-weight:400; color: var(--ash-2)">·</span> <span style="font-family: var(--ff-mono); font-size: 18px; color: var(--ash);">Đại lý · Công trình · Xuất khẩu</span></h1>
+      <p>Hợp đồng nguyên tắc (khung, neo nhiều đơn), hợp đồng bán cửa nhôm / nhôm thanh &amp; hợp đồng xuất khẩu. <span id="hdCounts"></span></p>
+    </div>
+    <div class="actions">
+      <button class="btn btn-primary" id="btnNewHD" data-no-interact="true">
+        <i data-lucide="plus" style="width:14px;height:14px"></i> Lập hợp đồng
+      </button>
+    </div>
+  </div>
+
+  <div class="stat-strip">
+    <div class="stat-tile"><span>HĐ hiệu lực</span><b id="stActive">0</b></div>
+    <div class="stat-tile"><span>Chờ ký</span><b id="stPending">0</b></div>
+    <div class="stat-tile"><span>Giá trị đã ký</span><b id="stValue">0</b></div>
+    <div class="stat-tile"><span>Quá hạn thanh toán</span><b id="stOverdue">0</b></div>
+  </div>
+
+  <div class="filter-bar">
+    <div class="search-wrap">
+      <i data-lucide="search" style="width:14px;height:14px"></i>
+      <input id="hdSearch" placeholder="Tìm số HĐ, khách hàng, đơn liên kết..." />
+    </div>
+  </div>
+
+  <div class="tabs" id="hdTabs" style="margin-bottom: 14px;">
+    <button class="tab tab-active" data-st="all" data-no-interact="true">Tất cả</button>
+    <button class="tab" data-st="nháp" data-no-interact="true">Nháp</button>
+    <button class="tab" data-st="đã ký" data-no-interact="true">Đã ký</button>
+    <button class="tab" data-st="thanh lý" data-no-interact="true">Đã thanh lý</button>
+    <button class="tab" data-st="xuat_khau" data-no-interact="true">Xuất khẩu</button>
+  </div>
+
+  <div class="table-wrap">
+    <table class="tbl">
+      <thead>
+        <tr>
+          <th>Số HĐ</th>
+          <th>Khách hàng</th>
+          <th>Đơn liên kết</th>
+          <th class="num">Giá trị</th>
+          <th>Ngày ký</th>
+          <th>Công nợ / Cảnh báo</th>
+          <th>Trạng thái</th>
+          <th>Đính kèm</th>
+        </tr>
+      </thead>
+      <tbody id="hdBody"></tbody>
+    </table>
+  </div>
+
+</div>
+
+<script src="../assets/js/layout.js"></script>
+<script src="../assets/js/loss-data.js"></script>
+<script src="../assets/js/loss-ui.js"></script>
+<script src="../assets/js/pricing-engine.js"></script>
+<script src="../assets/js/quote-data.js"></script>
+<script src="../assets/js/accounting.js"></script>
+<script>
+  var Store = window.QuoteStore;
+  var $ = function (s) { return document.querySelector(s); };
+  var setText = function (s, v) { var el = $(s); if (el) el.textContent = v; };
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+  function fmtMoney(n) { n = Number(n) || 0; return n ? n.toLocaleString('vi-VN') : '—'; }
+  function toInputDate(s) { var m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(String(s || '').trim()); return m ? m[3] + '-' + m[2] + '-' + m[1] : ''; }
+  function fromInputDate(s) { var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(s || '').trim()); return m ? m[3] + '/' + m[2] + '/' + m[1] : ''; }
+  function todayStr() { var d = new Date(); var p = function (n) { return ('0' + n).slice(-2); }; return p(d.getDate()) + '/' + p(d.getMonth() + 1) + '/' + d.getFullYear(); }
+
+  // Vòng đời: nháp → chờ ký → đã ký → thanh lý
+  function nextStep(status) {
+    if (status === 'nháp') return { to: 'chờ ký', label: 'Gửi ký', icon: 'send' };
+    if (status === 'chờ ký') return { to: 'đã ký', label: 'Đánh dấu đã ký', icon: 'check' };
+    if (status === 'đã ký') return { to: 'thanh lý', label: 'Thanh lý', icon: 'archive' };
+    return null;
+  }
+
+  var listFilter = 'all', searchTerm = '';
+
+  // ---------------- LIST ----------------
+  function statusBadge(status) {
+    var m = Store.STATUS_META[status] || { cls: 'badge', label: status };
+    return '<span class="badge ' + m.cls + '">' + esc(m.label) + '</span>';
+  }
+
+  // ---- Cảnh báo công nợ / tiến độ (chọn lọc: ~30% đỏ, vài dòng xanh) ----
+  function warnCell(c) {
+    if (c.settledEarly) return '<span class="warn-good">Đã tất toán trước hạn</span>';
+    if (Number(c.debtOverdueDays) > 0) {
+      return '<span class="warn-bad">Quá hạn TT ' + c.debtOverdueDays + ' ngày · ' + Math.round((Number(c.debtAmount) || 0) / 1e6) + ' tr</span>';
+    }
+    if (c.lateDays) return '<span class="warn-bad">Trễ giao ' + c.lateDays + ' ngày</span>';
+    return '<span class="warn-none">—</span>';
+  }
+
+  function renderStats() {
+    var all = Store.allContracts();
+    var active = all.filter(function (c) { return c.status === 'đã ký'; });
+    var pending = all.filter(function (c) { return c.status === 'chờ ký' || c.status === 'nháp'; });
+    var signedVal = active.reduce(function (s2, c) { return c.currency === 'USD' ? s2 : s2 + (Number(Store.contractValue(c)) || 0); }, 0);
+    var od = all.filter(function (c) { return Number(c.debtOverdueDays) > 0; });
+    var odVal = od.reduce(function (s2, c) { return s2 + (Number(c.debtAmount) || 0); }, 0);
+    var set = function (id, v) { var el = document.getElementById(id); if (el) el.innerHTML = v; };
+    set('stActive', active.length + ' <small>hợp đồng</small>');
+    set('stPending', pending.length + ' <small>chờ xử lý</small>');
+    set('stValue', (signedVal / 1e9).toFixed(2) + ' <small>tỷ ₫</small>');
+    set('stOverdue', od.length + ' <small>HĐ · ' + Math.round(odVal / 1e6) + ' tr ₫</small>');
+  }
+
+  function renderList() {
+    var all = Store.allContracts();
+    var rows = all.filter(function (c) {
+      if (listFilter === 'xuat_khau') { if (c.dealType !== 'xuat_khau') return false; }
+      else if (listFilter !== 'all' && c.status !== listFilter) return false;
+      if (searchTerm) {
+        var hay = (c.id + ' ' + c.customer + ' ' + (c.orderId || '') + ' ' + (c.dealLabel || '')).toLowerCase();
+        if (hay.indexOf(searchTerm.toLowerCase()) < 0) return false;
+      }
+      return true;
+    });
+
+    setText('#hdCounts', '· ' + all.length + ' hợp đồng, ' + all.filter(function (c) { return c.status === 'đã ký'; }).length + ' đã ký');
+    renderStats();
+
+    var body = $('#hdBody');
+    if (!rows.length) {
+      body.innerHTML = '<tr><td colspan="8"><div class="list-empty"><i data-lucide="inbox" style="width:28px;height:28px"></i><div style="margin-top:8px">Không có hợp đồng nào khớp bộ lọc.</div></div></td></tr>';
+      if (window.lucide) lucide.createIcons();
+      return;
+    }
+
+    body.innerHTML = rows.map(function (c) {
+      var isFrame = c.contractType === 'nguyen_tac';
+      var typeBadge = isFrame
+        ? '<span class="badge badge-steel">Nguyên tắc</span>'
+        : (c.dealType === 'xuat_khau' ? '<span class="badge badge-rust">Xuất khẩu</span>' : '<span class="badge badge-moss">' + esc(c.dealLabel || 'Mua bán') + '</span>');
+      var orderCell, valCell;
+      if (isFrame) {
+        var ids = c.orderIds || [];
+        orderCell = ids.length
+          ? ids.map(function (oid) { return '<a class="lnk" href="03-don-hang.html?order=' + encodeURIComponent(oid) + '">' + esc(oid) + '</a>'; }).join(' ')
+          : '<span class="sub-soft">chưa neo đơn</span>';
+        var tv = Number(c.targetValue) || 0, rv = Number(c.releasedValue) || 0;
+        var pct = tv ? Math.min(100, Math.round(rv / tv * 100)) : 0;
+        valCell = '<div class="num-mono">' + fmtMoney(rv) + ' / ' + fmtMoney(tv) + (tv ? '₫' : '') + '</div>' +
+          (tv ? '<div class="sub-soft">đã dùng ' + pct + '% trần</div><div class="ct-bar"><i style="width:' + pct + '%"></i></div>' : '');
+      } else {
+        orderCell = c.orderId
+          ? '<a class="lnk" href="03-don-hang.html?order=' + encodeURIComponent(c.orderId) + '">' + esc(c.orderId) + '</a>'
+          : '<span class="sub-soft">—</span>';
+        valCell = c.currency === 'USD'
+          ? '<span class="num-mono">' + (Number(c.value) || 0).toLocaleString('en-US') + ' USD</span>'
+          : '<span class="num-mono">' + fmtMoney(c.value) + (Number(c.value) ? '₫' : '') + '</span>';
+      }
+      var signCell = c.signDate ? esc(c.signDate) : '<span class="sub-soft">—</span>';
+      var fileCell = c.file
+        ? '<div class="file-cell"><span class="file-name"><i data-lucide="paperclip" style="width:12px;height:12px"></i> ' + esc(c.file) + '</span>' +
+          '<button class="btn-mini" data-dl="' + esc(c.file) + '" data-no-interact="true"><i data-lucide="download" style="width:11px;height:11px"></i> Tải</button></div>'
+        : '<span class="sub-soft">—</span>';
+      var step = nextStep(c.status);
+      var stepBtn = step
+        ? '<button class="btn-mini" data-advance="' + esc(c.id) + '" data-to="' + esc(step.to) + '" data-no-interact="true"><i data-lucide="' + step.icon + '" style="width:11px;height:11px"></i> ' + step.label + '</button>'
+        : '';
+      var printBtn = '<button class="btn-mini" data-print-hd="' + esc(c.id) + '" data-no-interact="true"><i data-lucide="printer" style="width:11px;height:11px"></i> In</button>';
+      var acctBtn = (!isFrame && Number(c.value) && c.currency !== 'USD')
+        ? '<button class="btn-mini" data-no-interact="true" data-acct-type="contract" data-acct-code="' + esc(c.id) + '" data-acct-amount="' + (Number(c.value) || 0) + '" data-acct-partner="' + esc(c.customer) + '" data-acct-date="' + esc(c.signDate || '') + '" data-acct-note="Doanh thu theo hợp đồng ' + esc(c.id) + '"><i data-lucide="file-spreadsheet" style="width:11px;height:11px"></i> Xuất KT</button>'
+        : '';
+      return '<tr class="clickable" data-id="' + esc(c.id) + '">' +
+        '<td><span class="id-mono">' + esc(c.id) + '</span><div class="sub-soft">' + typeBadge + '</div></td>' +
+        '<td><a class="lnk" href="07-crm.html?kh=' + encodeURIComponent(c.customer) + '">' + esc(c.customer) + '</a>' +
+          (c.buyerCountry ? '<div class="sub-soft">' + esc(c.buyerCountry) + '</div>' : '') + '</td>' +
+        '<td>' + orderCell + '</td>' +
+        '<td class="num">' + valCell + '</td>' +
+        '<td>' + signCell + '</td>' +
+        '<td>' + warnCell(c) + '</td>' +
+        '<td><div class="st-cell">' + statusBadge(c.status) + stepBtn + printBtn + acctBtn + '</div></td>' +
+        '<td>' + fileCell + '</td>' +
+        '</tr>';
+    }).join('');
+
+    Array.prototype.forEach.call(body.querySelectorAll('tr.clickable'), function (tr) {
+      tr.addEventListener('click', function (e) {
+        var dl = e.target.closest('[data-dl]');
+        if (dl) { e.stopPropagation(); ERPInteract.showToast('Đang tải ' + esc(dl.dataset.dl) + '… (mô phỏng)', 'info'); return; }
+        var adv = e.target.closest('[data-advance]');
+        if (adv) {
+          e.stopPropagation();
+          var id = adv.dataset.advance, to = adv.dataset.to;
+          var patch = { status: to };
+          if (to === 'đã ký') { var cc = Store.getContract(id); if (cc && !cc.signDate) patch.signDate = todayStr(); }
+          Store.saveContract(id, patch);
+          var lbl = Store.STATUS_META[to] ? Store.STATUS_META[to].label : to;
+          ERPInteract.showToast('<b>' + esc(id) + '</b> → ' + esc(lbl), 'success');
+          renderList();
+          return;
+        }
+        var pr = e.target.closest('[data-print-hd]');
+        if (pr) { e.stopPropagation(); previewContract(pr.dataset.printHd); return; }
+        if (e.target.closest('[data-acct-type]')) return;
+        if (e.target.closest('a[href]')) return;   // link trường → để ERPPeek / điều hướng xử lý
+        openDrawer(tr.dataset.id);
+      });
+    });
+    if (window.lucide) lucide.createIcons();
+  }
+
+  // ---------------- FORM ----------------
+  function formBody(hd) {
+    hd = hd || {};
+    var type = hd.contractType || 'mua_ban';
+    var custOpts = Store.CUSTOMERS.map(function (c) {
+      return '<option value="' + esc(c.name) + '"' + (c.name === hd.customer ? ' selected' : '') + '>' + esc(c.name) + '</option>';
+    }).join('');
+    // allow a preset customer not in the list (deep-link)
+    if (hd.customer && !Store.CUSTOMERS.some(function (c) { return c.name === hd.customer; })) {
+      custOpts = '<option value="' + esc(hd.customer) + '" selected>' + esc(hd.customer) + '</option>' + custOpts;
+    }
+    var typeOpts = [['mua_ban', 'Hợp đồng mua bán (cụ thể)'], ['nguyen_tac', 'Hợp đồng nguyên tắc (khung)']].map(function (o) {
+      return '<option value="' + o[0] + '"' + (o[0] === type ? ' selected' : '') + '>' + o[1] + '</option>';
+    }).join('');
+    var statusOpts = [
+      ['nháp', 'Nháp'], ['chờ ký', 'Chờ ký'], ['đã ký', 'Đã ký'], ['hết hạn', 'Hết hạn'], ['thanh lý', 'Đã thanh lý']
+    ].map(function (o) {
+      return '<option value="' + o[0] + '"' + (o[0] === hd.status ? ' selected' : '') + '>' + o[1] + '</option>';
+    }).join('');
+
+    // HĐ mua bán: thẻ tóm tắt đơn liên kết
+    var orderSummary = '';
+    if (hd.orderId) {
+      var cells = '';
+      if (hd.product) cells += '<div><span>Sản phẩm</span><b>' + esc(hd.product) + '</b></div>';
+      if (Number(hd.qty)) cells += '<div><span>Số lượng</span><b>' + fmtMoney(hd.qty) + '</b></div>';
+      if (Number(hd.value)) cells += '<div><span>Giá trị đơn</span><b>' + fmtMoney(hd.value) + '₫</b></div>';
+      orderSummary =
+        '<div class="full ct-sale hd-order-card">' +
+          '<div class="hoc-head"><i data-lucide="link-2" style="width:12px;height:12px"></i> Đơn liên kết ' +
+            '<a class="link-order" href="03-don-hang.html?order=' + encodeURIComponent(hd.orderId) + '">' + esc(hd.orderId) + '</a></div>' +
+          (cells ? '<div class="hoc-grid">' + cells + '</div>' : '') +
+          '<div class="hoc-note">Giá trị HĐ đã lấy theo đơn. Sửa ô “Giá trị” bên dưới nếu cần khác.</div>' +
+        '</div>';
+    }
+
+    // HĐ nguyên tắc: thẻ lũy kế đã dùng + đơn con (khi sửa)
+    var frameSummary = '';
+    if (type === 'nguyen_tac' && ((hd.orderIds && hd.orderIds.length) || Number(hd.releasedValue))) {
+      var tv = Number(hd.targetValue) || 0, rv = Number(hd.releasedValue) || 0;
+      var pct = tv ? Math.min(100, Math.round(rv / tv * 100)) : 0;
+      var orderLinks = (hd.orderIds || []).map(function (oid) {
+        return '<a class="link-order" href="03-don-hang.html?order=' + encodeURIComponent(oid) + '">' + esc(oid) + '</a>';
+      }).join(', ') || '—';
+      frameSummary =
+        '<div class="full ct-frame hd-order-card">' +
+          '<div class="hoc-head"><i data-lucide="layers" style="width:12px;height:12px"></i> Lũy kế đã dùng</div>' +
+          '<div><b style="font-size:14px">' + fmtMoney(rv) + '₫</b> / trần ' + fmtMoney(tv) + '₫ (' + pct + '%)' +
+            (tv ? '<div class="ct-bar"><i style="width:' + pct + '%"></i></div>' : '') + '</div>' +
+          '<div class="hoc-note">Đơn con đã neo: ' + orderLinks + '</div>' +
+        '</div>';
+    }
+
+    // datalist sản phẩm cho dòng hàng
+    var prodList = '';
+    try {
+      prodList = '<datalist id="hdProdList">' + (Store.allProducts() || []).slice(0, 60).map(function (p) {
+        return '<option value="' + esc(p.name) + '"></option>';
+      }).join('') + '</datalist>';
+    } catch (e) { prodList = ''; }
+
+    // dòng hàng khởi tạo: hd.items → từ đơn liên kết → 1 dòng trống
+    var items = (hd.items && hd.items.length) ? hd.items
+      : (hd.product ? [{ name: hd.product, qty: Number(hd.qty) || 0, unit: 'bộ', price: (Number(hd.qty) ? Math.round((Number(hd.value) || 0) / Number(hd.qty)) : 0) }] : [{}]);
+    var itemRows = items.map(itemRowHtml).join('');
+    var vatPct = (hd.vatPct == null ? 8 : Number(hd.vatPct));
+    var vatOpts = [0, 5, 8, 10].map(function (v) { return '<option value="' + v + '"' + (v === vatPct ? ' selected' : '') + '>' + v + '%</option>'; }).join('');
+
+    var payOpts = [['ck', 'Chuyển khoản'], ['tm', 'Tiền mặt'], ['ck_tm', 'CK + tiền mặt']].map(function (o) {
+      return '<option value="' + o[0] + '"' + (o[0] === (hd.payMethod || 'ck') ? ' selected' : '') + '>' + o[1] + '</option>';
+    }).join('');
+    var shipOpts = [['kho_kh', 'Giao tại kho khách'], ['kho_ban', 'Nhận tại kho bên bán'], ['npp', 'Giao qua đại lý uỷ quyền / nhà xe']].map(function (o) {
+      return '<option value="' + o[0] + '"' + (o[0] === (hd.deliveryTerms || 'kho_kh') ? ' selected' : '') + '>' + o[1] + '</option>';
+    }).join('');
+
+    return '<div class="hd-form-grid">' + prodList +
+
+      // ---- 1. Thông tin chung ----
+      '<div class="hd-sec"><i data-lucide="file-text" style="width:12px;height:12px"></i> Thông tin chung</div>' +
+      '<div><label class="hd-lbl">Loại hợp đồng <span style="color:var(--rust)">*</span></label><select id="hdType" class="hd-input">' + typeOpts + '</select></div>' +
+      '<div><label class="hd-lbl">Khách hàng <span style="color:var(--rust)">*</span></label><select id="hdCustomer" class="hd-input">' + custOpts + '</select></div>' +
+      '<div class="hd-3col">' +
+        '<div><label class="hd-lbl">Người đại diện KH</label><input id="hdRep" class="hd-input" placeholder="VD: Nguyễn Văn B" value="' + esc(hd.rep) + '" /></div>' +
+        '<div><label class="hd-lbl">Chức vụ</label><input id="hdRepTitle" class="hd-input" placeholder="VD: Giám đốc dự án" value="' + esc(hd.repTitle) + '" /></div>' +
+        '<div><label class="hd-lbl">MST khách hàng</label><input id="hdTaxCode" class="hd-input" placeholder="VD: 0109541582" value="' + esc(hd.taxCode) + '" /></div>' +
+      '</div>' +
+
+      // ---- 2a. HĐ mua bán: đơn liên kết + dòng hàng ----
+      '<div class="hd-sec ct-sale"><i data-lucide="package" style="width:12px;height:12px"></i> Hàng hóa &amp; giá trị</div>' +
+      orderSummary +
+      '<div class="full ct-sale"><label class="hd-lbl">Đơn liên kết</label><select id="hdOrder" class="hd-input">' + orderOpts18(hd.customer, hd.orderId) + '</select></div>' +
+      '<div class="full ct-sale"><div class="hd-items-wrap">' +
+        '<table class="hd-items"><thead><tr>' +
+          '<th style="width:34%">Sản phẩm</th><th style="width:11%">SL</th><th style="width:13%">ĐVT</th><th style="width:16%">Đơn giá (₫)</th><th style="width:18%;text-align:right">Thành tiền</th><th class="it-del"></th>' +
+        '</tr></thead><tbody id="hdItemsBody">' + itemRows + '</tbody></table>' +
+        '<div class="hd-items-foot">' +
+          '<button type="button" class="hd-add-row" id="hdAddItem"><i data-lucide="plus" style="width:11px;height:11px"></i> Thêm dòng</button>' +
+          '<div class="hd-totals">' +
+            '<span>Tạm tính <b id="hdSub">0</b></span>' +
+            '<span class="vat-w">VAT <select id="hdVat">' + vatOpts + '</select> <b id="hdVatAmt">0</b></span>' +
+            '<span>Tổng <b class="grand" id="hdGrand">0₫</b></span>' +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+      '<input type="hidden" id="hdValue" value="' + (Number(hd.value) || 0) + '" /></div>' +
+
+      // ---- 2b. HĐ nguyên tắc ----
+      '<div class="hd-sec ct-frame"><i data-lucide="layers" style="width:12px;height:12px"></i> Khung giá trị</div>' +
+      frameSummary +
+      '<div class="ct-frame"><label class="hd-lbl">Trần giá trị (₫)</label><input id="hdTargetValue" class="hd-input" type="number" min="0" placeholder="0" value="' + (Number(hd.targetValue) || '') + '" /></div>' +
+      '<div class="ct-frame"><label class="hd-lbl">Trần SL (tùy chọn)</label><input id="hdTargetQty" class="hd-input" type="number" min="0" placeholder="0" value="' + (Number(hd.targetQty) || '') + '" /></div>' +
+      '<div class="full ct-frame"><label class="hd-lbl">Khung giá / điều khoản giá</label><textarea id="hdPriceTerms" class="hd-input" rows="2" placeholder="VD: áp bảng giá nhôm hệ quý III, chiết khấu 3% khi đạt 500 m²/tháng…">' + esc(hd.priceTerms) + '</textarea></div>' +
+
+      // ---- 3. Thanh toán & giao hàng ----
+      '<div class="hd-sec"><i data-lucide="credit-card" style="width:12px;height:12px"></i> Thanh toán &amp; giao hàng</div>' +
+      '<div class="hd-3col">' +
+        '<div><label class="hd-lbl">Tạm ứng / cọc (%)</label><input id="hdDeposit" class="hd-input" type="number" min="0" max="100" placeholder="30" value="' + (hd.payDeposit == null ? '' : Number(hd.payDeposit)) + '" /></div>' +
+        '<div><label class="hd-lbl">Công nợ còn lại (ngày)</label><input id="hdDebtDays" class="hd-input" type="number" min="0" placeholder="30" value="' + (hd.payDebtDays == null ? '' : Number(hd.payDebtDays)) + '" /></div>' +
+        '<div><label class="hd-lbl">Hình thức thanh toán</label><select id="hdPayMethod" class="hd-input">' + payOpts + '</select></div>' +
+      '</div>' +
+      '<div class="hd-3col">' +
+        '<div><label class="hd-lbl">Điều kiện giao hàng</label><select id="hdShip" class="hd-input">' + shipOpts + '</select></div>' +
+        '<div><label class="hd-lbl">Địa điểm giao</label><input id="hdShipPlace" class="hd-input" placeholder="VD: Công trình Vinhomes Ocean Park, Gia Lâm, Hà Nội" value="' + esc(hd.deliveryPlace) + '" /></div>' +
+        '<div><label class="hd-lbl">Phạt chậm giao (%/tuần)</label><input id="hdLate" class="hd-input" type="number" min="0" step="0.1" placeholder="0.5" value="' + (hd.latePenalty == null ? '' : Number(hd.latePenalty)) + '" /></div>' +
+      '</div>' +
+
+      // ---- 4. Hiệu lực & trạng thái ----
+      '<div class="hd-sec"><i data-lucide="calendar-check" style="width:12px;height:12px"></i> Hiệu lực &amp; trạng thái</div>' +
+      '<div class="hd-3col">' +
+        '<div><label class="hd-lbl">Ngày ký</label><input id="hdSign" class="hd-input" type="date" value="' + toInputDate(hd.signDate) + '" /></div>' +
+        '<div><label class="hd-lbl">Ngày hiệu lực</label><input id="hdEffective" class="hd-input" type="date" value="' + toInputDate(hd.effectiveDate) + '" /></div>' +
+        '<div><label class="hd-lbl">Ngày hết hạn</label><input id="hdExpiry" class="hd-input" type="date" value="' + toInputDate(hd.expiryDate) + '" /></div>' +
+      '</div>' +
+      '<div><label class="hd-lbl">Trạng thái</label><select id="hdStatus" class="hd-input">' + statusOpts + '</select></div>' +
+      '<div><label class="hd-lbl">Người phụ trách (bên bán)</label><input id="hdOwner" class="hd-input" placeholder="VD: Nguyễn Văn A — TP Kinh doanh dự án" value="' + esc(hd.owner) + '" /></div>' +
+
+      // ---- 5. Ghi chú & đính kèm ----
+      '<div class="full"><label class="hd-lbl">Ghi chú / điều khoản khác</label><textarea id="hdNote" class="hd-input" rows="2" placeholder="VD: nhôm 6063-T5, anod ≥15µm, bảo hành 24 tháng nhôm &amp; phụ kiện…">' + esc(hd.note) + '</textarea></div>' +
+      '<div class="full"><label class="hd-lbl">File đính kèm</label>' +
+        '<label class="cf-drop"><input type="file" id="hdFileInput" hidden accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png" />' +
+          '<span class="cf-drop-ic"><i data-lucide="paperclip" style="width:14px;height:14px"></i></span>' +
+          '<span class="cf-drop-name" id="hdFileName">' + (hd.file ? esc(hd.file) : 'Bấm để chọn file hợp đồng (PDF, ảnh…)') + '</span>' +
+        '</label>' +
+        '<input type="hidden" id="hdFile" value="' + esc(hd.file) + '" />' +
+      '</div>' +
+      '</div>';
+  }
+
+  // 1 dòng hàng trong bảng items
+  function itemRowHtml(it) {
+    it = it || {};
+    var units = ['bộ', 'm²', 'cánh', 'cây', 'kg', 'md'];
+    var unitOpts = units.map(function (u) { return '<option value="' + u + '"' + (u === (it.unit || 'bộ') ? ' selected' : '') + '>' + u + '</option>'; }).join('');
+    var total = (Number(it.qty) || 0) * (Number(it.price) || 0);
+    return '<tr>' +
+      '<td><input class="it-name" list="hdProdList" placeholder="VD: Cửa thuỷ lực hệ 120 · 2 cánh vân gỗ trắc" value="' + esc(it.name) + '" /></td>' +
+      '<td><input class="it-qty" type="number" min="0" placeholder="0" value="' + (Number(it.qty) || '') + '" /></td>' +
+      '<td><select class="it-unit">' + unitOpts + '</select></td>' +
+      '<td><input class="it-price" type="number" min="0" placeholder="0" value="' + (Number(it.price) || '') + '" /></td>' +
+      '<td class="it-total">' + (total ? fmtMoney(total) + '₫' : '—') + '</td>' +
+      '<td class="it-del"><button type="button" data-del-row title="Xóa dòng"><i data-lucide="x" style="width:12px;height:12px"></i></button></td>' +
+      '</tr>';
+  }
+
+  // đọc + tính lại bảng dòng hàng → cập nhật tạm tính/VAT/tổng và #hdValue
+  function readItems() {
+    var rows = document.querySelectorAll('#hdItemsBody tr');
+    var items = [];
+    Array.prototype.forEach.call(rows, function (tr) {
+      var name = tr.querySelector('.it-name').value.trim();
+      var qty = parseFloat(tr.querySelector('.it-qty').value) || 0;
+      var unit = tr.querySelector('.it-unit').value;
+      var price = parseFloat(tr.querySelector('.it-price').value) || 0;
+      if (name || qty || price) items.push({ name: name, qty: qty, unit: unit, price: price });
+    });
+    return items;
+  }
+  function recalcItems() {
+    var body = document.getElementById('hdItemsBody');
+    if (!body) return;
+    var sub = 0;
+    Array.prototype.forEach.call(body.querySelectorAll('tr'), function (tr) {
+      var t = (parseFloat(tr.querySelector('.it-qty').value) || 0) * (parseFloat(tr.querySelector('.it-price').value) || 0);
+      sub += t;
+      tr.querySelector('.it-total').innerHTML = t ? fmtMoney(t) + '₫' : '—';
+    });
+    var vatPct = parseFloat((document.getElementById('hdVat') || {}).value) || 0;
+    var vat = Math.round(sub * vatPct / 100);
+    var grand = sub + vat;
+    var set = function (id, v) { var el = document.getElementById(id); if (el) el.textContent = v; };
+    var money0 = function (n) { return (Number(n) || 0).toLocaleString('vi-VN'); };
+    set('hdSub', money0(sub));
+    set('hdVatAmt', money0(vat));
+    set('hdGrand', money0(grand) + '₫');
+    var hv = document.getElementById('hdValue'); if (hv) hv.value = grand;
+  }
+  // Options "Đơn liên kết": các đơn của khách (hiển thị mã POM), value = id nội bộ
+  function orderOpts18(customerName, selId) {
+    var orders = (window.QuoteStore && QuoteStore.ordersByCustomer) ? QuoteStore.ordersByCustomer(customerName) : [];
+    var opts = '<option value="">— Chưa gắn đơn —</option>' +
+      orders.map(function (o) {
+        return '<option value="' + o.id + '" data-val="' + (o.value || 0) + '"' + (o.id === selId ? ' selected' : '') + '>' +
+          QuoteStore.poCode(o) + ' · ' + esc(o.product || '') + (o.value ? ' · ' + fmtMoney(o.value) + '₫' : '') + '</option>';
+      }).join('');
+    if (selId && !orders.some(function (o) { return o.id === selId; })) opts = '<option value="' + esc(selId) + '" selected>' + esc(selId) + '</option>' + opts;
+    return opts;
+  }
+
+  // Ẩn/hiện trường theo loại hợp đồng
+  function applyCtType(type) {
+    var frame = type === 'nguyen_tac';
+    Array.prototype.forEach.call(document.querySelectorAll('.ct-sale'), function (el) { el.classList.toggle('hidden', frame); });
+    Array.prototype.forEach.call(document.querySelectorAll('.ct-frame'), function (el) { el.classList.toggle('hidden', !frame); });
+  }
+  function wireFormType(initType) {
+    applyCtType(initType);
+    var t = document.getElementById('hdType');
+    if (t) t.addEventListener('change', function () { applyCtType(t.value); });
+    // đổi khách → nạp lại danh sách đơn liên kết
+    var custSel = document.getElementById('hdCustomer');
+    if (custSel) custSel.addEventListener('change', function () { var os = document.getElementById('hdOrder'); if (os) os.innerHTML = orderOpts18(custSel.value, ''); });
+    // chọn đơn → tự điền dòng hàng đầu theo đơn (nếu bảng còn trống)
+    var ordSel = document.getElementById('hdOrder');
+    if (ordSel) ordSel.addEventListener('change', function () {
+      var opt = ordSel.selectedOptions[0];
+      if (!opt || !opt.value) return;
+      var o = (Store.allOrders ? Store.allOrders() : []).filter(function (x) { return x.id === opt.value; })[0];
+      if (!o) return;
+      var body = document.getElementById('hdItemsBody');
+      var existing = readItems();
+      if (body && !existing.length) {
+        var qty = Number(o.qty) || 0, val = Number(o.value) || 0;
+        body.innerHTML = itemRowHtml({ name: o.product || '', qty: qty, unit: 'bộ', price: qty ? Math.round(val / qty) : val });
+        if (window.lucide) lucide.createIcons();
+        recalcItems();
+      }
+    });
+    // bảng dòng hàng: tính lại khi gõ, thêm/xóa dòng
+    var itemsBody = document.getElementById('hdItemsBody');
+    if (itemsBody) {
+      itemsBody.addEventListener('input', recalcItems);
+      itemsBody.addEventListener('change', recalcItems);
+      itemsBody.addEventListener('click', function (e) {
+        var del = e.target.closest('[data-del-row]');
+        if (del) {
+          var tr = del.closest('tr');
+          if (itemsBody.querySelectorAll('tr').length > 1) tr.remove();
+          else Array.prototype.forEach.call(tr.querySelectorAll('input'), function (i) { i.value = ''; });
+          recalcItems();
+        }
+      });
+    }
+    var addBtn = document.getElementById('hdAddItem');
+    if (addBtn) addBtn.addEventListener('click', function () {
+      var body = document.getElementById('hdItemsBody');
+      body.insertAdjacentHTML('beforeend', itemRowHtml({}));
+      if (window.lucide) lucide.createIcons();
+      var last = body.querySelector('tr:last-child .it-name'); if (last) last.focus();
+    });
+    var vatSel = document.getElementById('hdVat');
+    if (vatSel) vatSel.addEventListener('change', recalcItems);
+    recalcItems();
+    // chọn file đính kèm
+    var fi = document.getElementById('hdFileInput');
+    if (fi) fi.addEventListener('change', function () { var f = fi.files && fi.files[0]; if (f) { document.getElementById('hdFile').value = f.name; document.getElementById('hdFileName').textContent = f.name; } });
+    if (window.lucide) lucide.createIcons();
+  }
+
+  function collectForm() {
+    var g = function (id) { var el = document.getElementById(id); return el ? el.value.trim() : ''; };
+    var type = g('hdType') || 'mua_ban';
+    var patch = {
+      contractType: type,
+      customer: g('hdCustomer'),
+      rep: g('hdRep'), repTitle: g('hdRepTitle'), taxCode: g('hdTaxCode'),
+      owner: g('hdOwner'),
+      payDeposit: parseFloat(g('hdDeposit')) || 0,
+      payDebtDays: parseInt(g('hdDebtDays'), 10) || 0,
+      payMethod: g('hdPayMethod') || 'ck',
+      deliveryTerms: g('hdShip') || 'kho_kh',
+      deliveryPlace: g('hdShipPlace'),
+      latePenalty: parseFloat(g('hdLate')) || 0,
+      note: g('hdNote'),
+      signDate: fromInputDate(g('hdSign')),
+      effectiveDate: fromInputDate(g('hdEffective')),
+      expiryDate: fromInputDate(g('hdExpiry')),
+      status: g('hdStatus') || 'nháp',
+      file: g('hdFile')
+    };
+    if (type === 'nguyen_tac') {
+      patch.targetValue = parseInt(g('hdTargetValue'), 10) || 0;
+      patch.targetQty = parseInt(g('hdTargetQty'), 10) || 0;
+      patch.priceTerms = g('hdPriceTerms');
+    } else {
+      patch.orderId = g('hdOrder');
+      var items = readItems();
+      var sub = items.reduce(function (s, it) { return s + (it.qty * it.price); }, 0);
+      var vatPct = parseFloat(g('hdVat')) || 0;
+      patch.items = items;
+      patch.vatPct = vatPct;
+      patch.subTotal = sub;
+      patch.vatAmount = Math.round(sub * vatPct / 100);
+      patch.value = sub + patch.vatAmount;
+      // tương thích view danh sách: product/qty tóm tắt từ dòng hàng
+      if (items.length) {
+        patch.product = items[0].name + (items.length > 1 ? ' +' + (items.length - 1) + ' SP' : '');
+        patch.qty = items.reduce(function (s, it) { return s + it.qty; }, 0);
+      }
+    }
+    return patch;
+  }
+
+  // Validation trước khi lưu — trả message lỗi hoặc '' nếu hợp lệ
+  function validateForm(patch) {
+    if (!patch.customer) return 'Chọn <b>khách hàng</b> trước khi lưu.';
+    if (patch.contractType === 'mua_ban') {
+      var ok = (patch.items || []).some(function (it) { return it.name && it.qty > 0 && it.price > 0; });
+      if (!ok) return 'Thêm ít nhất <b>1 dòng hàng</b> (sản phẩm, SL, đơn giá).';
+    } else {
+      if (!Number(patch.targetValue)) return 'Nhập <b>trần giá trị</b> cho hợp đồng nguyên tắc.';
+    }
+    return '';
+  }
+
+  function openNewForm(preset) {
+    preset = preset || {};
+    ERPInteract.showModal({
+      title: 'Lập hợp đồng mới',
+      body: formBody({ status: 'nháp', contractType: preset.contractType || 'mua_ban',
+        customer: preset.customer || '', orderId: preset.orderId || '',
+        value: preset.value || 0, product: preset.product || '', qty: preset.qty || 0 }),
+      primaryText: 'Tạo hợp đồng', secondaryText: 'Huỷ',
+      onPrimary: function () {
+        var patch = collectForm();
+        var err = validateForm(patch);
+        if (err) { ERPInteract.showToast(err, 'warning'); return false; }
+        var hd = Store.createContract(patch);
+        Store.saveContract(hd.id, patch); // lưu cả các trường mở rộng (đại diện, thanh toán, dòng hàng…)
+        ERPInteract.showToast('<b>Đã tạo</b> ' + hd.id + ' — ' + (hd.customer || '') + (patch.value ? ' · ' + fmtMoney(patch.value) + '₫' : ''), 'success');
+        history.replaceState(null, '', location.pathname);
+        renderList();
+      }
+    });
+    wireFormType(preset.contractType || 'mua_ban');
+  }
+
+  function openEditForm(id) {
+    var hd = Store.getContract(id);
+    if (!hd) return;
+    ERPInteract.showModal({
+      title: 'Hợp đồng ' + hd.id,
+      body: formBody(hd),
+      primaryText: 'Lưu thay đổi', secondaryText: 'Đóng',
+      onPrimary: function () {
+        var patch = collectForm();
+        var err = validateForm(patch);
+        if (err) { ERPInteract.showToast(err, 'warning'); return false; }
+        Store.saveContract(id, patch);
+        ERPInteract.showToast('<b>Đã lưu</b> ' + id, 'success');
+        history.replaceState(null, '', location.pathname);
+        renderList();
+      }
+    });
+    wireFormType(hd.contractType || 'mua_ban');
+    history.replaceState(null, '', '?id=' + encodeURIComponent(id));
+  }
+
+  // ======================================================================
+  //  OWIN — dữ liệu hợp đồng ngành cửa nhôm · drawer sửa tại chỗ · 2 mẫu in
+  // ======================================================================
+  var OWIN = {
+    nameVi: 'CÔNG TY CỔ PHẦN THƯƠNG MẠI OWIN',
+    nameEn: 'OWIN TRADING JOINT STOCK COMPANY',
+    addrVi: 'Số 359 đường Phúc Diễn, phường Xuân Phương, TP Hà Nội',
+    addrEn: 'No. 359 Phuc Dien Street, Xuan Phuong Ward, Hanoi City, Vietnam',
+    factory: 'Nhà máy: Số 8 Giá Ngự, Xâm Xuyên, Thường Tín, TP Hà Nội',
+    tax: '0109541582',
+    tel: '056.386.9999',
+    email: 'owingroup@gmail.com',
+    bankVi: 'Ngân hàng TMCP Quân Đội (MB Bank) — CN Hà Nội · Số TK: 0109541582888',
+    bankEn: 'Military Commercial Joint Stock Bank (MB Bank), Hanoi Branch · A/C No.: 0109541582888 · SWIFT: MSCBVNVX',
+    repVi: 'Ông Nguyễn Văn Owin', repTitleVi: 'Tổng Giám đốc',
+    repEn: 'Mr. Nguyen Van Owin', repTitleEn: 'General Director'
+  };
+
+  function itm(name, sys, dim, glass, color, unit, qty, price) {
+    return { name: name, sys: sys, dim: dim, glass: glass, color: color, unit: unit, qty: qty, price: price };
+  }
+  function sumItems(items) { return (items || []).reduce(function (s, it) { return s + (Number(it.qty) || 0) * (Number(it.price) || 0); }, 0); }
+
+  // Seed 12 hợp đồng ngành nhôm (đại lý · công trình · nhôm thanh · xuất khẩu)
+  function seedOwinContracts() {
+    var raw = [
+      { id: 'HD-2026-101', dealType: 'dai_ly', dealLabel: 'Bán đại lý', customer: 'ĐL OWIN HẢI DƯƠNG',
+        custAddr: 'Số 214 Nguyễn Lương Bằng, TP Hải Dương', taxCode: '0800456712', rep: 'Ông Phạm Văn Khoa', repTitle: 'Giám đốc',
+        custPhone: '0912 448 216', custBank: 'Vietcombank CN Hải Dương · 0451000778821',
+        items: [ itm('Cửa thuỷ lực hệ 120 · 2 cánh vân gỗ trắc', 'Hệ 120 thuỷ lực', '2200×3200mm phủ bì', 'Kính hộp 5-9-5 cường lực', 'Vân gỗ trắc', 'm²', 42.5, 4200000),
+                 itm('Cửa sổ mở quay Luxanode 121 · 2 cánh', 'Luxanode Anodized-ED 121', '1400×1600mm phủ bì', 'Kính hộp 5-9-5', 'Ghi xám anod', 'm²', 68, 2150000),
+                 itm('Bộ khoá & tay nắm cao cấp', 'Phụ kiện Kinlong', 'Khoá vân tay + tay gạt', '—', 'Inox xước', 'bộ', 12, 3200000) ],
+        signDate: '06/03/2026', effectiveDate: '07/03/2026', expiryDate: '31/12/2026', status: 'đã ký',
+        file: 'HD-DL-HaiDuong-2026.pdf', owner: 'Nguyễn Văn A — TP Kinh doanh đại lý',
+        payDeposit: 40, payDebtDays: 30, payMethod: 'ck', deliveryTerms: 'kho_kh', deliveryPlace: 'Kho ĐL Owin Hải Dương, TP Hải Dương',
+        latePenalty: 0.5, note: 'Nhôm 6063-T5, lớp anod ≥15µm. Bảo hành 24 tháng nhôm & phụ kiện.',
+        debtOverdueDays: 18, debtAmount: 62000000 },
+
+      { id: 'HD-2026-102', dealType: 'cong_trinh', dealLabel: 'Thi công công trình', customer: 'VINHOMES OCEAN PARK',
+        custAddr: 'KĐT Vinhomes Ocean Park, Gia Lâm, TP Hà Nội', taxCode: '0102671977', rep: 'Ông Trần Quốc Hưng', repTitle: 'Giám đốc dự án',
+        custPhone: '024 3974 9999', custBank: 'Techcombank CN Hà Nội · 19021547889016',
+        items: [ itm('Cửa thuỷ lực hệ 180 · 4 cánh vân gỗ hương', 'Hệ 180 thuỷ lực', '3600×2900mm phủ bì', 'Kính cường lực 8mm', 'Vân gỗ hương', 'm²', 268, 5100000),
+                 itm('Cửa trượt quay 93 · 4 cánh ghi xám', 'Hệ trượt quay 93', '2800×2400mm phủ bì', 'Kính hộp 5-9-5', 'Ghi xám', 'm²', 412, 2650000),
+                 itm('Vách kính khung nhôm Luxanode', 'Luxanode Anodized-ED 121', 'Theo shopdrawing', 'Kính cường lực 8mm', 'Bạc anod', 'm²', 540, 1980000) ],
+        signDate: '18/02/2026', effectiveDate: '20/02/2026', expiryDate: '30/11/2026', status: 'đã ký',
+        file: 'HD-CT-VinhomesOP-2026.pdf', owner: 'Lê Thị Bích — TP Kinh doanh dự án',
+        payDeposit: 30, payDebtDays: 45, payMethod: 'ck', deliveryTerms: 'kho_kh', deliveryPlace: 'Công trường Vinhomes Ocean Park, Gia Lâm, Hà Nội',
+        latePenalty: 0.5, note: 'Bao gồm đo đạc, sản xuất, vận chuyển và lắp đặt hoàn thiện tại công trình.',
+        debtOverdueDays: 0, debtAmount: 0 },
+
+      { id: 'HD-2026-103', dealType: 'nhom_thanh', dealLabel: 'Bán nhôm thanh', customer: 'NHÔM KÍNH NAM TIẾN',
+        custAddr: 'Số 88 Quốc lộ 32, Hoài Đức, TP Hà Nội', taxCode: '0104558123', rep: 'Ông Đỗ Nam Tiến', repTitle: 'Giám đốc',
+        custPhone: '0983 221 447', custBank: 'BIDV CN Tây Hà Nội · 12010002233445',
+        items: [ itm('Nhôm thanh hệ 120 (bán xá theo kg)', 'Hệ 120 thuỷ lực · 6063-T5', 'Cây 5,8m · dày 2,0mm', '—', 'Sơn tĩnh điện trắng sữa', 'kg', 6800, 118000),
+                 itm('Nhôm thanh Luxanode 121 (bán xá theo kg)', 'Luxanode Anodized-ED 121', 'Cây 5,8m · anod ≥15µm', '—', 'Anod bạc', 'kg', 3200, 132000) ],
+        signDate: '09/01/2026', effectiveDate: '10/01/2026', expiryDate: '31/07/2026', status: 'đã ký',
+        file: 'HD-NT-NamTien-2026.pdf', owner: 'Nguyễn Văn A — TP Kinh doanh đại lý',
+        payDeposit: 50, payDebtDays: 15, payMethod: 'ck', deliveryTerms: 'kho_ban', deliveryPlace: 'Nhà máy Owin, Thường Tín, Hà Nội',
+        latePenalty: 0.5, note: 'Giao theo tiến độ, CO/CQ nhôm 6063-T5 kèm từng lô.',
+        settledEarly: true },
+
+      { id: 'HD-2026-104', dealType: 'xuat_khau', dealLabel: 'Xuất khẩu', customer: 'ALUMEX TRADING PTE LTD',
+        buyerCountry: 'Singapore', custAddr: '18 Boon Lay Way, #05-134 Tradehub 21, Singapore 609966', taxCode: '201934567K',
+        rep: 'Mr. Lim Wei Sheng', repTitle: 'Managing Director', custPhone: '+65 6316 4488',
+        custBank: 'DBS Bank Ltd, Singapore · A/C 0721-004455-01 · SWIFT: DBSSSGSG',
+        currency: 'USD', incoterms: 'FOB Hai Phong Port, Incoterms 2020', portLoading: 'Hai Phong Port, Vietnam',
+        portDischarge: 'Singapore Port, Singapore', etd: '25/07/2026', vatPct: 0,
+        paymentTermEn: '30% T/T in advance within 05 days from contract signing; 70% T/T against copy of Bill of Lading. Alternatively by Irrevocable L/C at sight.',
+        items: [ itm('Aluminium hydraulic swing door, 2 leaves', 'OWIN 120 hydraulic system', '2200 x 3200 mm overall', 'Insulated glass 5-9-5 tempered', 'Wood grain / Teak', 'm²', 360, 186),
+                 itm('Aluminium sliding-pivot door, 4 leaves', 'OWIN 93 sliding-pivot system', '2800 x 2400 mm overall', 'Tempered glass 8 mm', 'Grey', 'm²', 285, 142),
+                 itm('Aluminium casement window, Luxanode', 'Luxanode Anodized-ED 121', '1400 x 1600 mm overall', 'Insulated glass 5-9-5', 'Anodized silver', 'm²', 240, 96) ],
+        signDate: '14/05/2026', effectiveDate: '14/05/2026', expiryDate: '31/12/2026', status: 'đã ký',
+        file: 'SC-ALUMEX-2026-04.pdf', owner: 'Phạm Thu Hà — Phụ trách xuất khẩu',
+        payDeposit: 30, payDebtDays: 0, payMethod: 'ck', deliveryTerms: 'kho_ban',
+        deliveryPlace: 'FOB Hai Phong Port', latePenalty: 0.5,
+        note: 'Alloy 6063-T5, anodized layer ≥ 15µm, inspection by SGS at loading port.' },
+
+      { id: 'HD-2026-105', dealType: 'cong_trinh', dealLabel: 'Thi công công trình', customer: 'SUN GROUP HẠ LONG',
+        custAddr: 'Khu du lịch Bãi Cháy, TP Hạ Long, Quảng Ninh', taxCode: '5700689215', rep: 'Bà Nguyễn Thanh Mai', repTitle: 'Trưởng ban QLDA',
+        custPhone: '0203 3846 999', custBank: 'Vietinbank CN Quảng Ninh · 102874556331',
+        items: [ itm('Cửa vòm nhôm uốn hệ 120 · 2 cánh', 'Hệ 120 uốn vòm', 'R1800 · 2400×3400mm', 'Kính hộp uốn 5-9-5', 'Vân gỗ óc chó', 'm²', 96, 5400000),
+                 itm('Cửa đi mở lùa 121 Luxanode · 4 cánh', 'Luxanode Anodized-ED 121', '3200×2600mm phủ bì', 'Kính cường lực 8mm', 'Champagne anod', 'm²', 228, 2380000),
+                 itm('Dịch vụ uốn vòm nhôm (gia công theo mét)', 'Máy uốn vòm CNC 3 trục', 'Bán kính R1200–R3000', '—', '—', 'md', 640, 285000) ],
+        signDate: '', effectiveDate: '', expiryDate: '31/12/2026', status: 'chờ ký',
+        file: '', owner: 'Lê Thị Bích — TP Kinh doanh dự án',
+        payDeposit: 35, payDebtDays: 45, payMethod: 'ck', deliveryTerms: 'kho_kh',
+        deliveryPlace: 'Công trường Sun Group Bãi Cháy, TP Hạ Long', latePenalty: 0.5,
+        note: 'Hạng mục uốn vòm yêu cầu duyệt mẫu trước khi sản xuất hàng loạt.' },
+
+      { id: 'HD-2026-106', dealType: 'dai_ly', dealLabel: 'Bán đại lý', customer: 'ĐL OWIN HƯNG YÊN',
+        custAddr: 'Km18 QL5, Yên Mỹ, Hưng Yên', taxCode: '0900771234', rep: 'Ông Vũ Đình Long', repTitle: 'Giám đốc',
+        custPhone: '0975 336 118', custBank: 'Agribank CN Hưng Yên · 2900205577881',
+        items: [ itm('Cửa trượt quay 93 · 6 cánh vân gỗ trắc', 'Hệ trượt quay 93', '4200×2600mm phủ bì', 'Kính hộp 5-9-5', 'Vân gỗ trắc', 'm²', 84, 2750000),
+                 itm('Hệ chấn song kết hợp phào Owin', 'Hệ chấn song + phào', 'Theo ô chờ', '—', 'Trắng sứ', 'm²', 46, 1250000),
+                 itm('Gioăng EPDM', 'Phụ kiện Kinlong', 'Cuộn 100m', '—', 'Đen', 'md', 1800, 9500) ],
+        signDate: '21/04/2026', effectiveDate: '22/04/2026', expiryDate: '31/12/2026', status: 'đã ký',
+        file: 'HD-DL-HungYen-2026.pdf', owner: 'Nguyễn Văn A — TP Kinh doanh đại lý',
+        payDeposit: 40, payDebtDays: 30, payMethod: 'ck_tm', deliveryTerms: 'npp',
+        deliveryPlace: 'Kho ĐL Owin Hưng Yên, Yên Mỹ', latePenalty: 0.5,
+        note: 'Đại lý uỷ quyền cấp 1, hưởng chiết khấu bậc thang theo doanh số quý.',
+        debtOverdueDays: 9, debtAmount: 48000000 },
+
+      { id: 'HD-2026-107', dealType: 'xuat_khau', dealLabel: 'Xuất khẩu', customer: 'PACIFIC DOORS CO., LTD',
+        buyerCountry: 'Taiwan (R.O.C.)', custAddr: 'No. 156, Sec. 2, Zhongshan N. Rd., Zhongshan Dist., Taipei City 104, Taiwan',
+        taxCode: '28744561', rep: 'Mr. Chen Yi-Hsuan', repTitle: 'President', custPhone: '+886 2 2581 7788',
+        custBank: 'CTBC Bank Co., Ltd., Taipei · A/C 3105-4471-8890 · SWIFT: CTCBTWTP',
+        currency: 'USD', incoterms: 'FOB Hai Phong Port, Incoterms 2020', portLoading: 'Hai Phong Port, Vietnam',
+        portDischarge: 'Keelung Port, Taiwan', etd: '18/08/2026', vatPct: 0,
+        paymentTermEn: 'Irrevocable L/C at sight opened in favour of the Seller within 10 days from contract date; or 30% T/T deposit and 70% T/T against copy of B/L.',
+        items: [ itm('Aluminium arched door, curved 120 system', 'OWIN 120 arch-bending system', 'R1800 · 2400 x 3400 mm', 'Curved insulated glass 5-9-5', 'Walnut wood grain', 'm²', 180, 218),
+                 itm('Aluminium casement window, 2 leaves', 'Luxanode Anodized-ED 121', '1400 x 1600 mm overall', 'Insulated glass 5-9-5', 'Champagne anodized', 'm²', 320, 104),
+                 itm('Aluminium profile 6063-T5, bulk', 'OWIN 120 system profile', 'Bar 5.8 m · t 2.0 mm', '—', 'Powder coated white', 'kg', 8500, 4.35) ],
+        signDate: '', effectiveDate: '', expiryDate: '31/12/2026', status: 'chờ ký',
+        file: '', owner: 'Phạm Thu Hà — Phụ trách xuất khẩu',
+        payDeposit: 30, payDebtDays: 0, payMethod: 'ck', deliveryTerms: 'kho_ban',
+        deliveryPlace: 'FOB Hai Phong Port', latePenalty: 0.5,
+        note: 'Partial shipment allowed, transhipment not allowed. Inspection by SGS at loading port.' },
+
+      { id: 'HD-2026-108', dealType: 'cong_trinh', dealLabel: 'Thi công công trình', customer: 'ECOPARK',
+        custAddr: 'KĐT Ecopark, Văn Giang, Hưng Yên', taxCode: '0900284412', rep: 'Ông Hoàng Minh Đức', repTitle: 'Giám đốc kỹ thuật',
+        custPhone: '0221 3979 888', custBank: 'MB Bank CN Hưng Yên · 8800104455662',
+        items: [ itm('Cửa thuỷ lực hệ 120 · 2 cánh vân gỗ trắc', 'Hệ 120 thuỷ lực', '2200×3200mm phủ bì', 'Kính hộp 5-9-5 cường lực', 'Vân gỗ trắc', 'm²', 186, 4350000),
+                 itm('Cửa sổ mở lùa 76 Luxanode · 2 cánh', 'Luxanode 76 mở lùa', '1600×1400mm phủ bì', 'Kính hộp 5-9-5', 'Ghi xám anod', 'm²', 324, 1850000),
+                 itm('Cửa nhôm tấm tổ ong 2 cánh', 'Hệ tấm tổ ong Owin', '900×2200mm phủ bì', '—', 'Vân gỗ sồi', 'bộ', 64, 4650000) ],
+        signDate: '30/03/2026', effectiveDate: '01/04/2026', expiryDate: '31/10/2026', status: 'đã ký',
+        file: 'HD-CT-Ecopark-2026.pdf', owner: 'Lê Thị Bích — TP Kinh doanh dự án',
+        payDeposit: 30, payDebtDays: 45, payMethod: 'ck', deliveryTerms: 'kho_kh',
+        deliveryPlace: 'Công trường Ecopark, Văn Giang, Hưng Yên', latePenalty: 0.5,
+        note: 'Đợt 3 chậm do vướng mặt bằng lắp đặt tầng 12–15.',
+        lateDays: 6 },
+
+      { id: 'HD-2026-109', dealType: 'nhom_thanh', dealLabel: 'Bán nhôm thanh', customer: 'NHÔM KÍNH MINH AN',
+        custAddr: 'Số 45 Phạm Văn Đồng, Bắc Từ Liêm, TP Hà Nội', taxCode: '0107889441', rep: 'Bà Trịnh Thị Minh', repTitle: 'Giám đốc',
+        custPhone: '0904 117 335', custBank: 'VPBank CN Cầu Giấy · 199988776655',
+        items: [ itm('Nhôm thanh hệ 120 (bán xá theo kg)', 'Hệ 120 thuỷ lực · 6063-T5', 'Cây 5,8m · dày 2,0mm', '—', 'Sơn tĩnh điện ghi', 'kg', 4200, 112000),
+                 itm('Thanh nhôm hệ trượt quay 93', 'Hệ trượt quay 93 · 6063-T5', 'Cây 5,8m', '—', 'Vân gỗ trắc', 'kg', 2400, 124000) ],
+        signDate: '05/02/2026', effectiveDate: '06/02/2026', expiryDate: '31/08/2026', status: 'đã ký',
+        file: 'HD-NT-MinhAn-2026.pdf', owner: 'Nguyễn Văn A — TP Kinh doanh đại lý',
+        payDeposit: 50, payDebtDays: 15, payMethod: 'ck', deliveryTerms: 'kho_ban',
+        deliveryPlace: 'Nhà máy Owin, Thường Tín, Hà Nội', latePenalty: 0.5,
+        note: 'Khách thanh toán dứt điểm ngay sau đợt giao thứ hai.',
+        settledEarly: true },
+
+      { id: 'HD-2026-110', dealType: 'dai_ly', dealLabel: 'Bán đại lý', customer: 'ĐL OWIN NGHỆ AN',
+        custAddr: 'Số 172 Lê Lợi, TP Vinh, Nghệ An', taxCode: '2901558877', rep: 'Ông Nguyễn Hữu Sơn', repTitle: 'Giám đốc',
+        custPhone: '0918 774 200', custBank: 'Sacombank CN Nghệ An · 0600 4455 7788',
+        items: [ itm('Tủ bếp nhôm nội thất Owin Luxury (bộ 3,2m)', 'Nhôm nội thất Owin Luxury', 'Bộ 3,2m', '—', 'Vân gỗ sồi', 'bộ', 6, 28500000),
+                 itm('Tủ bếp nhôm nội thất Omega (bộ 4,5m)', 'Nhôm nội thất Omega', 'Bộ 4,5m', '—', 'Trắng sứ', 'bộ', 4, 36500000) ],
+        signDate: '', effectiveDate: '', expiryDate: '', status: 'nháp',
+        file: '', owner: 'Nguyễn Văn A — TP Kinh doanh đại lý',
+        payDeposit: 40, payDebtDays: 30, payMethod: 'ck', deliveryTerms: 'npp',
+        deliveryPlace: 'Kho ĐL Owin Nghệ An, TP Vinh', latePenalty: 0.5,
+        note: 'Đang chờ đại lý xác nhận cấu hình tủ bếp.' },
+
+      { id: 'HD-2026-111', dealType: 'cong_trinh', dealLabel: 'Thi công công trình', customer: 'NT XÂY DỰNG HOÀNG GIA',
+        custAddr: 'Số 9 Nguyễn Khuyến, Hà Đông, TP Hà Nội', taxCode: '0106334521', rep: 'Ông Lý Hoàng Gia', repTitle: 'Giám đốc',
+        custPhone: '0968 552 114', custBank: 'ACB CN Hà Đông · 2288 3344 5566',
+        items: [ itm('Cửa thuỷ lực hệ 180 · 4 cánh vân gỗ hương', 'Hệ 180 thuỷ lực', '3600×2900mm phủ bì', 'Kính cường lực 8mm', 'Vân gỗ hương', 'm²', 118, 5250000),
+                 itm('Vách kính khung nhôm Luxanode', 'Luxanode Anodized-ED 121', 'Theo shopdrawing', 'Kính cường lực 8mm', 'Bạc anod', 'm²', 205, 1920000) ],
+        signDate: '12/12/2025', effectiveDate: '15/12/2025', expiryDate: '30/06/2026', status: 'đã ký',
+        file: 'HD-CT-HoangGia-2025.pdf', owner: 'Lê Thị Bích — TP Kinh doanh dự án',
+        payDeposit: 30, payDebtDays: 45, payMethod: 'ck', deliveryTerms: 'kho_kh',
+        deliveryPlace: 'Công trường Hoàng Gia Tower, Hà Đông, Hà Nội', latePenalty: 0.5,
+        note: 'Đã nghiệm thu toàn bộ, còn lại 10% bảo hành quá hạn thanh toán.',
+        debtOverdueDays: 26, debtAmount: 155000000 },
+
+      { id: 'HD-2026-112', contractType: 'nguyen_tac', dealType: 'dai_ly', dealLabel: 'Nguyên tắc đại lý',
+        customer: 'NHÔM KÍNH PHƯƠNG TRANG',
+        custAddr: 'Số 301 Giải Phóng, Hoàng Mai, TP Hà Nội', taxCode: '0105447788', rep: 'Ông Bùi Phương Trang', repTitle: 'Giám đốc',
+        custPhone: '0913 556 221', custBank: 'Techcombank CN Hoàng Mai · 19033445566778',
+        orderIds: [], releasedValue: 640000000, targetValue: 2000000000, targetQty: 0,
+        priceTerms: 'Áp bảng giá nhôm hệ Owin quý III/2026; chiết khấu 3% khi đạt 500 m²/tháng, 5% khi đạt 900 m²/tháng. Công nợ 30 ngày.',
+        signDate: '02/01/2026', effectiveDate: '02/01/2026', expiryDate: '31/12/2026', status: 'đã ký',
+        file: 'HD-NguyenTac-PhuongTrang-2026.pdf', owner: 'Nguyễn Văn A — TP Kinh doanh đại lý',
+        payDeposit: 0, payDebtDays: 30, payMethod: 'ck', deliveryTerms: 'kho_ban',
+        deliveryPlace: 'Nhà máy Owin, Thường Tín, Hà Nội', latePenalty: 0.5,
+        note: 'Hợp đồng khung neo các đơn hàng phát sinh trong năm 2026.' }
+    ];
+
+    var list = Store.allContracts();
+    var have = {};
+    list.forEach(function (c) { have[c.id] = 1; });
+    var added = 0;
+    raw.forEach(function (r) {
+      if (have[r.id]) return;
+      var c = {};
+      Object.keys(r).forEach(function (k) { c[k] = r[k]; });
+      if (!c.contractType) c.contractType = 'mua_ban';
+      if (c.contractType === 'mua_ban') {
+        var sub = sumItems(c.items);
+        var vp = (c.vatPct == null) ? 8 : Number(c.vatPct);
+        c.vatPct = vp;
+        c.subTotal = Math.round(sub * 100) / 100;
+        c.vatAmount = Math.round(sub * vp / 100);
+        c.value = Math.round((sub + c.vatAmount) * 100) / 100;
+        c.qty = (c.items || []).reduce(function (s2, it) { return s2 + (Number(it.qty) || 0); }, 0);
+        c.product = (c.items && c.items[0] ? c.items[0].name : '') + ((c.items || []).length > 1 ? ' +' + (c.items.length - 1) + ' SP' : '');
+        c.orderId = c.orderId || '';
+      }
+      list.push(c);
+      added++;
+    });
+    if (added) Store.save();
+  }
+
+  // ---------------- Số thành chữ ----------------
+  function wordsVi(n) {
+    n = Math.round(Number(n) || 0);
+    if (!n) return 'Không đồng';
+    var d = ['không', 'một', 'hai', 'ba', 'bốn', 'năm', 'sáu', 'bảy', 'tám', 'chín'];
+    function block(b, full) {
+      var t = '', tr = Math.floor(b / 100), ch = Math.floor((b % 100) / 10), dv = b % 10;
+      if (tr > 0 || full) t += d[tr] + ' trăm';
+      if (ch > 1) { t += ' ' + d[ch] + ' mươi'; if (dv === 1) t += ' mốt'; else if (dv === 5) t += ' lăm'; else if (dv) t += ' ' + d[dv]; }
+      else if (ch === 1) { t += ' mười'; if (dv === 5) t += ' lăm'; else if (dv) t += ' ' + d[dv]; }
+      else if (dv) { t += (tr > 0 || full) ? ' lẻ ' + d[dv] : ' ' + d[dv]; }
+      return t.trim();
+    }
+    var units = ['', ' nghìn', ' triệu', ' tỷ'], parts = [], i = 0;
+    while (n > 0 && i < 4) { parts.unshift({ v: n % 1000, u: units[i] }); n = Math.floor(n / 1000); i++; }
+    var out = parts.map(function (p, idx) { return p.v ? (block(p.v, idx > 0) + p.u) : ''; }).filter(Boolean).join(' ');
+    out = out.replace(/\s+/g, ' ').trim();
+    return out.charAt(0).toUpperCase() + out.slice(1) + ' đồng';
+  }
+  function wordsEn(n) {
+    n = Math.round(Number(n) || 0);
+    if (!n) return 'ZERO';
+    var one = ['', 'ONE', 'TWO', 'THREE', 'FOUR', 'FIVE', 'SIX', 'SEVEN', 'EIGHT', 'NINE', 'TEN',
+      'ELEVEN', 'TWELVE', 'THIRTEEN', 'FOURTEEN', 'FIFTEEN', 'SIXTEEN', 'SEVENTEEN', 'EIGHTEEN', 'NINETEEN'];
+    var ten = ['', '', 'TWENTY', 'THIRTY', 'FORTY', 'FIFTY', 'SIXTY', 'SEVENTY', 'EIGHTY', 'NINETY'];
+    function under1000(x) {
+      var t = '';
+      if (x >= 100) { t += one[Math.floor(x / 100)] + ' HUNDRED'; x %= 100; if (x) t += ' '; }
+      if (x >= 20) { t += ten[Math.floor(x / 10)]; if (x % 10) t += ' ' + one[x % 10]; }
+      else if (x > 0) t += one[x];
+      return t;
+    }
+    var scale = ['', ' THOUSAND', ' MILLION', ' BILLION'], parts = [], i = 0;
+    while (n > 0 && i < 4) { parts.unshift({ v: n % 1000, u: scale[i] }); n = Math.floor(n / 1000); i++; }
+    return parts.map(function (p) { return p.v ? under1000(p.v) + p.u : ''; }).filter(Boolean).join(' ').trim();
+  }
+  function usdWords(n) {
+    var whole = Math.floor(Number(n) || 0);
+    var cents = Math.round(((Number(n) || 0) - whole) * 100);
+    return 'US DOLLARS ' + wordsEn(whole) + (cents ? ' AND ' + wordsEn(cents) + ' CENTS' : '') + ' ONLY';
+  }
+
+  // ---------------- Nhãn phụ ----------------
+  var PAY_LABEL = { ck: 'Chuyển khoản', tm: 'Tiền mặt', ck_tm: 'Chuyển khoản + tiền mặt' };
+  var SHIP_LABEL = { kho_kh: 'Giao tại kho / công trình của bên mua', kho_ban: 'Nhận tại nhà máy bên bán', npp: 'Giao qua đại lý uỷ quyền / nhà xe' };
+  var DEAL_LABEL = { dai_ly: 'Bán hàng đại lý', cong_trinh: 'Thi công công trình', nhom_thanh: 'Bán nhôm thanh (xá)', xuat_khau: 'Xuất khẩu cửa nhôm' };
+  function fmtUsd(n) { return (Number(n) || 0).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 }); }
+  function money(c, n) { return c.currency === 'USD' ? (fmtUsd(n) + ' USD') : (fmtMoney(n) + '₫'); }
+  function subOf(c) { return (c.subTotal != null) ? c.subTotal : sumItems(c.items); }
+
+  // ======================================================================
+  //  DRAWER — bản ghi hợp đồng, bố cục chuẩn ERP, sửa tại chỗ
+  // ======================================================================
+  var drawerEl = null, drawerId = null, drawerEditing = false;
+
+  function drField(label, value, opts) {
+    opts = opts || {};
+    return '<div class="pk-cell' + (opts.wide ? ' wide' : '') + '"><span>' + label + '</span>' +
+      '<b class="' + (opts.big ? 'big' : '') + '">' + (value || value === 0 ? value : '—') + '</b></div>';
+  }
+  function drEdit(label, key, value, opts) {
+    opts = opts || {};
+    var inp;
+    if (opts.options) {
+      inp = '<select data-fld="' + key + '">' + opts.options.map(function (o) {
+        return '<option value="' + esc(o[0]) + '"' + (String(o[0]) === String(value) ? ' selected' : '') + '>' + esc(o[1]) + '</option>';
+      }).join('') + '</select>';
+    } else if (opts.textarea) {
+      inp = '<textarea rows="2" data-fld="' + key + '">' + esc(value) + '</textarea>';
+    } else {
+      inp = '<input type="' + (opts.type || 'text') + '" data-fld="' + key + '" value="' + esc(value) + '"' + (opts.ph ? ' placeholder="' + esc(opts.ph) + '"' : '') + ' />';
+    }
+    return '<div class="pk-cell' + (opts.wide ? ' wide' : '') + '"><span>' + label + '</span>' + inp + '</div>';
+  }
+  function drSec(icon, title) { return '<div class="pk-sec"><i data-lucide="' + icon + '" style="width:12px;height:12px"></i> ' + title + '</div>'; }
+
+  function drawerBody(c) {
+    var ed = drawerEditing;
+    var isFrame = c.contractType === 'nguyen_tac';
+    var isExp = c.dealType === 'xuat_khau';
+    var f = ed ? drEdit : null;
+
+    var general = drSec('info', 'Thông tin chung') + '<div class="pk-grid">' +
+      drField('Loại hợp đồng', (isFrame ? 'Hợp đồng nguyên tắc (khung)' : 'Hợp đồng mua bán') + ' · ' + (DEAL_LABEL[c.dealType] || 'Bán hàng')) +
+      drField('Khách hàng', '<a class="lnk" href="07-crm.html?kh=' + encodeURIComponent(c.customer) + '">' + esc(c.customer) + '</a>' + (c.buyerCountry ? ' · ' + esc(c.buyerCountry) : '')) +
+      (ed ? drEdit('Mã số thuế', 'taxCode', c.taxCode || '') : drField('Mã số thuế', esc(c.taxCode || ''))) +
+      (ed ? drEdit('Người đại diện', 'rep', c.rep || '') : drField('Người đại diện', esc(c.rep || ''))) +
+      (ed ? drEdit('Chức vụ', 'repTitle', c.repTitle || '') : drField('Chức vụ', esc(c.repTitle || ''))) +
+      (ed ? drEdit('Điện thoại', 'custPhone', c.custPhone || '') : drField('Điện thoại', esc(c.custPhone || ''))) +
+      (ed ? drEdit('Địa chỉ', 'custAddr', c.custAddr || '', { wide: true }) : drField('Địa chỉ', esc(c.custAddr || ''), { wide: true })) +
+      (ed ? drEdit('Tài khoản ngân hàng', 'custBank', c.custBank || '', { wide: true }) : drField('Tài khoản ngân hàng', esc(c.custBank || ''), { wide: true })) +
+      '</div>';
+
+    var commercial;
+    if (isFrame) {
+      var tv = Number(c.targetValue) || 0, rv = Number(c.releasedValue) || 0;
+      commercial = drSec('layers', 'Thương mại — khung giá trị') + '<div class="pk-grid">' +
+        (ed ? drEdit('Trần giá trị (₫)', 'targetValue', tv, { type: 'number' }) : drField('Trần giá trị', fmtMoney(tv) + '₫', { big: true })) +
+        drField('Đã sử dụng', fmtMoney(rv) + '₫ · ' + (tv ? Math.round(rv / tv * 100) : 0) + '%') +
+        (ed ? drEdit('Khung giá / điều khoản giá', 'priceTerms', c.priceTerms || '', { wide: true, textarea: true })
+            : drField('Khung giá / điều khoản giá', esc(c.priceTerms || ''), { wide: true })) +
+        '</div>';
+    } else {
+      var sub = subOf(c);
+      commercial = drSec('badge-dollar-sign', 'Thương mại') + '<div class="pk-grid">' +
+        drField('Cộng tiền hàng', money(c, sub)) +
+        drField(isExp ? 'Thuế xuất khẩu' : 'VAT ' + (c.vatPct == null ? 8 : c.vatPct) + '%', isExp ? '0%' : money(c, c.vatAmount || 0)) +
+        drField('Tổng giá trị hợp đồng', money(c, c.value), { big: true, wide: true }) +
+        (isExp ? drField('Điều kiện giao hàng', esc(c.incoterms || '')) : drField('Điều kiện giao hàng', SHIP_LABEL[c.deliveryTerms] || '—')) +
+        (isExp ? drField('Cảng xếp / dỡ', esc((c.portLoading || '') + ' → ' + (c.portDischarge || ''))) : '') +
+        (ed ? drEdit('Địa điểm giao hàng', 'deliveryPlace', c.deliveryPlace || '', { wide: true }) : drField('Địa điểm giao hàng', esc(c.deliveryPlace || ''), { wide: true })) +
+        drField('Phương thức thanh toán', isExp ? esc(c.paymentTermEn || '') : (PAY_LABEL[c.payMethod] || '—'), isExp ? { wide: true } : {}) +
+        (ed ? drEdit('Tạm ứng / cọc (%)', 'payDeposit', c.payDeposit || 0, { type: 'number' }) : drField('Tạm ứng / cọc', (c.payDeposit || 0) + '%')) +
+        (ed ? drEdit('Công nợ còn lại (ngày)', 'payDebtDays', c.payDebtDays || 0, { type: 'number' }) : drField('Công nợ còn lại', (c.payDebtDays || 0) + ' ngày')) +
+        '</div>';
+    }
+
+    var flag = '';
+    if (c.settledEarly) flag = '<span class="dr-flag good"><i data-lucide="check" style="width:12px;height:12px"></i> Đã tất toán trước hạn</span>';
+    else if (Number(c.debtOverdueDays) > 0) flag = '<span class="dr-flag bad"><i data-lucide="alert-triangle" style="width:12px;height:12px"></i> Quá hạn thanh toán ' + c.debtOverdueDays + ' ngày · ' + fmtMoney(c.debtAmount) + '₫</span>';
+    else if (c.lateDays) flag = '<span class="dr-flag bad"><i data-lucide="alert-triangle" style="width:12px;height:12px"></i> Trễ giao ' + c.lateDays + ' ngày</span>';
+
+    var statusOpts = [['nháp', 'Nháp'], ['chờ ký', 'Chờ ký'], ['đã ký', 'Đã ký'], ['hết hạn', 'Hết hạn'], ['thanh lý', 'Đã thanh lý']];
+    var progress = drSec('calendar-check', 'Tiến độ & hiệu lực') + '<div class="pk-grid">' +
+      (ed ? drEdit('Ngày ký', 'signDate', c.signDate || '', { ph: 'dd/mm/yyyy' }) : drField('Ngày ký', esc(c.signDate || ''))) +
+      (ed ? drEdit('Ngày hiệu lực', 'effectiveDate', c.effectiveDate || '', { ph: 'dd/mm/yyyy' }) : drField('Ngày hiệu lực', esc(c.effectiveDate || ''))) +
+      (ed ? drEdit('Ngày hết hạn', 'expiryDate', c.expiryDate || '', { ph: 'dd/mm/yyyy' }) : drField('Ngày hết hạn', esc(c.expiryDate || ''))) +
+      (ed ? drEdit('Trạng thái', 'status', c.status, { options: statusOpts }) : drField('Trạng thái', Store.STATUS_META[c.status] ? Store.STATUS_META[c.status].label : esc(c.status))) +
+      (isExp ? drField('ETD dự kiến', esc(c.etd || '')) : '') +
+      (ed ? drEdit('Người phụ trách (bên bán)', 'owner', c.owner || '', { wide: true }) : drField('Người phụ trách (bên bán)', esc(c.owner || ''), { wide: true })) +
+      (flag ? '<div class="pk-cell wide"><span>Cảnh báo</span><b>' + flag + '</b></div>' : '') +
+      (ed ? drEdit('Ghi chú / điều khoản khác', 'note', c.note || '', { wide: true, textarea: true }) : drField('Ghi chú / điều khoản khác', esc(c.note || ''), { wide: true })) +
+      '</div>';
+
+    var itemsHtml = '';
+    if (!isFrame && (c.items || []).length) {
+      itemsHtml = drSec('package', 'Dòng hàng hợp đồng') +
+        '<table class="pk-items"><thead><tr><th>Tên sản phẩm</th><th>Quy cách</th><th>ĐVT</th>' +
+        '<th class="r">SL</th><th class="r">Đơn giá</th><th class="r">Thành tiền</th></tr></thead><tbody>' +
+        c.items.map(function (it, i) {
+          var spec = [it.sys, it.dim, it.color, it.glass].filter(function (x) { return x && x !== '—'; }).join(' · ');
+          var line = (Number(it.qty) || 0) * (Number(it.price) || 0);
+          if (ed) {
+            return '<tr data-row="' + i + '"><td><input data-it="name" value="' + esc(it.name) + '" /></td>' +
+              '<td><input data-it="dim" value="' + esc(it.dim) + '" /></td>' +
+              '<td><input data-it="unit" value="' + esc(it.unit) + '" style="width:56px" /></td>' +
+              '<td class="r"><input data-it="qty" type="number" step="any" value="' + (Number(it.qty) || 0) + '" /></td>' +
+              '<td class="r"><input data-it="price" type="number" step="any" value="' + (Number(it.price) || 0) + '" /></td>' +
+              '<td class="r">' + money(c, line) + '</td></tr>';
+          }
+          return '<tr><td>' + esc(it.name) + '</td><td style="font-size:11.5px;color:var(--ash)">' + esc(spec) + '</td>' +
+            '<td>' + esc(it.unit) + '</td><td class="r">' + fmtMoney(it.qty) + '</td>' +
+            '<td class="r">' + fmtMoney(it.price) + '</td><td class="r"><b>' + money(c, line) + '</b></td></tr>';
+        }).join('') +
+        '<tr><td colspan="5" style="text-align:right"><b>Tổng giá trị hợp đồng</b></td><td class="r"><b>' + money(c, c.value) + '</b></td></tr>' +
+        '</tbody></table>';
+    }
+
+    var links = drSec('link-2', 'Liên kết') + '<div class="pk-links">' +
+      (c.orderId ? '<a class="pk-pill" href="03-don-hang.html?order=' + encodeURIComponent(c.orderId) + '"><i data-lucide="shopping-cart" style="width:13px;height:13px"></i><span><span class="pk-pill-t">Đơn hàng</span><br>' + esc(c.orderId) + '</span></a>' : '') +
+      ((c.orderIds || []).map(function (oid) {
+        return '<a class="pk-pill" href="03-don-hang.html?order=' + encodeURIComponent(oid) + '"><i data-lucide="shopping-cart" style="width:13px;height:13px"></i><span><span class="pk-pill-t">Đơn hàng</span><br>' + esc(oid) + '</span></a>';
+      }).join('')) +
+      (c.bgId ? '<a class="pk-pill" href="02-bao-gia.html?bg=' + encodeURIComponent(c.bgId) + '"><i data-lucide="file-text" style="width:13px;height:13px"></i><span><span class="pk-pill-t">Báo giá</span><br>' + esc(c.bgId) + '</span></a>' : '') +
+      (!c.orderId && !(c.orderIds || []).length && !c.bgId ? '<span class="pk-empty">Chưa neo đơn hàng nào.</span>' : '') +
+      '</div>';
+
+    var actions = '<div class="pk-actions">' +
+      (ed
+        ? '<button class="btn btn-primary" data-dr="save" data-no-interact="true"><i data-lucide="save" style="width:14px;height:14px"></i> Lưu</button>' +
+          '<button class="btn btn-secondary" data-dr="cancel" data-no-interact="true">Huỷ</button>'
+        : '<button class="btn btn-primary" data-dr="order" data-no-interact="true"><i data-lucide="arrow-right" style="width:14px;height:14px"></i> → Tạo đơn hàng</button>' +
+          '<button class="btn btn-secondary" data-dr="preview" data-no-interact="true"><i data-lucide="eye" style="width:14px;height:14px"></i> Xem trước bản in</button>' +
+          '<button class="btn btn-secondary" data-dr="print" data-no-interact="true"><i data-lucide="printer" style="width:14px;height:14px"></i> In</button>' +
+          '<button class="btn btn-secondary" data-dr="form" data-no-interact="true"><i data-lucide="sliders-horizontal" style="width:14px;height:14px"></i> Form đầy đủ</button>') +
+      '</div>';
+
+    return general + commercial + progress + itemsHtml + links + actions;
+  }
+
+  function chipClsOf(st) {
+    if (st === 'đã ký') return 'ok';
+    if (st === 'chờ ký' || st === 'nháp') return 'warn';
+    if (st === 'hết hạn') return 'bad';
+    return '';
+  }
+
+  function renderDrawer() {
+    var c = Store.getContract(drawerId);
+    if (!c || !drawerEl) return;
+    var isExp = c.dealType === 'xuat_khau';
+    drawerEl.querySelector('.pk-panel').innerHTML =
+      '<div class="pk-head">' +
+        '<div class="pk-head-top">' +
+          '<span class="pk-type"><i data-lucide="file-check-2" style="width:13px;height:13px"></i> Hợp đồng · ' + (DEAL_LABEL[c.dealType] || 'Bán hàng') + '</span>' +
+          '<span class="pk-x">' +
+            (drawerEditing ? '' : '<button class="pk-btn" data-dr="edit" data-no-interact="true"><i data-lucide="pencil" style="width:12px;height:12px"></i> Sửa</button>') +
+            '<button class="pk-btn" data-dr="preview" data-no-interact="true"><i data-lucide="printer" style="width:12px;height:12px"></i> In</button>' +
+            '<button class="pk-btn" data-dr="close" data-no-interact="true"><i data-lucide="x" style="width:12px;height:12px"></i></button>' +
+          '</span>' +
+        '</div>' +
+        '<div class="pk-head-id"><span class="pk-id">' + esc(c.id) + '</span>' +
+          '<span class="pk-chip ' + chipClsOf(c.status) + '">' + (Store.STATUS_META[c.status] ? Store.STATUS_META[c.status].label : esc(c.status)) + '</span>' +
+          (isExp ? '<span class="pk-chip">Export · ' + esc(c.currency || 'USD') + '</span>' : '') + '</div>' +
+        '<div class="pk-head-sub">' + esc(c.customer) + (c.buyerCountry ? ' · ' + esc(c.buyerCountry) : '') + ' · ' + money(c, Store.contractValue(c)) + '</div>' +
+      '</div>' +
+      '<div class="pk-body">' + drawerBody(c) + '</div>';
+    if (window.lucide) lucide.createIcons();
+  }
+
+  function closeDrawer() {
+    if (!drawerEl) return;
+    var el = drawerEl; drawerEl = null; drawerId = null; drawerEditing = false;
+    el.classList.add('pk-leaving');
+    setTimeout(function () { el.remove(); }, 180);
+    history.replaceState(null, '', location.pathname);
+  }
+
+  function openDrawer(id) {
+    var c = Store.getContract(id);
+    if (!c) { ERPInteract.showToast('Không tìm thấy hợp đồng <b>' + esc(id) + '</b>', 'warning'); return; }
+    if (drawerEl) { drawerEl.remove(); drawerEl = null; }
+    drawerId = id; drawerEditing = false;
+    var ov = document.createElement('div');
+    ov.className = 'pk-overlay hd-dr';
+    ov.style.zIndex = 4900;
+    ov.innerHTML = '<div class="pk-panel"></div>';
+    document.body.appendChild(ov);
+    drawerEl = ov;
+    renderDrawer();
+    history.replaceState(null, '', '?hd=' + encodeURIComponent(id));
+
+    ov.addEventListener('click', function (e) {
+      if (e.target === ov) { closeDrawer(); return; }
+      var btn = e.target.closest('[data-dr]');
+      if (!btn) return;
+      var act = btn.dataset.dr;
+      e.stopPropagation();
+      if (act === 'close') return closeDrawer();
+      if (act === 'edit') { drawerEditing = true; return renderDrawer(); }
+      if (act === 'cancel') { drawerEditing = false; return renderDrawer(); }
+      if (act === 'save') return saveDrawer();
+      if (act === 'preview') return previewContract(drawerId);
+      if (act === 'print') return printContract(drawerId);
+      if (act === 'form') { var fid = drawerId; closeDrawer(); return openEditForm(fid); }
+      if (act === 'order') return pushToOrder(drawerId);
+    });
+  }
+
+  function saveDrawer() {
+    var c = Store.getContract(drawerId); if (!c) return;
+    var panel = drawerEl.querySelector('.pk-panel');
+    var patch = {};
+    Array.prototype.forEach.call(panel.querySelectorAll('[data-fld]'), function (el) {
+      var k = el.dataset.fld, v = el.value;
+      if (el.type === 'number') v = parseFloat(v) || 0;
+      patch[k] = v;
+    });
+    var rows = panel.querySelectorAll('.pk-items tbody tr[data-row]');
+    if (rows.length) {
+      var items = [];
+      Array.prototype.forEach.call(rows, function (tr) {
+        var idx = parseInt(tr.dataset.row, 10);
+        var base = (c.items && c.items[idx]) ? c.items[idx] : {};
+        var o = {};
+        Object.keys(base).forEach(function (k) { o[k] = base[k]; });
+        Array.prototype.forEach.call(tr.querySelectorAll('[data-it]'), function (el) {
+          var k = el.dataset.it;
+          o[k] = (k === 'qty' || k === 'price') ? (parseFloat(el.value) || 0) : el.value;
+        });
+        items.push(o);
+      });
+      patch.items = items;
+      var sub = sumItems(items);
+      var vp = (patch.vatPct != null ? Number(patch.vatPct) : (c.vatPct == null ? 8 : Number(c.vatPct)));
+      patch.subTotal = Math.round(sub * 100) / 100;
+      patch.vatAmount = Math.round(sub * vp / 100);
+      patch.value = Math.round((sub + patch.vatAmount) * 100) / 100;
+      patch.qty = items.reduce(function (s2, it) { return s2 + (Number(it.qty) || 0); }, 0);
+      patch.product = (items[0] ? items[0].name : '') + (items.length > 1 ? ' +' + (items.length - 1) + ' SP' : '');
+    }
+    Store.saveContract(drawerId, patch);
+    drawerEditing = false;
+    renderDrawer();
+    renderList();
+    ERPInteract.showToast('<b>Đã lưu</b> hợp đồng ' + esc(drawerId), 'success');
+  }
+
+  // ---------------- Đẩy sang Đơn hàng ----------------
+  function pushToOrder(id) {
+    var c = Store.getContract(id); if (!c) return;
+    if (c.contractType === 'nguyen_tac') { ERPInteract.showToast('Hợp đồng nguyên tắc không lên đơn trực tiếp — hãy lập hợp đồng mua bán neo vào khung.', 'warning', 3600); return; }
+    if (!(c.items || []).length) { ERPInteract.showToast('Hợp đồng chưa có dòng hàng để lên đơn.', 'warning'); return; }
+    var lines = c.items.map(function (it) {
+      return { code: '', name: it.name, qty: Number(it.qty) || 0, unit: it.unit || 'bộ',
+        price: Number(it.price) || 0, vatPct: c.vatPct == null ? 8 : c.vatPct, source: 'contract',
+        lineTotal: (Number(it.qty) || 0) * (Number(it.price) || 0) };
+    });
+    var order = Store.createOrderManual({
+      customer: c.customer, mst: c.taxCode || '', contact: c.rep || '',
+      salesRep: (c.owner || 'Sales').split('—')[0].trim(),
+      deliveryDate: c.expiryDate || '',
+      paymentTerm: 'Cọc ' + (c.payDeposit || 0) + '%, còn lại ' + (c.payDebtDays || 0) + ' ngày',
+      lines: lines,
+      financials: { grandTotal: Number(c.value) || 0, deposit: Math.round((Number(c.value) || 0) * (Number(c.payDeposit) || 0) / 100), depositPct: Number(c.payDeposit) || 0 }
+    });
+    if (!order) { ERPInteract.showToast('Không tạo được đơn hàng', 'error'); return; }
+    order.contractId = c.id;
+    order.productNote = 'Tạo từ hợp đồng ' + c.id;
+    Store.saveContract(c.id, { orderId: order.id });
+    Store.save();
+    renderList();
+    if (drawerEl) renderDrawer();
+    ERPInteract.showToast('Đã tạo <a href="03-don-hang.html?order=' + encodeURIComponent(order.id) + '" class="lnk">' + esc(order.id) + '</a> — bấm để mở', 'success', 6000);
+  }
+
+  // ======================================================================
+  //  BẢN IN — mẫu TRONG NƯỚC (tiếng Việt) và mẫu QUỐC TẾ (tiếng Anh)
+  // ======================================================================
+  function tplOf(c) { return c.dealType === 'xuat_khau' ? 'en' : 'vn'; }
+
+  function tplSwitch(id, tpl) {
+    return '<div class="tpl-switch no-print"><b>Mẫu in:</b>' +
+      '<button data-hdtpl="vn" data-hdid="' + esc(id) + '" class="' + (tpl === 'vn' ? 'on' : '') + '">Trong nước (Tiếng Việt)</button>' +
+      '<button data-hdtpl="en" data-hdid="' + esc(id) + '" class="' + (tpl === 'en' ? 'on' : '') + '">Quốc tế (English)</button>' +
+      '<span style="color:#55524a">Nút chọn mẫu không in ra giấy.</span></div>';
+  }
+
+  function itemsTableVi(c) {
+    var sub = subOf(c);
+    return '<table class="pdoc-items"><thead><tr>' +
+      '<th style="width:4%">STT</th><th>Tên hàng hoá / hệ nhôm</th><th style="width:26%">Quy cách</th>' +
+      '<th style="width:7%">ĐVT</th><th style="width:8%">SL</th><th style="width:13%">Đơn giá</th><th style="width:15%">Thành tiền</th>' +
+      '</tr></thead><tbody>' +
+      (c.items || []).map(function (it, i) {
+        var spec = [it.sys, it.dim, it.color, it.glass].filter(function (x) { return x && x !== '—'; }).join('<br>');
+        return '<tr><td class="c">' + (i + 1) + '</td><td>' + esc(it.name) + '</td><td>' + spec + '</td>' +
+          '<td class="c">' + esc(it.unit) + '</td><td class="r">' + fmtMoney(it.qty) + '</td>' +
+          '<td class="r">' + fmtMoney(it.price) + '</td><td class="r">' + fmtMoney((Number(it.qty) || 0) * (Number(it.price) || 0)) + '</td></tr>';
+      }).join('') +
+      '</tbody></table>' +
+      '<div class="c-tot"><table>' +
+        '<tr><td>Cộng tiền hàng</td><td>' + fmtMoney(sub) + ' ₫</td></tr>' +
+        '<tr><td>Thuế GTGT (' + (c.vatPct == null ? 8 : c.vatPct) + '%)</td><td>' + fmtMoney(c.vatAmount || 0) + ' ₫</td></tr>' +
+        '<tr><td><b>TỔNG GIÁ TRỊ HỢP ĐỒNG</b></td><td><b>' + fmtMoney(c.value) + ' ₫</b></td></tr>' +
+      '</table><div class="c-words">Bằng chữ: ' + wordsVi(c.value) + ' chẵn./.</div></div>';
+  }
+
+  function buildVnContract(c, tpl) {
+    var isFrame = c.contractType === 'nguyen_tac';
+    var d = (c.signDate || todayStr()).split('/');
+    return tplSwitch(c.id, tpl) + ERPPrint.docHead() +
+      '<div class="cdoc">' +
+      '<div class="c-national"><b>CỘNG HOÀ XÃ HỘI CHỦ NGHĨA VIỆT NAM</b><i>Độc lập – Tự do – Hạnh phúc</i></div>' +
+      '<div class="c-title">HỢP ĐỒNG KINH TẾ</div>' +
+      '<div class="c-sub">(V/v: cung cấp ' + esc((DEAL_LABEL[c.dealType] || 'cửa nhôm hệ')).toLowerCase() + ')<br>' +
+        'Số: <b>' + esc(c.id) + '/HĐKT-OWIN</b>' + (c.signDate ? ' · Ngày ' + esc(d[0]) + ' tháng ' + esc(d[1]) + ' năm ' + esc(d[2]) : '') + '</div>' +
+
+      '<div class="c-base">' +
+        '<div>- Căn cứ Bộ luật Dân sự số 91/2015/QH13 ngày 24/11/2015 của Quốc hội nước CHXHCN Việt Nam;</div>' +
+        '<div>- Căn cứ Luật Thương mại số 36/2005/QH11 ngày 14/6/2005 của Quốc hội nước CHXHCN Việt Nam;</div>' +
+        '<div>- Căn cứ nhu cầu và khả năng cung ứng của hai Bên.</div>' +
+      '</div>' +
+      '<div>Hôm nay, ngày ' + esc(c.signDate || todayStr()) + ', tại trụ sở Công ty Cổ phần Thương mại OWIN, chúng tôi gồm:</div>' +
+
+      '<div class="c-party"><b>BÊN A (BÊN MUA): ' + esc(c.customer) + '</b><table>' +
+        '<tr><td>Địa chỉ</td><td>' + esc(c.custAddr || '—') + '</td></tr>' +
+        '<tr><td>Mã số thuế</td><td>' + esc(c.taxCode || '—') + '</td></tr>' +
+        '<tr><td>Điện thoại</td><td>' + esc(c.custPhone || '—') + '</td></tr>' +
+        '<tr><td>Tài khoản</td><td>' + esc(c.custBank || '—') + '</td></tr>' +
+        '<tr><td>Đại diện</td><td>' + esc(c.rep || '—') + ' — Chức vụ: ' + esc(c.repTitle || '—') + '</td></tr>' +
+      '</table></div>' +
+
+      '<div class="c-party"><b>BÊN B (BÊN BÁN): ' + OWIN.nameVi + '</b><table>' +
+        '<tr><td>Địa chỉ</td><td>' + OWIN.addrVi + '</td></tr>' +
+        '<tr><td>Nhà máy sản xuất</td><td>Số 8 Giá Ngự, Xâm Xuyên, Thường Tín, TP Hà Nội</td></tr>' +
+        '<tr><td>Mã số thuế</td><td>' + OWIN.tax + '</td></tr>' +
+        '<tr><td>Điện thoại</td><td>' + OWIN.tel + ' · Email: ' + OWIN.email + '</td></tr>' +
+        '<tr><td>Tài khoản</td><td>' + OWIN.bankVi + '</td></tr>' +
+        '<tr><td>Đại diện</td><td>' + OWIN.repVi + ' — Chức vụ: ' + OWIN.repTitleVi + '</td></tr>' +
+      '</table></div>' +
+
+      '<div>Hai Bên thống nhất ký kết hợp đồng với các điều khoản sau:</div>' +
+
+      '<div class="c-art">Điều 1. Nội dung &amp; quy cách hàng hoá</div>' +
+      (isFrame
+        ? '<div>Bên B cung cấp cho Bên A các sản phẩm nhôm hệ Owin theo từng đơn đặt hàng phát sinh trong thời hạn hiệu lực của hợp đồng này. Khung giá và điều khoản giá áp dụng:</div>' +
+          '<div style="margin:6px 0;padding:8px 10px;background:#f3efe6;border:1px solid #c9c4b8">' + esc(c.priceTerms || '') + '</div>' +
+          '<div>Trần giá trị hợp đồng: <b>' + fmtMoney(c.targetValue) + ' ₫</b>. Giá trị đã phát hành theo đơn: ' + fmtMoney(c.releasedValue) + ' ₫.</div>'
+        : '<div>Bên B bán và Bên A mua các sản phẩm theo bảng sau (nhôm hợp kim 6063-T5, lớp anod ≥ 15µm hoặc sơn tĩnh điện theo mẫu đã duyệt):</div>' + itemsTableVi(c)) +
+
+      '<div class="c-art">Điều 2. Giá trị hợp đồng &amp; thuế</div>' +
+      '<div>Tổng giá trị hợp đồng: <b>' + fmtMoney(isFrame ? c.targetValue : c.value) + ' ₫</b> ' +
+        '(bằng chữ: ' + wordsVi(isFrame ? c.targetValue : c.value) + ' chẵn). ' +
+        'Giá trên đã bao gồm thuế GTGT ' + (c.vatPct == null ? 8 : c.vatPct) + '%, chi phí bao gói, vận chuyển nội thành Hà Nội' +
+        (c.dealType === 'cong_trinh' ? ' và nhân công lắp đặt tại công trình' : '') + '. ' +
+        'Giá chưa bao gồm chi phí tháo dỡ cửa cũ, cẩu tháp, giàn giáo ngoài phạm vi thi công của Bên B.</div>' +
+
+      '<div class="c-art">Điều 3. Phương thức thanh toán</div>' +
+      '<ol>' +
+        '<li>Đợt 1: Bên A tạm ứng <b>' + (c.payDeposit || 0) + '%</b> giá trị hợp đồng trong vòng 05 ngày kể từ ngày ký để Bên B triển khai sản xuất.</li>' +
+        '<li>Đợt 2: Thanh toán 40% giá trị hợp đồng khi hàng được giao tới chân công trình / kho Bên A.</li>' +
+        '<li>Đợt 3: Thanh toán phần còn lại trong vòng <b>' + (c.payDebtDays || 0) + ' ngày</b> kể từ ngày nghiệm thu, bàn giao và nhận đủ hoá đơn GTGT.</li>' +
+        '<li>Hình thức thanh toán: ' + (PAY_LABEL[c.payMethod] || 'Chuyển khoản') + ' vào tài khoản của Bên B nêu tại phần thông tin trên.</li>' +
+      '</ol>' +
+
+      '<div class="c-art">Điều 4. Thời gian &amp; địa điểm giao hàng – lắp đặt</div>' +
+      '<ol>' +
+        '<li>Thời gian sản xuất: 12–18 ngày làm việc kể từ ngày Bên A chốt bản vẽ kỹ thuật và thanh toán tạm ứng.</li>' +
+        '<li>Địa điểm giao hàng: ' + esc(c.deliveryPlace || '—') + ' (' + (SHIP_LABEL[c.deliveryTerms] || '') + ').</li>' +
+        '<li>Bên A bố trí mặt bằng, điện thi công và nghiệm thu từng hạng mục trong vòng 03 ngày kể từ khi Bên B báo hoàn thành.</li>' +
+      '</ol>' +
+
+      '<div class="c-art">Điều 5. Bảo hành</div>' +
+      '<ol>' +
+        '<li>Bảo hành <b>24 tháng</b> đối với khung nhôm, lớp sơn tĩnh điện / anod và mối ép góc.</li>' +
+        '<li>Bảo hành <b>12 tháng</b> đối với phụ kiện kim khí (bản lề thuỷ lực, khoá, tay nắm, gioăng).</li>' +
+        '<li>Không bảo hành với hư hỏng do va đập, cải tạo sai hướng dẫn, thiên tai hoặc sử dụng sai công năng.</li>' +
+      '</ol>' +
+
+      '<div class="c-art">Điều 6. Quyền &amp; nghĩa vụ của hai Bên</div>' +
+      '<ol>' +
+        '<li>Bên B sản xuất đúng hệ nhôm, màu sắc, chủng loại kính và phụ kiện đã chốt; cung cấp CO/CQ nhôm 6063-T5 và phiếu kiểm định lớp phủ anod.</li>' +
+        '<li>Bên B chịu trách nhiệm về an toàn lao động của nhân sự do mình đưa tới công trình.</li>' +
+        '<li>Bên A cung cấp kích thước ô chờ chính xác, thanh toán đúng hạn và tạo điều kiện cho Bên B thi công.</li>' +
+        '<li>Mọi thay đổi về quy cách sau khi đã chốt bản vẽ phải lập phụ lục hợp đồng.</li>' +
+      '</ol>' +
+
+      '<div class="c-art">Điều 7. Phạt vi phạm &amp; bồi thường</div>' +
+      '<ol>' +
+        '<li>Bên B chậm giao hàng: phạt <b>' + (c.latePenalty || 0.5) + '%</b> giá trị phần hàng chậm cho mỗi tuần chậm, tổng mức phạt không quá 8% giá trị phần nghĩa vụ vi phạm.</li>' +
+        '<li>Bên A chậm thanh toán: chịu lãi suất quá hạn bằng 150% lãi suất cho vay ngắn hạn của MB Bank tại thời điểm thanh toán.</li>' +
+        '<li>Bên vi phạm phải bồi thường thiệt hại thực tế, trực tiếp phát sinh cho Bên còn lại theo quy định của Luật Thương mại 2005.</li>' +
+      '</ol>' +
+
+      '<div class="c-art">Điều 8. Giải quyết tranh chấp</div>' +
+      '<div>Mọi tranh chấp phát sinh từ hoặc liên quan đến hợp đồng này trước hết được giải quyết bằng thương lượng. ' +
+        'Nếu không đạt được thoả thuận trong 30 ngày, tranh chấp sẽ được đưa ra giải quyết chung thẩm tại ' +
+        '<b>Trung tâm Trọng tài Quốc tế Việt Nam (VIAC)</b> bên cạnh Phòng Thương mại và Công nghiệp Việt Nam, ' +
+        'theo Quy tắc tố tụng trọng tài của VIAC. Địa điểm trọng tài: Hà Nội. Ngôn ngữ: tiếng Việt. ' +
+        'Phán quyết trọng tài là chung thẩm và ràng buộc hai Bên.</div>' +
+
+      '<div class="c-art">Điều 9. Hiệu lực hợp đồng</div>' +
+      '<div>Hợp đồng có hiệu lực từ ngày ' + esc(c.effectiveDate || c.signDate || '…') + ' đến ngày ' + esc(c.expiryDate || '…') + '. ' +
+        'Hợp đồng được lập thành 04 bản có giá trị pháp lý như nhau, mỗi Bên giữ 02 bản. ' +
+        (c.note ? 'Ghi chú: ' + esc(c.note) : '') + '</div>' +
+
+      '<div class="pdoc-sign">' +
+        '<div><b>ĐẠI DIỆN BÊN A</b><i>(Ký, ghi rõ họ tên, đóng dấu)</i><div class="sp"></div>' + esc(c.rep || '') + '</div>' +
+        '<div><b>ĐẠI DIỆN BÊN B</b><i>(Ký, ghi rõ họ tên, đóng dấu)</i><div class="sp"></div>' + OWIN.repVi + '</div>' +
+      '</div>' +
+      '</div>';
+  }
+
+  function itemsTableEn(c) {
+    var sub = subOf(c);
+    return '<table class="pdoc-items"><thead><tr>' +
+      '<th style="width:4%">No</th><th>Description</th><th style="width:16%">Aluminium system</th>' +
+      '<th style="width:14%">Dimensions</th><th style="width:13%">Glass</th><th style="width:11%">Colour</th>' +
+      '<th style="width:5%">Unit</th><th style="width:7%">Qty</th><th style="width:9%">Unit price<br>(USD)</th><th style="width:11%">Amount<br>(USD)</th>' +
+      '</tr></thead><tbody>' +
+      (c.items || []).map(function (it, i) {
+        return '<tr><td class="c">' + (i + 1) + '</td><td>' + esc(it.name) + '</td><td>' + esc(it.sys) + '</td>' +
+          '<td>' + esc(it.dim) + '</td><td>' + esc(it.glass) + '</td><td>' + esc(it.color) + '</td>' +
+          '<td class="c">' + esc(it.unit) + '</td><td class="r">' + fmtUsd(it.qty) + '</td>' +
+          '<td class="r">' + (Number(it.price) || 0).toFixed(2) + '</td>' +
+          '<td class="r">' + fmtUsd(Math.round((Number(it.qty) || 0) * (Number(it.price) || 0) * 100) / 100) + '</td></tr>';
+      }).join('') +
+      '<tr><td colspan="9" style="text-align:right"><b>TOTAL FOB HAI PHONG (USD)</b></td><td class="r"><b>' + fmtUsd(Math.round(sub * 100) / 100) + '</b></td></tr>' +
+      '</tbody></table>' +
+      '<div class="c-words">Price term: <b>' + esc(c.incoterms || 'FOB Hai Phong Port, Incoterms 2020') + '</b>.</div>';
+  }
+
+  function buildEnContract(c, tpl) {
+    return tplSwitch(c.id, tpl) +
+      '<div class="pdoc-head"><div class="pdoc-logo">OW</div><div class="pdoc-co">' +
+        '<b>' + OWIN.nameEn + '</b>' +
+        '<div>' + OWIN.addrEn + '</div>' +
+        '<div>Tax code: ' + OWIN.tax + ' · Tel: (+84) ' + OWIN.tel + ' · Email: ' + OWIN.email + '</div>' +
+      '</div></div>' +
+      '<div class="cdoc">' +
+      '<div class="c-title">SALES CONTRACT</div>' +
+      '<div class="c-sub">Contract No.: <b>' + esc(c.id) + '/SC-OWIN</b> · Date: ' + esc(c.signDate || todayStr()) + '<br>' +
+        'This Contract is governed by the United Nations Convention on Contracts for the International Sale of Goods (CISG 1980) and Incoterms® 2020.</div>' +
+
+      '<div class="c-party"><b>THE SELLER: ' + OWIN.nameEn + '</b><table>' +
+        '<tr><td>Address</td><td>' + OWIN.addrEn + '</td></tr>' +
+        '<tr><td>Factory</td><td>No. 8 Gia Ngu, Xam Xuyen, Thuong Tin, Hanoi, Vietnam</td></tr>' +
+        '<tr><td>Tax code</td><td>' + OWIN.tax + '</td></tr>' +
+        '<tr><td>Tel / Email</td><td>(+84) ' + OWIN.tel + ' / ' + OWIN.email + '</td></tr>' +
+        '<tr><td>Bank details</td><td>' + OWIN.bankEn + '</td></tr>' +
+        '<tr><td>Represented by</td><td>' + OWIN.repEn + ' — ' + OWIN.repTitleEn + '</td></tr>' +
+      '</table></div>' +
+
+      '<div class="c-party"><b>THE BUYER: ' + esc(c.customer) + '</b><table>' +
+        '<tr><td>Address</td><td>' + esc(c.custAddr || '—') + '</td></tr>' +
+        '<tr><td>Country</td><td>' + esc(c.buyerCountry || '—') + '</td></tr>' +
+        '<tr><td>Business reg. / Tax code</td><td>' + esc(c.taxCode || '—') + '</td></tr>' +
+        '<tr><td>Tel</td><td>' + esc(c.custPhone || '—') + '</td></tr>' +
+        '<tr><td>Bank details</td><td>' + esc(c.custBank || '—') + '</td></tr>' +
+        '<tr><td>Represented by</td><td>' + esc(c.rep || '—') + ' — ' + esc(c.repTitle || '—') + '</td></tr>' +
+      '</table></div>' +
+
+      '<div>The Seller agrees to sell and the Buyer agrees to buy the commodity under the following terms and conditions:</div>' +
+
+      '<div class="c-art">Article 1. Commodity &amp; Specification</div>' + itemsTableEn(c) +
+
+      '<div class="c-art">Article 2. Quantity &amp; Tolerance</div>' +
+      '<ol>' +
+        '<li>Total quantity as stated in Article 1, with a tolerance of <b>±3%</b> in quantity and value at the Seller’s option.</li>' +
+        '<li>Dimensional tolerance of each finished unit: ±2 mm on width and height; squareness 90° ± 0.5°.</li>' +
+      '</ol>' +
+
+      '<div class="c-art">Article 3. Quality &amp; Inspection</div>' +
+      '<ol>' +
+        '<li>Aluminium alloy <b>6063-T5</b>, extruded and heat-treated, certified by mill test certificate (CO/CQ) for each lot.</li>' +
+        '<li>Anodized layer thickness <b>≥ 15µm</b>; powder coating adhesion tested by cross-cut method per EN ISO 2409.</li>' +
+        '<li>Manufactured under the Seller’s quality system certified to <b>EN / ISO 9001:2015</b>; tempered glass to EN 12150.</li>' +
+        '<li>Inspection and quantity/quality survey by <b>SGS</b> at the loading port; the SGS certificate shall be final and binding on both parties.</li>' +
+      '</ol>' +
+
+      '<div class="c-art">Article 4. Packing &amp; Marking</div>' +
+      '<ol>' +
+        '<li>Each unit protected by PE surface film and EPE foam, then packed in export standard <b>wooden crates</b> fumigated per ISPM-15.</li>' +
+        '<li>Shipping marks on two opposite sides of each crate: OWIN / Contract No. ' + esc(c.id) + ' / Port of discharge: ' + esc(c.portDischarge || '') + ' / Crate No. / N.W. / G.W. / Made in Vietnam.</li>' +
+      '</ol>' +
+
+      '<div class="c-art">Article 5. Price &amp; Total Value</div>' +
+      '<ol>' +
+        '<li>Currency: <b>USD</b>. Price term: <b>' + esc(c.incoterms || 'FOB Hai Phong Port, Incoterms 2020') + '</b>.</li>' +
+        '<li>Total contract value: <b>USD ' + fmtUsd(Math.round(subOf(c) * 100) / 100) + '</b>.</li>' +
+        '<li>Say in words: <b>' + usdWords(subOf(c)) + '</b></li>' +
+      '</ol>' +
+
+      '<div class="c-art">Article 6. Payment</div>' +
+      '<ol>' +
+        '<li><b>30%</b> of the total contract value by T/T in advance within 05 days from the contract signing date.</li>' +
+        '<li><b>70%</b> of the total contract value by T/T against the scanned copy of the Bill of Lading.</li>' +
+        '<li>Alternatively, payment may be made by an <b>Irrevocable Letter of Credit at sight</b> in favour of the Seller, opened with a first-class bank acceptable to the Seller.</li>' +
+        '<li>All banking charges outside Vietnam are for the Buyer’s account.</li>' +
+      '</ol>' +
+
+      '<div class="c-art">Article 7. Shipment &amp; Delivery</div>' +
+      '<ol>' +
+        '<li>Port of loading: <b>' + esc(c.portLoading || 'Hai Phong Port, Vietnam') + '</b>. Port of discharge: <b>' + esc(c.portDischarge || '') + '</b>.</li>' +
+        '<li>Estimated time of departure (ETD): <b>' + esc(c.etd || '—') + '</b>.</li>' +
+        '<li><b>Partial shipment: allowed. Transhipment: not allowed.</b></li>' +
+        '<li>The Seller shall notify the Buyer of the shipping details within 03 working days after the departure of the vessel.</li>' +
+      '</ol>' +
+
+      '<div class="c-art">Article 8. Documents Required</div>' +
+      '<ol>' +
+        '<li>Signed Commercial Invoice in 03 originals.</li>' +
+        '<li>Detailed Packing List in 03 originals.</li>' +
+        '<li>Full set (3/3) of clean on board Bill of Lading marked "Freight Prepaid/Collect" as agreed.</li>' +
+        '<li>Certificate of Origin <b>Form B</b> issued by VCCI.</li>' +
+        '<li>Certificate of Quality / Mill test certificate issued by the Seller and SGS inspection certificate.</li>' +
+        '<li>Insurance Certificate (where applicable under the agreed price term).</li>' +
+      '</ol>' +
+
+      '<div class="c-art">Article 9. Warranty</div>' +
+      '<div>The Seller warrants the goods against defects in material and workmanship for <b>24 months</b> from the Bill of Lading date. ' +
+        'Hardware accessories (hydraulic hinges, locks, handles, gaskets) are warranted for 12 months. ' +
+        'The warranty excludes damage caused by improper installation, misuse, impact or force majeure events.</div>' +
+
+      '<div class="c-art">Article 10. Force Majeure</div>' +
+      '<div>Neither party shall be liable for any failure or delay in performing its obligations caused by events beyond its reasonable control, ' +
+        'including but not limited to war, riot, epidemic, fire, flood, typhoon, earthquake, strike, embargo or governmental restriction. ' +
+        'The affected party shall notify the other party in writing within 10 days from the occurrence, supported by a certificate issued by the competent authority.</div>' +
+
+      '<div class="c-art">Article 11. Claim</div>' +
+      '<div>Any claim regarding quantity or visible defects must be lodged within <b>30 days</b> from the date of arrival at the port of discharge; ' +
+        'claims on latent quality defects within <b>90 days</b>. Every claim shall be supported by an inspection report issued by an independent ' +
+        'surveyor accepted by both parties. The Seller shall reply within 15 days from receipt of the claim.</div>' +
+
+      '<div class="c-art">Article 12. Arbitration</div>' +
+      '<div>Any dispute arising out of or in connection with this Contract shall be finally settled by the ' +
+        '<b>Vietnam International Arbitration Centre (VIAC)</b> at the Vietnam Chamber of Commerce and Industry in accordance with its Rules of Arbitration. ' +
+        'The place of arbitration shall be Hanoi, Vietnam. The language of the arbitration shall be <b>English</b>. ' +
+        'The arbitral award shall be final and binding upon both parties. Arbitration fees shall be borne by the losing party.</div>' +
+
+      '<div class="c-art">Article 13. General Provisions</div>' +
+      '<ol>' +
+        '<li>This Contract is made in <b>English</b> in <b>04 originals</b> of equal legal validity, <b>02 originals</b> retained by each party.</li>' +
+        '<li>Any amendment or supplement shall be valid only if made in writing and signed by the authorised representatives of both parties.</li>' +
+        '<li>This Contract is valid from the signing date until ' + esc(c.expiryDate || '31/12/2026') + ' or until both parties have fully performed their obligations.</li>' +
+      '</ol>' +
+
+      '<div class="pdoc-sign">' +
+        '<div><b>FOR AND ON BEHALF OF THE SELLER</b><i>(Signature &amp; company stamp)</i><div class="sp"></div>' + OWIN.repEn + ' — ' + OWIN.repTitleEn + '</div>' +
+        '<div><b>FOR AND ON BEHALF OF THE BUYER</b><i>(Signature &amp; company stamp)</i><div class="sp"></div>' + esc(c.rep || '') + ' — ' + esc(c.repTitle || '') + '</div>' +
+      '</div>' +
+      '</div>';
+  }
+
+  function contractDocHtml(c, tpl) { return tpl === 'en' ? buildEnContract(c, tpl) : buildVnContract(c, tpl); }
+
+  var curPreview = null;
+  function previewContract(id, tpl) {
+    var c = Store.getContract(id);
+    if (!c) { ERPInteract.showToast('Không tìm thấy hợp đồng <b>' + esc(id) + '</b>', 'warning'); return; }
+    tpl = tpl || tplOf(c);
+    if (curPreview) { try { curPreview.close(); } catch (e) {} curPreview = null; }
+    curPreview = ERPPrint.preview({
+      title: (tpl === 'en' ? 'Sales Contract ' : 'Hợp đồng ') + c.id + ' — xem trước bản in',
+      printTitle: (tpl === 'en' ? 'Sales Contract ' : 'Hop dong ') + c.id,
+      bodyHtml: contractDocHtml(c, tpl)
+    });
+  }
+  function printContract(id, tpl) {
+    var c = Store.getContract(id); if (!c) return;
+    tpl = tpl || tplOf(c);
+    var html = contractDocHtml(c, tpl).replace(/<div class="tpl-switch no-print">[\s\S]*?<\/div>\s*(?=<div)/, '');
+    ERPPrint.printHtml((tpl === 'en' ? 'Sales Contract ' : 'Hop dong ') + c.id, html);
+  }
+
+  // Chuyển mẫu ngay trong màn xem trước
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-hdtpl]');
+    if (!b) return;
+    e.preventDefault(); e.stopPropagation();
+    previewContract(b.dataset.hdid, b.dataset.hdtpl);
+  }, true);
+
+  // Esc đóng drawer (khi không có bản in đang mở)
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Escape' || !drawerEl) return;
+    if (document.querySelector('.erp-print-overlay')) return;
+    if (document.querySelector('.pk-overlay:not(.hd-dr)')) return;
+    closeDrawer();
+  });
+
+  // ---------------- WIRING ----------------
+  document.addEventListener('erp:ready', function () {
+    Array.prototype.forEach.call($('#hdTabs').querySelectorAll('.tab'), function (t) {
+      t.addEventListener('click', function () {
+        $('#hdTabs').querySelector('.tab-active').classList.remove('tab-active');
+        t.classList.add('tab-active');
+        listFilter = t.dataset.st;
+        renderList();
+      });
+    });
+    $('#hdSearch').addEventListener('input', function (e) { searchTerm = e.target.value; renderList(); });
+    $('#btnNewHD').addEventListener('click', function () { openNewForm(); });
+
+    seedOwinContracts();
+    renderList();
+
+    // deep-linking
+    var params = new URLSearchParams(location.search);
+    var id = params.get('hd') || params.get('id');
+    var order = params.get('order');
+    var customer = params.get('customer');
+    if (id && Store.getContract(id)) {
+      openDrawer(id);
+    } else if (order) {
+      openNewForm({
+        orderId: order, customer: customer || '',
+        value: parseInt(params.get('value'), 10) || 0,
+        product: params.get('product') || '',
+        qty: parseInt(params.get('qty'), 10) || 0
+      });
+    }
+  });
+</script>
+</body>
+</html>

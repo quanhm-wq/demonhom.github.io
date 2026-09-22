@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kế toán — ERP NHÔM OWIN</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/css/style.css" />
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+  <style>
+    /* Tab active state cho hệ thống data-tab (layout.js toggle class .active) */
+    .tabs .tab.active { background: var(--canvas); color: var(--ink); box-shadow: 0 1px 0 var(--rule); }
+    .tabs .tab { display: inline-flex; align-items: center; gap: 5px; }
+    .tabs .tab svg { width: 15px; height: 15px; flex-shrink: 0; }
+    svg.sec-ic { width: 16px; height: 16px; vertical-align: -3px; color: var(--ash); margin-right: 4px; }
+
+    /* Strip 4 ô số nhỏ (cao ~64px) — màn ngoài gọn theo chuẩn màn chức năng */
+    .kt-strip { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-bottom: 12px; }
+    .kt-mini { background: var(--canvas); border: 1px solid var(--rule-soft, #e8e3d3); border-radius: var(--r-5); padding: 10px 14px; min-height: 64px; display: flex; flex-direction: column; justify-content: center; }
+    .kt-mini .l { font-family: var(--ff-mono); font-size: 9.5px; font-weight: 500; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ash); }
+    .kt-mini .v { font-size: 21px; font-weight: 500; letter-spacing: -0.015em; color: var(--ink); font-variant-numeric: tabular-nums; line-height: 1.1; margin-top: 3px; }
+    .kt-mini .d { font-size: 10.5px; color: var(--ash); margin-top: 2px; }
+    .kt-mini.bad .v { color: var(--signal); }
+    .kt-mini.good .v { color: var(--moss); }
+    @media (max-width: 900px) { .kt-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+    /* Cột cảnh báo chọn lọc */
+    .warn-red { color: #8a1f1f; font-weight: 600; }
+    .warn-green { color: #1f6b3a; font-weight: 600; }
+    .warn-none { color: var(--ash-2, #b8b2a2); }
+
+    /* Highlight dòng khi mở bằng deep-link ?pt= / ?pc= */
+    .row-hit { background: rgba(197, 64, 10, 0.12) !important; box-shadow: inset 3px 0 0 var(--rust, #c5400a); }
+    .tbl tbody tr { height: 40px; }
+    .tbl { font-size: 13px; }
+  </style>
+</head>
+<body>
+
+<div id="app-shell" data-active="ke-toan" data-title="Kế toán" data-crumb="<b>Tài chính</b> · Kế toán tổng hợp">
+
+  <div class="page-header">
+    <div>
+      <h1>Tài chính kế toán</h1>
+      <p>Công ty CP Thương mại OWIN · Tháng 5/2026 · 18 ngày đã qua</p>
+    </div>
+    <div class="actions">
+      <button class="btn btn-primary" id="hdrNewVoucher" data-no-interact="true"><i data-lucide="plus" style="width:14px;height:14px"></i> Phiếu thu/chi</button>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div data-tab-group>
+  <div class="card mb-4" style="padding:14px">
+    <div class="tabs">
+      <button class="tab active" data-tab="kt-tongquan"><i data-lucide="layout-dashboard"></i> Tổng quan</button>
+      <button class="tab" data-tab="kt-thuchi"><i data-lucide="arrow-left-right"></i> Thu / Chi</button>
+      <button class="tab" data-tab="kt-soquy"><i data-lucide="wallet"></i> Thu chi · Sổ quỹ</button>
+      <button class="tab" data-tab="kt-congno"><i data-lucide="users-round"></i> Công nợ</button>
+      <button class="tab" data-tab="kt-giathanh"><i data-lucide="calculator"></i> Giá thành</button>
+      <button class="tab" data-tab="kt-tscd"><i data-lucide="building-2"></i> TSCĐ &amp; CCDC</button>
+    </div>
+  </div>
+
+  <!-- ============ PANE: TỔNG QUAN ============ -->
+  <div data-tab-pane="kt-tongquan">
+
+    <div class="kt-strip">
+      <div class="kt-mini"><span class="l">Doanh thu T5</span><span class="v">2.847M</span><span class="d">+12% so với T4</span></div>
+      <div class="kt-mini good"><span class="l">Lợi nhuận gộp</span><span class="v">648M</span><span class="d">Tỷ suất 22.8%</span></div>
+      <div class="kt-mini bad"><span class="l">Phải thu</span><span class="v">1.245M</span><span class="d">12 KH · 248M quá hạn</span></div>
+      <div class="kt-mini"><span class="l">Phải trả NCC</span><span class="v">248M</span><span class="d">18 hoá đơn NCC</span></div>
+    </div>
+
+    <div class="card mb-4">
+      <div class="flex-between mb-3" style="flex-wrap:wrap;gap:10px">
+        <div>
+          <div class="t-h5"><i data-lucide="receipt" class="sec-ic"></i>Chứng từ gần nhất</div>
+          <div class="t-caption">Bấm mã đơn hàng / PO để mở đúng bản ghi gốc</div>
+        </div>
+        <button class="btn btn-secondary btn-sm" id="ovCashLink" data-no-interact="true">Mở sổ quỹ <i data-lucide="arrow-right" style="width:13px;height:13px"></i></button>
+      </div>
+      <div class="table-wrap" style="border:none">
+        <table class="tbl">
+          <thead><tr><th>Số phiếu</th><th>Loại</th><th>Nội dung</th><th>Đối tượng</th><th class="num">Số tiền</th><th>Ngày</th><th>Chứng từ gốc</th></tr></thead>
+          <tbody>
+            <tr id="v-PT-0517"><td><b>PT-0517</b></td><td><span class="badge badge-moss">Thu</span></td><td>Thanh toán đơn cửa thuỷ lực hệ 120</td><td>ĐL Nhôm kính Minh Anh</td><td class="num text-success"><b>+ 38.500.000₫</b></td><td>17/05</td><td><a class="lnk" href="18-hop-dong.html?hd=HD-2026-002">HD-2026-002</a></td></tr>
+            <tr id="v-PC-0316"><td><b>PC-0316</b></td><td><span class="badge badge-coral">Chi</span></td><td>Thanh toán nhôm thanh hệ 120 (6063-T5)</td><td>Đùn ép Nhôm Đông Anh</td><td class="num text-danger"><b>- 36.200.000₫</b></td><td>16/05</td><td><a class="lnk" href="13-mua-hang.html?po=PO-2026-0768">PO-2026-0768</a></td></tr>
+            <tr id="v-PT-0515"><td><b>PT-0515</b></td><td><span class="badge badge-moss">Thu</span></td><td>Thu trước 50% đơn cửa trượt quay 93</td><td>Nhôm kính Đại Phát</td><td class="num text-success"><b>+ 8.380.000₫</b></td><td>15/05</td><td><a class="lnk" href="03-don-hang.html?order=DH-0319">DH-0319</a></td></tr>
+            <tr id="v-PC-0315"><td><b>PC-0315</b></td><td><span class="badge badge-coral">Chi</span></td><td>Lương khoán nửa tháng — thợ cắt, ép góc, uốn vòm</td><td>32 thợ xưởng Thường Tín</td><td class="num text-danger"><b>- 124.500.000₫</b></td><td>15/05</td><td><a class="lnk" href="16-cham-cong-luong-khoan.html?bl=BL-05-2026">BL-05-2026</a></td></tr>
+            <tr id="v-PC-0314"><td><b>PC-0314</b></td><td><span class="badge badge-coral">Chi</span></td><td>Tiền điện tháng 4 — xưởng cắt CNC &amp; ép góc</td><td>EVN Hà Nội</td><td class="num text-danger"><b>- 28.400.000₫</b></td><td>14/05</td><td><span class="warn-none">—</span></td></tr>
+            <tr id="v-PT-0512"><td><b>PT-0512</b></td><td><span class="badge badge-moss">Thu</span></td><td>Thanh toán đơn vách kính khung nhôm Luxanode</td><td>VINHOMES OCEAN PARK</td><td class="num text-success"><b>+ 45.200.000₫</b></td><td>12/05</td><td><a class="lnk" href="03-don-hang.html?order=DH-0370">DH-0370</a></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+      <div>
+        <div class="t-micro-u" style="color:var(--ash)"><i data-lucide="wallet" class="sec-ic"></i>TỒN QUỸ (SỔ QUỸ THU CHI)</div>
+        <div class="t-h3 mt-1" id="ovCashBalance">—</div>
+        <div class="t-caption">Thu <span id="ovCashThu" class="text-success">—</span> · Chi <span id="ovCashChi" class="text-danger">—</span> trong tháng 8/2026</div>
+      </div>
+      <div style="text-align:right">
+        <div class="t-micro-u" style="color:var(--ash)">GIÁ THÀNH SX KỲ T5 (4 LỆNH)</div>
+        <div class="t-h3 mt-1">464.5M</div>
+        <div class="t-caption">Khấu hao phân bổ 58.4M/tháng · TSCĐ còn lại 5.240M</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ PANE: THU / CHI ============ -->
+  <div data-tab-pane="kt-thuchi" style="display:none">
+    <div class="kt-strip">
+      <div class="kt-mini good"><span class="l">Tổng thu T5</span><span class="v">1.024M</span><span class="d">62 phiếu thu</span></div>
+      <div class="kt-mini bad"><span class="l">Tổng chi T5</span><span class="v">786M</span><span class="d">48 phiếu chi</span></div>
+      <div class="kt-mini"><span class="l">Số dư quỹ + NH</span><span class="v">1.380M</span><span class="d">Tiền mặt 180M · NH 1.200M</span></div>
+      <div class="kt-mini"><span class="l">Phiếu chờ duyệt</span><span class="v">3</span><span class="d">PC-0315 · 124.5M lương khoán</span></div>
+    </div>
+
+    <div class="card">
+      <div class="flex-between mb-3">
+        <div>
+          <div class="t-h5"><i data-lucide="receipt" class="sec-ic"></i>Danh sách phiếu thu / phiếu chi</div>
+          <div class="t-caption">Mỗi phiếu liên kết ngược về đơn hàng, hợp đồng hoặc PO mua hàng</div>
+        </div>
+        <button class="btn btn-secondary btn-sm" id="tcNewVoucher" data-no-interact="true"><i data-lucide="plus" style="width:13px;height:13px"></i> Lập phiếu</button>
+      </div>
+      <div class="table-wrap" style="border:none">
+        <table class="tbl">
+          <thead><tr><th>Số phiếu</th><th>Loại</th><th>Nội dung</th><th>Đối tượng</th><th class="num">Số tiền</th><th>Ngày</th><th>Chứng từ gốc</th><th>Trạng thái</th></tr></thead>
+          <tbody>
+            <tr id="tc-PT-0517"><td><b>PT-0517</b></td><td><span class="badge badge-moss">Thu</span></td><td>Thanh toán đơn cửa thuỷ lực hệ 120 · 2 cánh</td><td>ĐL Nhôm kính Minh Anh</td><td class="num text-success"><b>+ 38.500.000₫</b></td><td>17/05</td><td><a class="lnk" href="18-hop-dong.html?hd=HD-2026-002">HD-2026-002</a></td><td><span class="badge badge-moss">Đã duyệt</span></td></tr>
+            <tr id="tc-PC-0316"><td><b>PC-0316</b></td><td><span class="badge badge-coral">Chi</span></td><td>Thanh toán nhôm thanh hệ 120 (6063-T5)</td><td>Đùn ép Nhôm Đông Anh</td><td class="num text-danger"><b>- 36.200.000₫</b></td><td>16/05</td><td><a class="lnk" href="13-mua-hang.html?po=PO-2026-0768">PO-2026-0768</a></td><td><span class="badge badge-moss">Đã duyệt</span></td></tr>
+            <tr id="tc-PT-0515"><td><b>PT-0515</b></td><td><span class="badge badge-moss">Thu</span></td><td>Thu trước 50% đơn cửa trượt quay 93 · 4 cánh</td><td>Nhôm kính Đại Phát</td><td class="num text-success"><b>+ 8.380.000₫</b></td><td>15/05</td><td><a class="lnk" href="03-don-hang.html?order=DH-0319">DH-0319</a></td><td><span class="badge badge-moss">Đã duyệt</span></td></tr>
+            <tr id="tc-PC-0315"><td><b>PC-0315</b></td><td><span class="badge badge-coral">Chi</span></td><td>Lương khoán nửa tháng — thợ cắt, ép góc, uốn vòm</td><td>32 thợ xưởng Thường Tín</td><td class="num text-danger"><b>- 124.500.000₫</b></td><td>15/05</td><td><a class="lnk" href="16-cham-cong-luong-khoan.html?bl=BL-05-2026">BL-05-2026</a></td><td><span class="badge badge-orange">Chờ duyệt</span></td></tr>
+            <tr id="tc-PC-0314"><td><b>PC-0314</b></td><td><span class="badge badge-coral">Chi</span></td><td>Tiền điện tháng 4 — xưởng cắt CNC &amp; ép góc</td><td>EVN Hà Nội</td><td class="num text-danger"><b>- 28.400.000₫</b></td><td>14/05</td><td><span class="warn-none">—</span></td><td><span class="badge badge-moss">Đã duyệt</span></td></tr>
+            <tr id="tc-PT-0512"><td><b>PT-0512</b></td><td><span class="badge badge-moss">Thu</span></td><td>Thanh toán đơn vách kính khung nhôm Luxanode</td><td>VINHOMES OCEAN PARK</td><td class="num text-success"><b>+ 45.200.000₫</b></td><td>12/05</td><td><a class="lnk" href="03-don-hang.html?order=DH-0370">DH-0370</a></td><td><span class="badge badge-moss">Đã duyệt</span></td></tr>
+            <tr id="tc-PC-0311"><td><b>PC-0311</b></td><td><span class="badge badge-coral">Chi</span></td><td>Thanh toán kính hộp 5-9-5 cường lực</td><td>Kính Việt Nhật Hải Long</td><td class="num text-danger"><b>- 58.000.000₫</b></td><td>10/05</td><td><a class="lnk" href="13-mua-hang.html?po=PO-2026-0778">PO-2026-0778</a></td><td><span class="badge badge-moss">Đã duyệt</span></td></tr>
+            <tr id="tc-PC-0309"><td><b>PC-0309</b></td><td><span class="badge badge-coral">Chi</span></td><td>Thanh toán bản lề thuỷ lực sàn &amp; bộ khoá tay nắm</td><td>Phụ kiện Kinlong VN</td><td class="num text-danger"><b>- 34.000.000₫</b></td><td>08/05</td><td><a class="lnk" href="13-mua-hang.html?po=PO-2026-0752">PO-2026-0752</a></td><td><span class="badge badge-moss">Đã duyệt</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ PANE: THU CHI · SỔ QUỸ (ERPCash — localStorage) ============ -->
+  <div data-tab-pane="kt-soquy" style="display:none">
+
+    <div class="kt-strip">
+      <div class="kt-mini"><span class="l">Tồn quỹ hiện tại</span><span class="v" id="cqKpiBalance">—</span><span class="d">Đầu kỳ 1.250.000.000₫ + thu − chi</span></div>
+      <div class="kt-mini good"><span class="l">Tổng thu tháng này</span><span class="v" id="cqKpiThu">—</span><span class="d">Tháng 8/2026 · <span id="cqKpiThuCount">0</span> phiếu thu</span></div>
+      <div class="kt-mini bad"><span class="l">Tổng chi tháng này</span><span class="v" id="cqKpiChi">—</span><span class="d">Tháng 8/2026 · <span id="cqKpiChiCount">0</span> phiếu chi</span></div>
+      <div class="kt-mini"><span class="l">Chênh lệch thu − chi</span><span class="v" id="cqKpiNet">—</span><span class="d">Dòng tiền ròng tháng 8/2026</span></div>
+    </div>
+
+    <div class="card">
+      <div class="flex-between mb-3" style="flex-wrap:wrap;gap:10px">
+        <div>
+          <div class="t-h5"><i data-lucide="book-open" class="sec-ic"></i>Sổ quỹ — nhật ký thu chi</div>
+          <div class="t-caption">Tồn quỹ chạy lũy kế từ số dư đầu kỳ theo thứ tự thời gian · phiếu in mẫu 01-TT / 02-TT theo TT200</div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <div class="tabs" style="padding:3px" id="cqFilterKind">
+            <button class="tab active" data-cq-kind="all" data-no-interact="true">Tất cả</button>
+            <button class="tab" data-cq-kind="thu" data-no-interact="true">Phiếu thu</button>
+            <button class="tab" data-cq-kind="chi" data-no-interact="true">Phiếu chi</button>
+          </div>
+          <select id="cqFilterMonth" data-no-interact="true"
+                  style="padding:7px 10px;border:1px solid var(--rule,#d8d2c0);border-radius:8px;background:var(--canvas,#fff);font:inherit;font-size:13px;color:var(--ink)">
+            <option value="all">Tất cả tháng</option>
+          </select>
+          <button class="btn btn-primary btn-sm" id="cqBtnThu" data-no-interact="true"><i data-lucide="plus" style="width:13px;height:13px"></i> Lập phiếu thu</button>
+          <button class="btn btn-secondary btn-sm" id="cqBtnChi" data-no-interact="true"><i data-lucide="plus" style="width:13px;height:13px"></i> Lập phiếu chi</button>
+        </div>
+      </div>
+      <div class="table-wrap" style="border:none">
+        <table class="tbl">
+          <thead>
+            <tr>
+              <th>Ngày</th><th>Số phiếu</th><th>Loại</th><th>Đối tượng</th><th>Diễn giải</th>
+              <th>Chứng từ gốc</th>
+              <th class="num">Thu</th><th class="num">Chi</th><th class="num">Tồn quỹ</th><th></th>
+            </tr>
+          </thead>
+          <tbody id="cqLedgerBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <datalist id="cqPartners">
+      <option value="Nhôm kính Đại Phát"></option>
+      <option value="ĐL Nhôm kính Minh Anh"></option>
+      <option value="ĐL Owin Hoàng Long"></option>
+      <option value="VINHOMES OCEAN PARK"></option>
+      <option value="Đùn ép Nhôm Đông Anh"></option>
+      <option value="Nhôm Luxanode nhập khẩu"></option>
+      <option value="Kính Việt Nhật Hải Long"></option>
+      <option value="Phụ kiện Kinlong VN"></option>
+      <option value="Sơn tĩnh điện Á Đông"></option>
+      <option value="Cơ khí WEIKE Việt Nam"></option>
+      <option value="Bao bì Phú Mỹ"></option>
+      <option value="Thợ xưởng Thường Tín"></option>
+      <option value="EVN Hà Nội"></option>
+    </datalist>
+  </div>
+
+  <!-- ============ PANE: CÔNG NỢ ============ -->
+  <div data-tab-pane="kt-congno" style="display:none">
+
+    <div class="kt-strip">
+      <div class="kt-mini bad"><span class="l">Phải thu quá hạn</span><span class="v">248M</span><span class="d">8 khách · cao nhất 140M</span></div>
+      <div class="kt-mini"><span class="l">Phải thu trong hạn</span><span class="v">997M</span><span class="d">36 hoá đơn</span></div>
+      <div class="kt-mini bad"><span class="l">Phải trả đến hạn tuần</span><span class="v">96M</span><span class="d">Nhôm Đông Anh · Kinlong</span></div>
+      <div class="kt-mini"><span class="l">Tổng phải trả NCC</span><span class="v">248M</span><span class="d">18 hoá đơn</span></div>
+    </div>
+
+    <div class="card mb-4">
+      <div class="flex-between mb-3">
+        <div>
+          <div class="t-h5"><i data-lucide="users-round" class="sec-ic"></i>Công nợ phải thu theo khách hàng</div>
+          <div class="t-caption">Đại lý uỷ quyền · cửa hàng nhôm kính · chủ đầu tư · nhà thầu</div>
+        </div>
+        <a class="btn btn-secondary btn-sm" href="07-crm.html" data-no-interact="true">Mở hồ sơ khách hàng</a>
+      </div>
+      <div class="table-wrap" style="border:none">
+        <table class="tbl">
+          <thead><tr><th>Khách hàng</th><th>Nhóm</th><th class="num">Dư nợ</th><th class="num">Quá hạn</th><th>Hạn thanh toán</th><th>Cảnh báo</th></tr></thead>
+          <tbody>
+            <tr><td><b>ĐL Nhôm kính Minh Anh</b></td><td>Đại lý uỷ quyền</td><td class="num">312M</td><td class="num text-danger">68M</td><td>20/05/2026</td><td class="warn-red">Công nợ quá hạn 31 ngày · 68 tr</td></tr>
+            <tr><td><b>Nhôm kính Đại Phát</b></td><td>Cửa hàng nhôm kính</td><td class="num">248M</td><td class="num">—</td><td>02/06/2026</td><td class="warn-green">Trả đúng hạn 12 tháng</td></tr>
+            <tr><td><b>Cty Xây dựng ABC</b></td><td>Nhà thầu</td><td class="num">185M</td><td class="num text-danger">40M</td><td>28/05/2026</td><td class="warn-red">Quá hạn 12 ngày · 40 tr</td></tr>
+            <tr><td><b>NT XÂY DỰNG HOÀNG GIA</b></td><td>Nhà thầu</td><td class="num">156M</td><td class="num text-danger">140M</td><td>15/04/2026</td><td class="warn-red">Quá hạn 65 ngày · 140 tr</td></tr>
+            <tr><td><b>VINHOMES OCEAN PARK</b></td><td>Chủ đầu tư</td><td class="num">144M</td><td class="num">—</td><td>10/06/2026</td><td class="warn-none">—</td></tr>
+            <tr><td><b>ĐL OWIN HẢI DƯƠNG</b></td><td>Đại lý uỷ quyền</td><td class="num">96M</td><td class="num">—</td><td>12/06/2026</td><td class="warn-green">Trả trước hạn 3 kỳ liền</td></tr>
+            <tr><td><b>NHÔM KÍNH NAM TIẾN</b></td><td>Cửa hàng nhôm kính</td><td class="num">62M</td><td class="num">—</td><td>18/06/2026</td><td class="warn-none">—</td></tr>
+            <tr><td><b>ECOPARK</b></td><td>Chủ đầu tư</td><td class="num">42M</td><td class="num">—</td><td>25/06/2026</td><td class="warn-none">—</td></tr>
+          </tbody>
+          <tfoot>
+            <tr style="background:var(--ink);color:#fff"><td colspan="2"><b style="color:#fff">Tổng phải thu</b></td><td class="num" style="color:#e5c454"><b>1.245M</b></td><td class="num" style="color:#e5c454"><b>248M</b></td><td colspan="2"></td></tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="flex-between mb-3">
+        <div>
+          <div class="t-h5"><i data-lucide="truck" class="sec-ic"></i>Nợ nhà cung cấp cần thanh toán</div>
+          <div class="t-caption">Bấm mã PO để mở đúng đơn mua hàng gốc</div>
+        </div>
+        <a class="btn btn-secondary btn-sm" href="21-cong-no-ncc.html" data-no-interact="true">Mở công nợ NCC</a>
+      </div>
+      <div class="table-wrap" style="border:none">
+        <table class="tbl">
+          <thead><tr><th>Nhà cung cấp</th><th>Chứng từ gốc</th><th class="num">Dư nợ</th><th>Hạn thanh toán</th><th>Cảnh báo</th></tr></thead>
+          <tbody>
+            <tr><td><b>Đùn ép Nhôm Đông Anh</b></td><td><a class="lnk" href="13-mua-hang.html?po=PO-2026-0768">PO-2026-0768</a></td><td class="num">62M</td><td>22/05/2026</td><td class="warn-red">Đến hạn trong 4 ngày</td></tr>
+            <tr><td><b>Phụ kiện Kinlong VN</b></td><td><a class="lnk" href="13-mua-hang.html?po=PO-2026-0752">PO-2026-0752</a></td><td class="num">34M</td><td>24/05/2026</td><td class="warn-red">Đến hạn trong 6 ngày</td></tr>
+            <tr><td><b>Kính Việt Nhật Hải Long</b></td><td><a class="lnk" href="13-mua-hang.html?po=PO-2026-0778">PO-2026-0778</a></td><td class="num">58M</td><td>02/06/2026</td><td class="warn-none">—</td></tr>
+            <tr><td><b>Nhôm Luxanode nhập khẩu</b></td><td><a class="lnk" href="13-mua-hang.html?po=PO-2026-0780">PO-2026-0780</a></td><td class="num">50M</td><td>08/06/2026</td><td class="warn-none">—</td></tr>
+            <tr><td><b>Bao bì Phú Mỹ</b></td><td><a class="lnk" href="13-mua-hang.html?po=PO-2026-0772">PO-2026-0772</a></td><td class="num">44M</td><td>15/06/2026</td><td class="warn-green">Được gia hạn 45 ngày</td></tr>
+          </tbody>
+          <tfoot>
+            <tr style="background:var(--ink);color:#fff"><td colspan="2"><b style="color:#fff">Tổng phải trả NCC</b></td><td class="num" style="color:#e5c454"><b>248M</b></td><td colspan="2"></td></tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ PANE: GIÁ THÀNH ============ -->
+  <div data-tab-pane="kt-giathanh" style="display:none">
+    <div class="kt-strip">
+      <div class="kt-mini"><span class="l">Doanh thu 4 lệnh</span><span class="v">587M</span><span class="d">Theo giá bán đã chốt</span></div>
+      <div class="kt-mini"><span class="l">Giá vốn (giá thành)</span><span class="v">464.5M</span><span class="d">Nhôm + kính + nhân công + SXC</span></div>
+      <div class="kt-mini good"><span class="l">Lãi gộp</span><span class="v">122.5M</span><span class="d">Doanh thu − giá vốn</span></div>
+      <div class="kt-mini"><span class="l">Tỷ suất LN gộp</span><span class="v">20.9%</span><span class="d">1 lệnh đang lỗ · cần xem lại giá</span></div>
+    </div>
+
+    <div class="card">
+      <div class="flex-between mb-3">
+        <div>
+          <div class="t-h5"><i data-lucide="calculator" class="sec-ic"></i>Giá thành &amp; lãi/lỗ theo lệnh sản xuất · T5/2026</div>
+          <div class="t-caption">Giá vốn (nhôm + kính + phụ kiện + nhân công khoán + SXC) so với giá bán → lãi gộp từng lệnh</div>
+        </div>
+        <button class="btn btn-secondary btn-sm" data-no-interact="true"><i data-lucide="download" style="width:13px;height:13px"></i> Xuất bảng</button>
+      </div>
+      <div class="table-wrap" style="border:none">
+        <table class="tbl">
+          <thead><tr><th>Lệnh SX</th><th>Sản phẩm</th><th class="num">SL</th><th class="num">Tổng giá thành</th><th class="num">Giá vốn/đv</th><th class="num">Giá bán/đv</th><th class="num">Lãi gộp</th><th class="num">% LN</th></tr></thead>
+          <tbody>
+            <tr><td><a class="lnk" href="06-lsx-phieu-cong-nghe.html?id=LSX-0319"><b>LSX-0319</b></a></td><td>Cửa thuỷ lực hệ 120 · 2 cánh</td><td class="num">40 bộ</td><td class="num">158.0M</td><td class="num">3.950.000₫</td><td class="num">5.500.000₫</td><td class="num text-success"><b>+ 62.0M</b></td><td class="num text-success">28.2%</td></tr>
+            <tr><td><a class="lnk" href="06-lsx-phieu-cong-nghe.html?id=LSX-0322"><b>LSX-0322</b></a></td><td>Cửa trượt quay 93 · 4 cánh</td><td class="num">20 bộ</td><td class="num">119.5M</td><td class="num">5.975.000₫</td><td class="num">8.000.000₫</td><td class="num text-success"><b>+ 40.5M</b></td><td class="num text-success">25.3%</td></tr>
+            <tr><td><a class="lnk" href="06-lsx-phieu-cong-nghe.html?id=LSX-0335"><b>LSX-0335</b></a></td><td>Cửa sổ mở quay Luxanode 121</td><td class="num">50 m²</td><td class="num">76.0M</td><td class="num">1.520.000₫</td><td class="num">2.040.000₫</td><td class="num text-success"><b>+ 26.0M</b></td><td class="num text-success">25.5%</td></tr>
+            <tr><td><a class="lnk" href="06-lsx-phieu-cong-nghe.html?id=LSX-0370"><b>LSX-0370</b></a></td><td>Cửa vòm nhôm uốn hệ 120 · 2 cánh</td><td class="num">15 bộ</td><td class="num">111.0M</td><td class="num">7.400.000₫</td><td class="num">7.000.000₫</td><td class="num text-danger"><b>− 6.0M</b></td><td class="num text-danger">−5.7%</td></tr>
+            <tr style="background:var(--ink);color:#fff"><td colspan="3"><b style="color:#fff">Tổng cộng 4 lệnh</b></td><td class="num" style="color:#fff"><b>464.5M</b></td><td class="num" style="color:#fff">—</td><td class="num" style="color:#fff">DT 587M</td><td class="num" style="color:#e5c454"><b>+ 122.5M</b></td><td class="num" style="color:#e5c454"><b>20.9%</b></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="t-caption mt-2" style="display:flex;align-items:flex-start;gap:6px">
+        <i data-lucide="alert-triangle" style="width:13px;height:13px;color:var(--rust-2);flex-shrink:0;margin-top:1px"></i>
+        <span><b style="color:#8a1f1f">LSX-0370 (cửa vòm uốn hệ 120) đang lỗ −6.0M</b>: hao nhôm khi uốn vòm lên 11% so định mức 6%, cộng 4 thanh nứt phải làm lại. Cần tăng giá bán hoặc siết lại bán kính uốn tối thiểu.</span>
+      </div>
+      <div class="t-caption mt-2" style="display:flex;align-items:flex-start;gap:6px">
+        <i data-lucide="info" style="width:13px;height:13px;color:var(--steel);flex-shrink:0;margin-top:1px"></i>
+        <span>Giá vốn lấy tự động từ <b>Lệnh sản xuất</b> &amp; <b>Phiếu xuất kho</b>; giá bán lấy từ <b>Đơn hàng bán</b>. Chi tiết xem trang <a href="17-tinh-gia.html" style="color:var(--rust);border-bottom:1px solid">Tính giá thành</a> · thiệt hại quy ra tiền xem <a href="31-bao-cao-thiet-hai.html" style="color:var(--rust);border-bottom:1px solid">Báo cáo thiệt hại</a>.</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ PANE: TSCĐ & CCDC ============ -->
+  <div data-tab-pane="kt-tscd" style="display:none">
+    <div class="kt-strip">
+      <div class="kt-mini"><span class="l">Nguyên giá TSCĐ</span><span class="v">8.420M</span><span class="d">12 tài sản</span></div>
+      <div class="kt-mini"><span class="l">Đã khấu hao</span><span class="v">3.180M</span><span class="d">Luỹ kế đến T5</span></div>
+      <div class="kt-mini good"><span class="l">Giá trị còn lại</span><span class="v">5.240M</span><span class="d">62.2% nguyên giá</span></div>
+      <div class="kt-mini"><span class="l">Khấu hao / tháng</span><span class="v">58.4M</span><span class="d">Phân bổ vào giá thành</span></div>
+    </div>
+    <div class="card">
+      <div class="t-h5 mb-3"><i data-lucide="building-2" class="sec-ic"></i>Danh mục tài sản cố định &amp; CCDC</div>
+      <div class="table-wrap" style="border:none">
+        <table class="tbl">
+          <thead><tr><th>Mã TS</th><th>Tên tài sản</th><th>Mã máy</th><th class="num">Nguyên giá</th><th class="num">KH luỹ kế</th><th class="num">Còn lại</th><th class="num">KH/tháng</th><th>Trạng thái</th></tr></thead>
+          <tbody>
+            <tr><td><b>TS-2021-018</b></td><td>Máy cắt nhôm 2 đầu lưỡi 500 WEIKE</td><td><a class="lnk" href="17-may-moc.html?may=CAT-01">CAT-01</a></td><td class="num">1.850M</td><td class="num">740M</td><td class="num">1.110M</td><td class="num">15.4M</td><td><span class="badge badge-moss">Đang dùng</span></td></tr>
+            <tr><td><b>TS-2020-007</b></td><td>Máy phay khoá CNC WEIKE (3 giây/lỗ)</td><td><a class="lnk" href="17-may-moc.html?may=CNC-03">CNC-03</a></td><td class="num">2.400M</td><td class="num">960M</td><td class="num">1.440M</td><td class="num">16.7M</td><td><span class="badge badge-moss">Đang dùng</span></td></tr>
+            <tr><td><b>TS-2020-015</b></td><td>Máy uốn vòm nhôm CNC 3 trục</td><td><a class="lnk" href="17-may-moc.html?may=UON-01">UON-01</a></td><td class="num">2.600M</td><td class="num">650M</td><td class="num">1.950M</td><td class="num">14.4M</td><td><span class="badge badge-moss">Đang dùng</span></td></tr>
+            <tr><td><b>TS-2019-003</b></td><td>Máy ép góc cơ WEIKE</td><td><a class="lnk" href="17-may-moc.html?may=EP-02">EP-02</a></td><td class="num">1.250M</td><td class="num">620M</td><td class="num">630M</td><td class="num">8.0M</td><td><span class="badge badge-orange">Đang sửa</span></td></tr>
+            <tr><td><b>CC-2022-041</b></td><td>Dàn máy tính &amp; thiết bị đo phòng KCS nhôm kính (CCDC)</td><td><span class="warn-none">—</span></td><td class="num">320M</td><td class="num">210M</td><td class="num">110M</td><td class="num">3.9M</td><td><span class="badge badge-moss">Đang dùng</span></td></tr>
+          </tbody>
+          <tfoot>
+            <tr style="background:var(--ink);color:#fff"><td colspan="3"><b style="color:#fff">Tổng cộng</b></td><td class="num" style="color:#fff"><b>8.420M</b></td><td class="num" style="color:#fff">3.180M</td><td class="num" style="color:#e5c454"><b>5.240M</b></td><td class="num" style="color:#fff">58.4M</td><td></td></tr>
+          </tfoot>
+        </table>
+      </div>
+      <div class="t-caption mt-2">Khấu hao đường thẳng theo TT45/2013 · phân bổ vào CP sản xuất chung (TK 627).</div>
+    </div>
+  </div>
+
+  </div><!-- /tab-group -->
+
+</div>
+
+<script src="../assets/js/layout.js"></script>
+<script src="../assets/js/loss-data.js"></script>
+<script src="../assets/js/loss-ui.js"></script>
+<script src="../assets/js/pricing-engine.js"></script>
+<script src="../assets/js/quote-data.js"></script>
+<script src="../assets/js/stock-data.js"></script>
+<script src="../assets/js/bom-data.js"></script>
+<script src="../assets/js/inventory.js"></script>
+<script src="../assets/js/purchase-data.js"></script>
+<script src="../assets/js/accounting.js"></script>
+<script>
+/* ============ QUẢN LÝ THU CHI · SỔ QUỸ — dùng store ERPCash (accounting.js) ============ */
+document.addEventListener('erp:ready', function () {
+  if (!window.ERPCash) return;
+  var C = window.ERPCash;
+  var state = { kind: 'all', month: 'all' };
+
+  function fmt(n) { return Math.round(Number(n) || 0).toLocaleString('vi-VN'); }
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+    });
+  }
+  function byId(id) { return document.getElementById(id); }
+  function setText(id, v) { var el = byId(id); if (el) el.textContent = v; }
+
+  /* Mã chứng từ gốc (ĐH / HĐ / PO / BG) → anchor .lnk mở đúng bản ghi */
+  function refLink(ref) {
+    var r = String(ref || '').trim();
+    if (!r) return '<span class="warn-none">—</span>';
+    var page = null, key = null;
+    if (/^DH-/i.test(r))      { page = '03-don-hang.html';  key = 'order'; }
+    else if (/^HD-/i.test(r)) { page = '18-hop-dong.html';  key = 'hd'; }
+    else if (/^BG-/i.test(r)) { page = '02-bao-gia.html';   key = 'bg'; }
+    else if (/^PO-/i.test(r)) { page = '13-mua-hang.html';  key = 'po'; }
+    else if (/^DNM-/i.test(r)){ page = '13-de-xuat-mua.html'; key = 'dnm'; }
+    else if (/^LSX-/i.test(r)){ page = '06-lsx-phieu-cong-nghe.html'; key = 'id'; }
+    if (!page) return '<span class="t-caption">' + esc(r) + '</span>';
+    return '<a class="lnk" href="' + page + '?' + key + '=' + encodeURIComponent(r) + '">' + esc(r) + '</a>';
+  }
+
+  // Sắp xếp thời gian tăng dần (cùng ngày: phiếu tạo trước đứng trước)
+  function chronological() {
+    var arr = C.all().map(function (r, i) { return { r: r, i: i }; });
+    arr.sort(function (a, b) {
+      var da = C.parseDate(a.r.date), db = C.parseDate(b.r.date);
+      var ka = da ? da.y * 10000 + da.m * 100 + da.d : 0;
+      var kb = db ? db.y * 10000 + db.m * 100 + db.d : 0;
+      if (ka !== kb) return ka - kb;
+      return b.i - a.i; // store là mới-nhất-trước → index lớn = cũ hơn
+    });
+    return arr.map(function (o) { return o.r; });
+  }
+  function monthKey(r) { var d = C.parseDate(r.date); return d ? d.m + '/' + d.y : ''; }
+
+  // ---------- KPI ----------
+  function renderKpis() {
+    var s = C.summary();
+    var countThu = 0, countChi = 0;
+    C.all().forEach(function (r) {
+      var d = C.parseDate(r.date);
+      if (d && d.m === C.MONTH && d.y === C.YEAR) {
+        if (r.kind === 'thu') countThu++; else countChi++;
+      }
+    });
+    setText('cqKpiBalance', fmt(s.balance) + '₫');
+    setText('cqKpiThu', '+ ' + fmt(s.thuThang) + '₫');
+    setText('cqKpiChi', '− ' + fmt(s.chiThang) + '₫');
+    setText('cqKpiThuCount', countThu);
+    setText('cqKpiChiCount', countChi);
+    var net = s.thuThang - s.chiThang;
+    setText('cqKpiNet', (net >= 0 ? '+ ' : '− ') + fmt(Math.abs(net)) + '₫');
+    // Card Tồn quỹ ở pane Tổng quan
+    setText('ovCashBalance', fmt(s.balance) + '₫');
+    setText('ovCashThu', '+' + fmt(s.thuThang) + '₫');
+    setText('ovCashChi', '−' + fmt(s.chiThang) + '₫');
+  }
+
+  // ---------- Bộ lọc tháng ----------
+  function renderMonthFilter() {
+    var sel = byId('cqFilterMonth');
+    if (!sel) return;
+    var seen = {}, months = [];
+    chronological().forEach(function (r) {
+      var k = monthKey(r);
+      if (k && !seen[k]) { seen[k] = 1; months.push(k); }
+    });
+    var html = '<option value="all">Tất cả tháng</option>';
+    months.forEach(function (m) {
+      html += '<option value="' + m + '"' + (state.month === m ? ' selected' : '') + '>Tháng ' + m + '</option>';
+    });
+    sel.innerHTML = html;
+    sel.value = state.month;
+    if (sel.value !== state.month) { state.month = 'all'; sel.value = 'all'; }
+  }
+
+  // ---------- Sổ quỹ ----------
+  function renderLedger() {
+    var tbody = byId('cqLedgerBody');
+    if (!tbody) return;
+    var html =
+      '<tr style="background:var(--paper-2,#eee9dd)">' +
+        '<td>—</td><td colspan="5"><b>Số dư đầu kỳ</b></td>' +
+        '<td class="num"></td><td class="num"></td>' +
+        '<td class="num"><b>' + fmt(C.OPENING) + '₫</b></td><td></td>' +
+      '</tr>';
+    var bal = C.OPENING;
+    chronological().forEach(function (r) {
+      var amt = Math.round(Number(r.amount) || 0);
+      bal += (r.kind === 'thu' ? amt : -amt); // lũy kế trên TOÀN BỘ phiếu (đúng số dư từng dòng)
+      var visible = (state.kind === 'all' || state.kind === r.kind) &&
+                    (state.month === 'all' || monthKey(r) === state.month);
+      if (!visible) return;
+      html += '<tr id="cq-' + esc(r.id) + '">' +
+        '<td>' + esc(r.date) + '</td>' +
+        '<td><b>' + esc(r.id) + '</b></td>' +
+        '<td><span class="badge ' + (r.kind === 'thu' ? 'badge-moss' : 'badge-coral') + '">' + esc(r.typeLabel) + '</span></td>' +
+        '<td>' + esc(r.partner) + '</td>' +
+        '<td>' + esc(r.reason || '') + '</td>' +
+        '<td>' + refLink(r.ref) + '</td>' +
+        '<td class="num text-success">' + (r.kind === 'thu' ? '<b>+ ' + fmt(amt) + '</b>' : '') + '</td>' +
+        '<td class="num text-danger">' + (r.kind === 'chi' ? '<b>− ' + fmt(amt) + '</b>' : '') + '</td>' +
+        '<td class="num"><b>' + fmt(bal) + '</b></td>' +
+        '<td><button class="btn btn-secondary btn-sm" data-cq-print="' + esc(r.id) + '" data-no-interact="true" style="white-space:nowrap">' +
+          '<i data-lucide="printer" style="width:12px;height:12px"></i> In</button></td>' +
+      '</tr>';
+    });
+    html +=
+      '<tr style="background:var(--ink);color:#fff">' +
+        '<td colspan="8"><b style="color:#fff">Tồn quỹ hiện tại</b></td>' +
+        '<td class="num" style="color:#e5c454"><b>' + fmt(bal) + '₫</b></td><td></td>' +
+      '</tr>';
+    tbody.innerHTML = html;
+    if (window.lucide) lucide.createIcons();
+  }
+
+  function renderAll() { renderKpis(); renderMonthFilter(); renderLedger(); }
+
+  // ---------- Modal lập phiếu thu / chi ----------
+  function openVoucherModal(kind) {
+    var isThu = kind === 'thu';
+    var inp = 'width:100%;padding:8px 10px;border:1px solid var(--rule,#d8d2c0);border-radius:8px;background:var(--canvas,#fff);font:inherit;font-size:13px;box-sizing:border-box;';
+    var lbl = 'display:block;font-size:11px;color:var(--ash,#6b665b);margin-bottom:4px;';
+    var opts = '';
+    C.TYPES[kind].forEach(function (t) { opts += '<option value="' + t.value + '">' + t.label + '</option>'; });
+    var body =
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 14px;text-align:left;margin-top:6px">' +
+        '<div><label style="' + lbl + '">Số phiếu</label><input id="cqfId" value="' + esc(C.nextId(kind)) + '" readonly style="' + inp + 'background:var(--paper-2,#eee9dd)"></div>' +
+        '<div><label style="' + lbl + '">Ngày</label><input id="cqfDate" value="' + esc(C.todayStr()) + '" style="' + inp + '"></div>' +
+        '<div><label style="' + lbl + '">Loại ' + (isThu ? 'thu' : 'chi') + '</label><select id="cqfType" style="' + inp + '">' + opts + '</select></div>' +
+        '<div><label style="' + lbl + '">Đối tượng *</label><input id="cqfPartner" list="cqPartners" placeholder="' + (isThu ? 'Người nộp tiền / đại lý' : 'Người nhận tiền / nhà cung cấp') + '" style="' + inp + '"></div>' +
+        '<div><label style="' + lbl + '">Số tham chiếu (HĐ/ĐH/PO)</label><input id="cqfRef" placeholder="VD: DH-0312, PO-0044" style="' + inp + '"></div>' +
+        '<div><label style="' + lbl + '">Hình thức</label><select id="cqfMethod" style="' + inp + '"><option value="tm">Tiền mặt</option><option value="ck">Chuyển khoản</option></select></div>' +
+        '<div><label style="' + lbl + '">Số tiền (₫) *</label><input id="cqfAmount" type="number" min="0" step="1000" placeholder="0" style="' + inp + '"></div>' +
+        '<div><label style="' + lbl + '">Người lập</label><input id="cqfBy" value="Trần Thị Thu Hà" style="' + inp + '"></div>' +
+        '<div style="grid-column:1/-1"><label style="' + lbl + '">Lý do ' + (isThu ? 'thu' : 'chi') + '</label><textarea id="cqfReason" rows="2" style="' + inp + 'resize:vertical"></textarea></div>' +
+      '</div>';
+
+    ERPInteract.showModal({
+      title: isThu ? 'Lập phiếu thu' : 'Lập phiếu chi',
+      body: body,
+      primaryText: 'Lưu phiếu',
+      secondaryText: 'Huỷ',
+      onPrimary: function () {
+        var amount = Math.round(parseFloat(byId('cqfAmount').value) || 0);
+        var partner = (byId('cqfPartner').value || '').trim();
+        if (amount <= 0) { ERPInteract.showToast('Số tiền phải lớn hơn 0', 'warning'); return false; }
+        if (!partner) { ERPInteract.showToast('Chưa nhập <b>đối tượng</b> ' + (isThu ? 'nộp' : 'nhận') + ' tiền', 'warning'); return false; }
+        var typeSel = byId('cqfType');
+        var rec = C.create({
+          kind: kind,
+          date: (byId('cqfDate').value || '').trim() || C.todayStr(),
+          type: typeSel.value,
+          partner: partner,
+          method: byId('cqfMethod').value,
+          amount: amount,
+          reason: (byId('cqfReason').value || '').trim(),
+          createdBy: (byId('cqfBy').value || '').trim() || 'Kế toán viên',
+          ref: (byId('cqfRef').value || '').trim()
+        });
+        var q = (rec.kind === 'thu' ? 'pt=' : 'pc=') + encodeURIComponent(rec.id);
+        ERPInteract.showToast('Đã lập ' + (isThu ? 'phiếu thu' : 'phiếu chi') +
+          ' <a class="lnk" href="15-ke-toan.html?' + q + '"><b>' + esc(rec.id) + '</b></a> — ' + fmt(rec.amount) + '₫', 'success');
+        renderAll();
+      }
+    });
+  }
+
+  // ---------- In phiếu thu / chi theo mẫu TT200 (01-TT / 02-TT) ----------
+  function printVoucher(id) {
+    var r = C.get(id);
+    if (!r || !window.ERPPrint) return;
+    var isThu = r.kind === 'thu';
+    var d = C.parseDate(r.date) || { d: '.....', m: '.....', y: '.....' };
+    var amt = Math.round(Number(r.amount) || 0);
+    function row(k, v) { return '<tr><td>' + k + '</td><td>' + v + '</td></tr>'; }
+    function sign(t, s) { return '<div><b>' + t + '</b><i>' + s + '</i><div class="sp"></div></div>'; }
+    var body = ERPPrint.docHead() +
+      '<div class="pdoc">' +
+        '<div style="display:flex;justify-content:space-between;align-items:flex-start;font-size:11px;line-height:1.5">' +
+          '<div>Đơn vị: CÔNG TY CỔ PHẦN THƯƠNG MẠI OWIN — MST 0109541582<br>' +
+            'Địa chỉ: 359 Phúc Diễn, Xuân Phương, Hà Nội<br>' +
+            'Bộ phận: Phòng Tài chính — Kế toán · Quyển số: 03/2026</div>' +
+          '<div style="text-align:right"><b>Mẫu số ' + (isThu ? '01-TT' : '02-TT') + '</b><br>' +
+            '(Ban hành theo Thông tư số 200/2014/TT-BTC<br>ngày 22/12/2014 của Bộ Tài chính)</div>' +
+        '</div>' +
+        '<div class="pdoc-title">' + (isThu ? 'PHIẾU THU' : 'PHIẾU CHI') + '</div>' +
+        '<div class="pdoc-sub">Ngày ' + d.d + ' tháng ' + d.m + ' năm ' + d.y + ' · Số: ' + esc(r.id) +
+          ' · Nợ: ' + (isThu ? '111, 112' : '331, 627, 642') + ' · Có: ' + (isThu ? '131, 511' : '111, 112') + '</div>' +
+        '<table class="pdoc-rows">' +
+          row('Họ tên người ' + (isThu ? 'nộp' : 'nhận') + ' tiền', esc(r.partner)) +
+          row('Địa chỉ', '.................................................................') +
+          row('Lý do ' + (isThu ? 'nộp' : 'chi'), esc(r.reason || r.typeLabel)) +
+          row('Số tiền', '<b>' + fmt(amt) + '₫</b> (' + (r.method === 'ck' ? 'Chuyển khoản' : 'Tiền mặt') + ')') +
+          row('Bằng chữ', '<b>' + esc(C.toWords(amt)) + '</b>') +
+          row('Kèm theo', (r.ref ? '01 chứng từ gốc (' + esc(r.ref) + ')' : '.......... ') + ' chứng từ gốc') +
+        '</table>' +
+        '<div class="pdoc-note">Đã ' + (isThu ? 'nhận' : 'chi') + ' đủ số tiền (viết bằng chữ): ' + esc(C.toWords(amt)) +
+          '. Người lập phiếu: ' + esc(r.createdBy || '—') + ' · Loại: ' + esc(r.typeLabel) + '.</div>' +
+        '<div class="pdoc-sign">' +
+          sign('Giám đốc', '(Ký, họ tên, đóng dấu)') +
+          sign('Kế toán trưởng', '(Ký, họ tên)') +
+          sign('Thủ quỹ', '(Ký, họ tên)') +
+          sign('Người lập phiếu', '(Ký, họ tên)') +
+          sign('Người ' + (isThu ? 'nộp' : 'nhận') + ' tiền', '(Ký, họ tên)') +
+        '</div>' +
+      '</div>';
+    ERPPrint.preview({
+      title: 'Xem trước — ' + (isThu ? 'Phiếu thu ' : 'Phiếu chi ') + r.id,
+      printTitle: (isThu ? 'Phieu-thu-' : 'Phieu-chi-') + r.id,
+      bodyHtml: body
+    });
+  }
+
+  // ---------- Gắn sự kiện ----------
+  var pane = document.querySelector('[data-tab-pane="kt-soquy"]');
+  if (pane) {
+    pane.addEventListener('click', function (e) {
+      var kindBtn = e.target.closest('[data-cq-kind]');
+      if (kindBtn) {
+        state.kind = kindBtn.dataset.cqKind;
+        pane.querySelectorAll('[data-cq-kind]').forEach(function (b) { b.classList.toggle('active', b === kindBtn); });
+        renderLedger();
+        return;
+      }
+      var printBtn = e.target.closest('[data-cq-print]');
+      if (printBtn) { printVoucher(printBtn.dataset.cqPrint); return; }
+      if (e.target.closest('#cqBtnThu')) { openVoucherModal('thu'); return; }
+      if (e.target.closest('#cqBtnChi')) { openVoucherModal('chi'); return; }
+    });
+    var monthSel = byId('cqFilterMonth');
+    if (monthSel) monthSel.addEventListener('change', function () { state.month = monthSel.value; renderLedger(); });
+  }
+  function gotoSoQuy() {
+    var tabBtn = document.querySelector('[data-tab="kt-soquy"]');
+    if (tabBtn) tabBtn.click();
+  }
+  var ovLink = byId('ovCashLink');
+  if (ovLink) ovLink.addEventListener('click', gotoSoQuy);
+  ['hdrNewVoucher', 'tcNewVoucher'].forEach(function (id) {
+    var b = byId(id);
+    if (b) b.addEventListener('click', function () { gotoSoQuy(); openVoucherModal('thu'); });
+  });
+
+  renderAll();
+
+  /* ============================================================
+     DEEP-LINK: 15-ke-toan.html?pt=<ID>  ·  ?pc=<ID>
+     → mở đúng phiếu thu / phiếu chi: chuyển tab, cuộn tới và
+       highlight dòng; nếu phiếu nằm trong store ERPCash thì mở
+       luôn bản xem trước phiếu in.
+     ============================================================ */
+  function flash(row) {
+    if (!row) return false;
+    row.classList.add('row-hit');
+    try { row.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) { row.scrollIntoView(); }
+    setTimeout(function () { row.classList.remove('row-hit'); }, 4000);
+    return true;
+  }
+  function openVoucherById(id) {
+    if (!id) return;
+    id = decodeURIComponent(id).trim();
+
+    // 1) Phiếu có trong store ERPCash → tab Sổ quỹ
+    if (C.get(id)) {
+      state.kind = 'all'; state.month = 'all';
+      var kindBtns = document.querySelectorAll('[data-cq-kind]');
+      kindBtns.forEach(function (b) { b.classList.toggle('active', b.dataset.cqKind === 'all'); });
+      var ms = byId('cqFilterMonth'); if (ms) ms.value = 'all';
+      renderLedger();
+      gotoSoQuy();
+      setTimeout(function () {
+        if (!flash(byId('cq-' + id))) return;
+        if (window.ERPInteract) ERPInteract.showToast('Đã mở phiếu <b>' + esc(id) + '</b> trong sổ quỹ', 'info', 2200);
+      }, 120);
+      return;
+    }
+
+    // 2) Phiếu demo trong bảng tĩnh → tab Thu / Chi
+    var tcRow = byId('tc-' + id);
+    if (tcRow) {
+      var tcTab = document.querySelector('[data-tab="kt-thuchi"]');
+      if (tcTab) tcTab.click();
+      setTimeout(function () { flash(tcRow); }, 120);
+      return;
+    }
+
+    if (window.ERPInteract) ERPInteract.showToast('Không tìm thấy phiếu <b>' + esc(id) + '</b>', 'warning');
+  }
+
+  try {
+    var qs = new URLSearchParams(window.location.search);
+    var pid = qs.get('pt') || qs.get('pc');
+    if (pid) setTimeout(function () { openVoucherById(pid); }, 60);
+  } catch (e) {}
+});
+</script>
+</body>
+</html>

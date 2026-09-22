@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kho vật liệu tiêu hao — ERP NHÔM OWIN</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/css/style.css" />
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+  <style>
+    .tab.active { background: var(--canvas); color: var(--ink); box-shadow: 0 1px 0 var(--rule); }
+    .att-input { padding:8px 10px; border:1px solid var(--rule); border-radius:8px; font-size:13px; font-family:inherit; background:var(--canvas); color:var(--ink); }
+    .wh-scroll thead th { position:sticky; top:0; background:var(--paper-2); z-index:1; }
+    .wh-scroll tbody tr[data-ma] { cursor:pointer; }
+
+    /* Detail drawer — trượt từ phải */
+    .drawer-overlay { position:fixed; inset:0; background:rgba(20,19,15,.42); backdrop-filter:blur(2px); z-index:80; opacity:0; pointer-events:none; transition:opacity .2s ease; }
+    .drawer-overlay.open { opacity:1; pointer-events:auto; }
+    .drawer { position:fixed; top:0; right:0; height:100vh; width:480px; max-width:94vw; background:var(--canvas); border-left:1px solid var(--rule); box-shadow:-12px 0 32px rgba(20,19,15,.16); z-index:81; transform:translateX(100%); transition:transform .26s cubic-bezier(.2,.8,.2,1); overflow-y:auto; padding:20px 22px 36px; }
+    .drawer.open { transform:translateX(0); }
+    .drawer::-webkit-scrollbar { width:8px; }
+    .drawer::-webkit-scrollbar-thumb { background:var(--rule); border-radius:9999px; }
+    .drawer-close { position:absolute; top:14px; right:14px; z-index:2; }
+    .wh-head { display:flex; gap:14px; align-items:center; }
+    .wh-avatar { width:54px; height:54px; border-radius:12px; background:var(--ink); color:var(--paper); display:inline-flex; align-items:center; justify-content:center; flex-shrink:0; }
+    .pf-info-row { display:flex; justify-content:space-between; gap:12px; padding:9px 0; border-bottom:1px solid var(--rule-hair); font-size:13px; }
+    .pf-info-row:last-child{ border-bottom:0; }
+    .pf-info-row .k { color:var(--ash); white-space:nowrap; }
+    .pf-info-row .v { font-weight:500; text-align:right; }
+    .wh-stat { border:1px solid var(--rule-soft); border-radius:10px; padding:11px 13px; background:var(--paper); }
+    .wh-stat .l { font-size:10.5px; text-transform:uppercase; letter-spacing:.06em; color:var(--ash); }
+    .wh-stat .v { font-size:18px; font-weight:700; margin-top:3px; }
+  </style>
+</head>
+<body>
+
+<div id="app-shell" data-active="kho-tieuhao" data-title="Kho vật liệu tiêu hao" data-crumb="<b>Kho</b> · Kho vật liệu tiêu hao">
+
+  <div class="page-header">
+    <div>
+      <h1>Kho vật liệu tiêu hao</h1>
+      <p>Keo silicon · băng dính xốp · giấy nhám · đá cắt · que hàn nhôm · bảo hộ — vật liệu phụ trợ xưởng nhôm</p>
+    </div>
+    <div class="actions">
+      <button class="btn btn-secondary"><i data-lucide="package-minus" style="width:14px;height:14px"></i> Phiếu xuất</button>
+      <button class="btn btn-primary"><i data-lucide="package-plus" style="width:14px;height:14px"></i> Phiếu nhập</button>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div data-tab-group>
+  <div class="tabs view-tabs mb-4">
+    <button class="tab active" data-tab="tab-ton"><i data-lucide="boxes" style="width:14px;height:14px;vertical-align:-2px"></i> Tồn kho</button>
+    <button class="tab" data-tab="tab-xnk"><i data-lucide="arrow-left-right" style="width:14px;height:14px;vertical-align:-2px"></i> Xuất nhập kho</button>
+    <button class="tab" data-tab="tab-bc"><i data-lucide="bar-chart-3" style="width:14px;height:14px;vertical-align:-2px"></i> Báo cáo</button>
+  </div>
+
+  <!-- ===== TỒN KHO ===== -->
+  <div data-tab-pane="tab-ton">
+    <div class="card mb-4">
+      <div class="flex-between mb-3">
+        <div class="t-h5"><i data-lucide="boxes" style="width:16px;height:16px"></i> Tồn vật liệu tiêu hao xưởng nhôm</div>
+        <span class="badge status-warning"><i data-lucide="alert-triangle" style="width:12px;height:12px"></i> 3 mã dưới định mức</span>
+      </div>
+      <div class="flex mb-3" style="gap:8px;flex-wrap:wrap">
+        <div style="position:relative;flex:1;min-width:220px">
+          <i data-lucide="search" style="width:14px;height:14px;position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--ash)"></i>
+          <input id="whSearch" class="att-input" type="text" placeholder="Tìm mã / tên vật liệu…" style="width:100%;padding-left:30px">
+        </div>
+        <select id="whGroup" class="att-input">
+          <option value="">Tất cả nhóm</option>
+          <option>Keo &amp; hoá chất</option><option>Băng keo &amp; màng</option><option>Mài cắt &amp; hàn</option><option>Vệ sinh &amp; bảo hộ</option>
+        </select>
+        <select id="whFlag" class="att-input">
+          <option value="">Mọi trạng thái</option><option value="low">Dưới định mức</option>
+        </select>
+      </div>
+      <div class="table-wrap wh-scroll" style="border:none;max-height:480px;overflow:auto">
+        <table class="tbl">
+          <thead><tr>
+            <th>Mã</th><th>Tên vật liệu</th><th>Nhóm</th><th>ĐVT</th><th class="num">Tồn</th><th class="num">Định mức tối thiểu</th><th class="num">Giá trị (₫)</th><th>Trạng thái</th><th>Cảnh báo tiêu hao</th>
+          </tr></thead>
+          <tbody>
+            <tr data-ma="TH-001" data-group="Keo &amp; hoá chất" data-flag="ok"><td><b>TH-001</b></td><td>Keo silicon trung tính</td><td>Keo &amp; hoá chất</td><td>tuýp</td><td class="num">180</td><td class="num">120</td><td class="num">11.160.000</td><td><span class="badge badge-moss">Đủ</span></td><td><span style="color:var(--ash-3)">—</span></td></tr>
+            <tr data-ma="TH-002" data-group="Keo &amp; hoá chất" data-flag="low"><td><b>TH-002</b></td><td>Dung dịch tẩy nhờn bề mặt nhôm</td><td>Keo &amp; hoá chất</td><td>lít</td><td class="num">42</td><td class="num">80</td><td class="num">5.040.000</td><td><span class="badge status-overdue">Dưới định mức</span></td><td><span style="color:#8a1f1f;font-weight:700">Tiêu hao vượt ĐM +18%</span></td></tr>
+            <tr data-ma="TH-003" data-group="Keo &amp; hoá chất" data-flag="ok"><td><b>TH-003</b></td><td>Dung dịch làm mát cắt gọt nhôm</td><td>Keo &amp; hoá chất</td><td>lít</td><td class="num">96</td><td class="num">60</td><td class="num">9.600.000</td><td><span class="badge badge-moss">Đủ</span></td><td><span style="color:var(--ash-3)">—</span></td></tr>
+            <tr data-ma="TH-023" data-group="Keo &amp; hoá chất" data-flag="ok"><td><b>TH-023</b></td><td>Chổi sơn quét keo</td><td>Keo &amp; hoá chất</td><td>cái</td><td class="num">64</td><td class="num">30</td><td class="num">1.280.000</td><td><span class="badge badge-moss">Đủ</span></td><td><span style="color:#1f6b3a;font-weight:700">Tiêu hao dưới ĐM −12%</span></td></tr>
+            <tr data-ma="TH-008" data-group="Băng keo &amp; màng" data-flag="ok"><td><b>TH-008</b></td><td>Băng dính xốp 2 mặt (dán kính)</td><td>Băng keo &amp; màng</td><td>cuộn</td><td class="num">240</td><td class="num">100</td><td class="num">10.800.000</td><td><span class="badge badge-moss">Đủ</span></td><td><span style="color:var(--ash-3)">—</span></td></tr>
+            <tr data-ma="TH-009" data-group="Băng keo &amp; màng" data-flag="ok"><td><b>TH-009</b></td><td>Băng keo bảo vệ bề mặt nhôm</td><td>Băng keo &amp; màng</td><td>cuộn</td><td class="num">86</td><td class="num">40</td><td class="num">6.880.000</td><td><span style="color:#1f6b3a;font-weight:700"><span class="badge badge-moss">Đủ</span></span></td><td><span style="color:var(--ash-3)">—</span></td></tr>
+            <tr data-ma="TH-014" data-group="Mài cắt &amp; hàn" data-flag="low"><td><b>TH-014</b></td><td>Giấy nhám P120 – P400</td><td>Mài cắt &amp; hàn</td><td>tờ</td><td class="num">180</td><td class="num">400</td><td class="num">1.440.000</td><td><span class="badge status-overdue">Dưới định mức</span></td><td><span style="color:#8a1f1f;font-weight:700">Tiêu hao vượt ĐM +24%</span></td></tr>
+            <tr data-ma="TH-015" data-group="Mài cắt &amp; hàn" data-flag="ok"><td><b>TH-015</b></td><td>Đá cắt nhôm Ø355</td><td>Mài cắt &amp; hàn</td><td>viên</td><td class="num">124</td><td class="num">60</td><td class="num">8.680.000</td><td><span class="badge badge-moss">Đủ</span></td><td><span style="color:var(--ash-3)">—</span></td></tr>
+            <tr data-ma="TH-016" data-group="Mài cắt &amp; hàn" data-flag="ok"><td><b>TH-016</b></td><td>Que hàn nhôm ER4043</td><td>Mài cắt &amp; hàn</td><td>kg</td><td class="num">46</td><td class="num">25</td><td class="num">9.200.000</td><td><span class="badge badge-moss">Đủ</span></td><td><span style="color:#1f6b3a;font-weight:700">Tiêu hao dưới ĐM −9%</span></td></tr>
+            <tr data-ma="TH-020" data-group="Mài cắt &amp; hàn" data-flag="low"><td><b>TH-020</b></td><td>Mũi vít bắt vít PH2 (bộ 10)</td><td>Mài cắt &amp; hàn</td><td>bộ</td><td class="num">12</td><td class="num">25</td><td class="num">1.440.000</td><td><span class="badge status-overdue">Dưới định mức</span></td><td><span style="color:#8a1f1f;font-weight:700">Gãy mũi nhiều · +31%</span></td></tr>
+            <tr data-ma="TH-021" data-group="Vệ sinh &amp; bảo hộ" data-flag="ok"><td><b>TH-021</b></td><td>Khăn lau công nghiệp</td><td>Vệ sinh &amp; bảo hộ</td><td>kg</td><td class="num">95</td><td class="num">40</td><td class="num">1.900.000</td><td><span class="badge badge-moss">Đủ</span></td><td><span style="color:var(--ash-3)">—</span></td></tr>
+            <tr data-ma="TH-022" data-group="Vệ sinh &amp; bảo hộ" data-flag="ok"><td><b>TH-022</b></td><td>Găng tay chống cắt (cấp 5)</td><td>Vệ sinh &amp; bảo hộ</td><td>đôi</td><td class="num">148</td><td class="num">80</td><td class="num">5.920.000</td><td><span class="badge badge-moss">Đủ</span></td><td><span style="color:var(--ash-3)">—</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="t-caption mt-2" id="whCount"></div>        </table>
+      </div>
+      <div class="t-caption mt-2" id="whCount"></div>
+    </div>
+  </div>
+
+  <!-- ===== XUẤT NHẬP KHO ===== -->
+  <div data-tab-pane="tab-xnk" style="display:none">
+    <div class="grid grid-4 mb-4">
+      <div class="wh-stat"><div class="l">Lượt giao dịch · T6</div><div class="v">24</div></div>
+      <div class="wh-stat"><div class="l">Tổng nhập (₫)</div><div class="v" style="color:var(--moss-deep);font-size:16px">38.000.000</div></div>
+      <div class="wh-stat"><div class="l">Tổng xuất (₫)</div><div class="v" style="color:var(--signal);font-size:16px">32.740.000</div></div>
+      <div class="wh-stat"><div class="l">Chênh lệch ròng (₫)</div><div class="v" style="font-size:16px">+5.260.000</div></div>
+    </div>
+    <div class="card mb-6">
+      <div class="flex-between mb-3">
+        <div class="t-h5"><i data-lucide="arrow-left-right" style="width:16px;height:16px"></i> Tổng quan các lần xuất nhập kho</div>
+        <a href="lich-su-xnk-kho.html" class="btn-link" style="font-size:12px">Xem lịch sử đầy đủ</a>
+      </div>
+      <div class="flex mb-3" style="gap:8px;flex-wrap:wrap">
+        <div style="position:relative;flex:1;min-width:220px">
+          <i data-lucide="search" style="width:14px;height:14px;position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--ash)"></i>
+          <input id="xnkSearch" class="att-input" type="text" placeholder="Tìm chứng từ / mã / tên vật tư…" style="width:100%;padding-left:30px">
+        </div>
+        <select id="xnkType" class="att-input">
+          <option value="">Nhập & xuất</option><option value="in">Chỉ nhập</option><option value="out">Chỉ xuất</option>
+        </select>
+        <select id="xnkGroup" class="att-input">
+          <option value="">Tất cả nhóm</option>
+          <option>Keo &amp; hoá chất</option><option>Băng keo &amp; màng</option><option>Mài cắt &amp; hàn</option><option>Vệ sinh &amp; bảo hộ</option>
+        </select>
+        <select id="xnkMonth" class="att-input">
+          <option value="">Mọi thời gian</option><option value="2026-06">Tháng 6/2026</option><option value="2026-05">Tháng 5/2026</option>
+        </select>
+      </div>
+      <div class="table-wrap wh-scroll" style="border:none;max-height:480px;overflow:auto">
+        <table class="tbl">
+          <thead><tr>
+            <th>Ngày</th><th>Chứng từ</th><th>Loại</th><th>Mã VT</th><th>Tên vật tư</th><th>Nhóm</th><th class="num">Số lượng</th><th class="num">Giá trị (₫)</th><th>Nguồn / Mục đích</th>
+          </tr></thead>
+          <tbody id="xnkBody"></tbody>
+        </table>
+      </div>
+      <div class="t-caption mt-2" id="xnkCount"></div>
+    </div>
+  </div>
+
+  <!-- ===== BÁO CÁO ===== -->
+  <div data-tab-pane="tab-bc" style="display:none">
+    <div class="grid grid-4 mb-4">
+      <div class="card-feature-blue"><div class="t-micro-u" style="color:var(--steel)">SỐ MÃ VẬT LIỆU</div><div class="t-h2 mt-1">12</div><div class="t-caption" style="color:var(--steel)">4 nhóm tiêu hao</div></div>
+      <div class="card-feature-yellow"><div class="t-micro-u" style="color:var(--rust-deep)">GIÁ TRỊ TỒN</div><div class="t-h2 mt-1">73M</div><div class="t-caption" style="color:var(--rust-deep)">tồn hiện tại</div></div>
+      <div class="card-feature-coral"><div class="t-micro-u" style="color:var(--coral-dark)">DƯỚI ĐỊNH MỨC</div><div class="t-h2 mt-1">3</div><div class="t-caption" style="color:var(--coral-dark)">cần đề nghị mua</div></div>
+      <div class="card-feature-teal"><div class="t-micro-u" style="color:var(--moss-deep)">TIÊU HAO THÁNG 6</div><div class="t-h2 mt-1">38M</div><div class="t-caption" style="color:var(--moss-deep)">xuất dùng cho lệnh SX</div></div>
+    </div>
+    <div class="grid grid-12 mb-4">
+      <div class="card">
+        <div class="t-h5 mb-3"><i data-lucide="bar-chart-3" style="width:16px;height:16px"></i> Giá trị tồn theo nhóm</div>
+        <div id="chartGroup" style="min-height:240px"></div>
+      </div>
+      <div class="card">
+        <div class="t-h5 mb-3"><i data-lucide="trending-up" style="width:16px;height:16px"></i> Tiêu hao 6 tháng gần nhất</div>
+        <div id="chartUse" style="min-height:240px"></div>
+      </div>
+    </div>
+    <div class="card mb-6">
+      <div class="t-h5 mb-3"><i data-lucide="table-2" style="width:16px;height:16px"></i> Nhập – Xuất – Tồn theo nhóm · T6/2026</div>
+      <div class="table-wrap" style="border:none">
+        <table class="tbl">
+          <thead><tr><th>Nhóm</th><th class="num">Tồn đầu kỳ</th><th class="num">Nhập (₫)</th><th class="num">Xuất dùng (₫)</th><th class="num">Tồn cuối (₫)</th></tr></thead>
+          <tbody>
+            <tr><td>Keo &amp; hoá chất</td><td class="num">24.000.000</td><td class="num">16.000.000</td><td class="num">12.920.000</td><td class="num">27.080.000</td></tr>
+            <tr><td>Băng keo &amp; màng</td><td class="num">14.500.000</td><td class="num">10.000.000</td><td class="num">6.820.000</td><td class="num">17.680.000</td></tr>
+            <tr><td>Mài cắt &amp; hàn</td><td class="num">18.000.000</td><td class="num">12.000.000</td><td class="num">9.240.000</td><td class="num">20.760.000</td></tr>
+            <tr><td>Vệ sinh &amp; bảo hộ</td><td class="num">6.500.000</td><td class="num">5.000.000</td><td class="num">3.680.000</td><td class="num">7.820.000</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  </div><!-- /tab-group -->
+
+  <!-- Detail drawer -->
+  <div class="drawer-overlay" id="wh-overlay"></div>
+  <aside class="drawer" id="wh-drawer" aria-hidden="true">
+    <button class="btn-icon drawer-close" id="wh-close" title="Đóng"><i data-lucide="x" style="width:18px;height:18px"></i></button>
+    <div id="wh-body"></div>
+  </aside>
+
+</div>
+
+<script src="../assets/js/layout.js"></script>
+<script src="../assets/js/pricing-engine.js"></script>
+<script src="../assets/js/quote-data.js"></script>
+<script src="../assets/js/loss-data.js"></script>
+<script src="../assets/js/loss-ui.js"></script>
+<script>
+  document.addEventListener('erp:ready', () => {
+    const rows = [...document.querySelectorAll('.wh-scroll tbody tr[data-group]')];
+    const search = document.getElementById('whSearch');
+    const grp = document.getElementById('whGroup');
+    const flag = document.getElementById('whFlag');
+    const count = document.getElementById('whCount');
+    function apply(){
+      const q=(search?.value||'').toLowerCase().trim(), g=grp?.value||'', f=flag?.value||''; let n=0;
+      rows.forEach(r=>{
+        const ok = (!q||r.textContent.toLowerCase().includes(q)) && (!g||r.dataset.group===g) && (!f||r.dataset.flag===f);
+        r.style.display = ok?'':'none'; if(ok) n++;
+      });
+      if(count) count.textContent = `Hiển thị ${n}/${rows.length} mã vật liệu`;
+    }
+    search?.addEventListener('input', apply); grp?.addEventListener('change', apply); flag?.addEventListener('change', apply); apply();
+
+    /* ===== Chi tiết vật tư — drawer trượt từ phải ===== */
+    const MAT = {
+      'TH-001': { ten:'Keo silicon trung tính', nhom:'Keo & hoá chất', dvt:'tuýp', ton:'180', dm:'120', gia:'62.000', giatri:'11.160.000', low:false,
+        info:[['Nhà cung cấp chính','Hoá chất Xây dựng Việt'],['Quy cách','Tuýp 300ml · thùng 24 tuýp'],['Vị trí kho','Kệ A2 · Kho vật tư nhôm'],['Hạn sử dụng','12 tháng kể từ NSX'],['Lần nhập gần nhất','08/06/2026 · 240 tuýp'],['Tiêu hao TB/tháng','~210 tuýp']],
+        his:[['08/06/2026','Nhập','PN-0612','+240 tuýp','14.880.000','Hoá chất Xây dựng Việt'],['02/06/2026','Xuất','PX-0598','−48 tuýp','','LSX-0331'],['28/05/2026','Xuất','PX-0571','−62 tuýp','','LSX-0319'],['20/05/2026','Nhập','PN-0588','+180 tuýp','11.160.000','Hoá chất Xây dựng Việt'],['14/05/2026','Xuất','PX-0540','−54 tuýp','','LSX-0322']] },
+      'TH-002': { ten:'Dung dịch tẩy nhờn bề mặt nhôm', nhom:'Keo & hoá chất', dvt:'lít', ton:'42', dm:'80', gia:'120.000', giatri:'5.040.000', low:true,
+        info:[['Nhà cung cấp chính','Hoá chất Xây dựng Việt'],['Quy cách','Can 18 lít'],['Vị trí kho','Kệ A3 · khu hoá chất'],['Hạn sử dụng','24 tháng kể từ NSX'],['Lần nhập gần nhất','25/05/2026 · 72 lít'],['Tiêu hao TB/tháng','~60 lít']],
+        his:[['12/06/2026','Xuất','PX-0625','−18 lít','','LSX-0335'],['25/05/2026','Nhập','PN-0566','+72 lít','8.640.000','Hoá chất Xây dựng Việt'],['18/05/2026','Xuất','PX-0552','−24 lít','','LSX-0331'],['09/05/2026','Xuất','PX-0531','−30 lít','','LSX-0319']] },
+      'TH-003': { ten:'Dung dịch làm mát cắt gọt nhôm', nhom:'Keo & hoá chất', dvt:'lít', ton:'96', dm:'60', gia:'100.000', giatri:'9.600.000', low:false,
+        info:[['Nhà cung cấp chính','Cơ khí WEIKE Việt Nam'],['Quy cách','Can 20 lít · pha 1:20'],['Vị trí kho','Kệ A4 · cạnh máy CAT-01'],['Định mức','~0,25 lít / bộ cửa'],['Lần nhập gần nhất','06/06/2026 · 60 lít'],['Tiêu hao TB/tháng','~48 lít']],
+        his:[['06/06/2026','Nhập','PN-0610','+60 lít','6.000.000','Cơ khí WEIKE Việt Nam'],['30/05/2026','Xuất','PX-0580','−22 lít','','Máy CAT-01 · CAT-02'],['15/05/2026','Xuất','PX-0545','−18 lít','','Máy CNC-03']] },
+      'TH-023': { ten:'Chổi sơn quét keo', nhom:'Keo & hoá chất', dvt:'cái', ton:'64', dm:'30', gia:'20.000', giatri:'1.280.000', low:false,
+        info:[['Nhà cung cấp chính','Vật tư Hồng Phúc'],['Quy cách','Chổi bản 25mm'],['Vị trí kho','Kệ A5 · Kho vật tư nhôm'],['Lần nhập gần nhất','03/06/2026 · 60 cái'],['Tiêu hao TB/tháng','~42 cái']],
+        his:[['03/06/2026','Nhập','PN-0605','+60 cái','1.200.000','Vật tư Hồng Phúc'],['27/05/2026','Xuất','PX-0568','−18 cái','','Tổ ép góc – lắp ráp']] },
+      'TH-008': { ten:'Băng dính xốp 2 mặt (dán kính)', nhom:'Băng keo & màng', dvt:'cuộn', ton:'240', dm:'100', gia:'45.000', giatri:'10.800.000', low:false,
+        info:[['Nhà cung cấp chính','Bao bì Phú Mỹ'],['Quy cách','Cuộn 10m × 12mm'],['Vị trí kho','Kệ B1 · Kho vật tư nhôm'],['Lần nhập gần nhất','01/06/2026 · 300 cuộn'],['Tiêu hao TB/tháng','~210 cuộn']],
+        his:[['01/06/2026','Nhập','PN-0601','+300 cuộn','13.500.000','Bao bì Phú Mỹ'],['30/05/2026','Xuất','PX-0580','−120 cuộn','','LSX-0335'],['15/05/2026','Xuất','PX-0545','−90 cuộn','','LSX-0341']] },
+      'TH-009': { ten:'Băng keo bảo vệ bề mặt nhôm', nhom:'Băng keo & màng', dvt:'cuộn', ton:'86', dm:'40', gia:'80.000', giatri:'6.880.000', low:false,
+        info:[['Nhà cung cấp chính','Bao bì Phú Mỹ'],['Quy cách','Cuộn 100m × 50mm'],['Vị trí kho','Kệ B2 · Kho vật tư nhôm'],['Lần nhập gần nhất','03/06/2026 · 60 cuộn'],['Tiêu hao TB/tháng','~55 cuộn']],
+        his:[['03/06/2026','Nhập','PN-0605','+60 cuộn','4.800.000','Bao bì Phú Mỹ'],['27/05/2026','Xuất','PX-0568','−28 cuộn','','Tổ hoàn thiện – đóng kiện'],['16/05/2026','Xuất','PX-0548','−34 cuộn','','Tổ hoàn thiện – đóng kiện']] },
+      'TH-014': { ten:'Giấy nhám P120 – P400', nhom:'Mài cắt & hàn', dvt:'tờ', ton:'180', dm:'400', gia:'8.000', giatri:'1.440.000', low:true,
+        info:[['Nhà cung cấp chính','Vật tư Hồng Phúc'],['Quy cách','Tờ 230×280mm'],['Vị trí kho','Tủ dụng cụ · Tổ hoàn thiện'],['Cảnh báo','Tiêu hao vượt định mức 24% — kiểm tra thao tác chà cạnh'],['Lần nhập gần nhất','20/05/2026 · 600 tờ']],
+        his:[['10/06/2026','Xuất','PX-0620','−220 tờ','','Tổ hoàn thiện – đóng kiện'],['20/05/2026','Nhập','PN-0560','+600 tờ','4.800.000','Vật tư Hồng Phúc'],['12/05/2026','Xuất','PX-0538','−180 tờ','','LSX-0322']] },
+      'TH-015': { ten:'Đá cắt nhôm Ø355', nhom:'Mài cắt & hàn', dvt:'viên', ton:'124', dm:'60', gia:'70.000', giatri:'8.680.000', low:false,
+        info:[['Nhà cung cấp chính','Cơ khí WEIKE Việt Nam'],['Quy cách','Ø355 × 3,0mm · dùng cho CAT-01/02'],['Vị trí kho','Kệ C1 · Kho vật tư nhôm'],['Định mức','1 viên / ~180 nhát cắt'],['Lần nhập gần nhất','05/06/2026 · 100 viên']],
+        his:[['05/06/2026','Nhập','PN-0609','+100 viên','7.000.000','Cơ khí WEIKE Việt Nam'],['31/05/2026','Xuất','PX-0585','−48 viên','','Máy CAT-01'],['18/05/2026','Xuất','PX-0551','−42 viên','','Máy CAT-02']] },
+      'TH-016': { ten:'Que hàn nhôm ER4043', nhom:'Mài cắt & hàn', dvt:'kg', ton:'46', dm:'25', gia:'200.000', giatri:'9.200.000', low:false,
+        info:[['Nhà cung cấp chính','Cơ khí WEIKE Việt Nam'],['Quy cách','Ø2,4mm · hộp 5kg'],['Vị trí kho','Kệ C2 · Kho vật tư nhôm'],['Ghi chú','Dùng vá mối ép góc hở khi sửa hàng lỗi'],['Lần nhập gần nhất','22/05/2026 · 30 kg']],
+        his:[['09/06/2026','Xuất','PX-0618','−6 kg','','Tổ ép góc – lắp ráp'],['22/05/2026','Nhập','PN-0563','+30 kg','6.000.000','Cơ khí WEIKE Việt Nam'],['11/05/2026','Xuất','PX-0535','−8 kg','','Sửa mối ép LSX-0333']] },
+      'TH-020': { ten:'Mũi vít bắt vít PH2 (bộ 10)', nhom:'Mài cắt & hàn', dvt:'bộ', ton:'12', dm:'25', gia:'120.000', giatri:'1.440.000', low:true,
+        info:[['Nhà cung cấp chính','Vật tư Hồng Phúc'],['Quy cách','Bộ 10 mũi · thép S2'],['Vị trí kho','Tủ dụng cụ · Tổ ép góc'],['Cảnh báo','Gãy mũi nhiều hơn định mức 31% — kiểm tra lực siết máy bắt vít'],['Lần nhập gần nhất','18/05/2026 · 20 bộ']],
+        his:[['08/06/2026','Xuất','PX-0615','−8 bộ','','Tổ ép góc – lắp ráp'],['18/05/2026','Nhập','PN-0552','+20 bộ','2.400.000','Vật tư Hồng Phúc']] },
+      'TH-021': { ten:'Khăn lau công nghiệp', nhom:'Vệ sinh & bảo hộ', dvt:'kg', ton:'95', dm:'40', gia:'20.000', giatri:'1.900.000', low:false,
+        info:[['Nhà cung cấp chính','Vật tư Hồng Phúc'],['Quy cách','Kiện 10kg'],['Vị trí kho','Kệ A4 · Tầng 1'],['Lần nhập gần nhất','06/06/2026 · 50 kg'],['Tiêu hao TB/tháng','~45 kg']],
+        his:[['06/06/2026','Nhập','PN-0610','+50 kg','1.000.000','Vật tư Hồng Phúc'],['29/05/2026','Xuất','PX-0575','−22 kg','','Vệ sinh xưởng'],['17/05/2026','Xuất','PX-0549','−28 kg','','Vệ sinh xưởng']] },
+      'TH-022': { ten:'Găng tay chống cắt (cấp 5)', nhom:'Vệ sinh & bảo hộ', dvt:'đôi', ton:'148', dm:'80', gia:'40.000', giatri:'5.920.000', low:false,
+        info:[['Nhà cung cấp chính','BHLĐ An Toàn Việt'],['Quy cách','Cấp chống cắt 5 · size L'],['Vị trí kho','Kệ BHLĐ B1 · Tầng 1'],['Định mức cấp','1 đôi/thợ/tháng'],['Lần nhập gần nhất','06/06/2026 · 100 đôi']],
+        his:[['06/06/2026','Nhập','PN-0611','+100 đôi','4.000.000','BHLĐ An Toàn Việt'],['03/06/2026','Xuất','PX-0606','−40 đôi','','Cấp định kỳ toàn xưởng'],['12/05/2026','Xuất','PX-0534','−38 đôi','','Cấp định kỳ toàn xưởng']] },
+    };
+    /* chứng từ & lệnh SX là liên kết bản ghi */
+    const ctLink = ct => /^PN/.test(ct) ? `<a href="05-kho.html?pnk=${encodeURIComponent(ct)}" class="lnk">${ct}</a>`
+      : /^PX/.test(ct) ? `<a href="05-kho.html?pxk=${encodeURIComponent(ct)}" class="lnk">${ct}</a>` : ct;
+    const srcLink = src => /^LSX-/.test(String(src).trim()) ? `<a href="06-lsx-phieu-cong-nghe.html?id=${encodeURIComponent(String(src).trim())}" class="lnk">${src}</a>` : src;
+    const infoRows = arr => arr.map(([k,v]) => `<div class="pf-info-row"><span class="k">${k}</span><span class="v">${v}</span></div>`).join('');
+    function hisRows(arr){
+      return arr.map(([d,loai,ct,sl,gt,nguon])=>{
+        const isIn = loai==='Nhập';
+        const badge = isIn ? '<span class="badge badge-moss">Nhập</span>' : '<span class="badge badge-steel">Xuất</span>';
+        const slc = isIn ? 'color:var(--moss-deep)' : 'color:var(--signal)';
+        return `<tr><td>${d}</td><td>${badge}</td><td>${ctLink(ct)}</td><td class="num" style="font-weight:600;${slc}">${sl}</td><td>${srcLink(nguon)}</td></tr>`;
+      }).join('');
+    }
+
+    const body = document.getElementById('wh-body');
+    const drawer = document.getElementById('wh-drawer');
+    const overlay = document.getElementById('wh-overlay');
+    function openDrawer(){ drawer.classList.add('open'); overlay.classList.add('open'); drawer.setAttribute('aria-hidden','false'); }
+    function closeDrawer(){ drawer.classList.remove('open'); overlay.classList.remove('open'); drawer.setAttribute('aria-hidden','true'); rows.forEach(r=>r.classList.remove('row-selected')); }
+    overlay.addEventListener('click', closeDrawer);
+    document.getElementById('wh-close')?.addEventListener('click', closeDrawer);
+    document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeDrawer(); });
+
+    function render(ma){
+      const m = MAT[ma]; if(!m || !body) return;
+      const statusBadge = m.low
+        ? '<span class="badge status-overdue"><i data-lucide="alert-triangle" style="width:12px;height:12px"></i> Dưới định mức</span>'
+        : '<span class="badge badge-moss"><i data-lucide="check" style="width:12px;height:12px"></i> Đủ tồn</span>';
+      const propose = m.low
+        ? `<button class="btn btn-primary btn-sm" style="flex:1"><i data-lucide="shopping-cart" style="width:13px;height:13px"></i> Đề xuất mua hàng</button>`
+        : `<button class="btn btn-secondary btn-sm" style="flex:1"><i data-lucide="shopping-cart" style="width:13px;height:13px"></i> Đề xuất mua hàng</button>`;
+      body.innerHTML = `
+        <div class="wh-head mb-3">
+          <div class="wh-avatar"><i data-lucide="package" style="width:24px;height:24px"></i></div>
+          <div style="min-width:0">
+            <div class="t-h4">${m.ten}</div>
+            <div class="t-caption">${ma} · ${m.nhom}</div>
+            <div class="mt-1">${statusBadge}</div>
+          </div>
+        </div>
+
+        <div class="flex" style="gap:8px;margin-bottom:14px">
+          ${propose}
+          <button class="btn btn-secondary btn-sm" style="flex:1"><i data-lucide="package-minus" style="width:13px;height:13px"></i> Xuất kho</button>
+        </div>
+
+        <div class="grid grid-3 mb-3" style="gap:8px">
+          <div class="wh-stat"><div class="l">Tồn hiện tại</div><div class="v" style="${m.low?'color:var(--signal)':''}">${m.ton} <span style="font-size:12px;font-weight:500;color:var(--ash)">${m.dvt}</span></div></div>
+          <div class="wh-stat"><div class="l">Định mức tối thiểu</div><div class="v">${m.dm}</div></div>
+          <div class="wh-stat"><div class="l">Đơn giá (₫)</div><div class="v" style="font-size:15px">${m.gia}</div></div>
+        </div>
+
+        <div class="t-micro-u mb-1">Thông tin vật tư</div>
+        ${infoRows([['Đơn vị tính',m.dvt],['Giá trị tồn (₫)',m.giatri],...m.info])}
+
+        <hr class="hr-soft">
+        <div class="flex-between mb-2">
+          <div class="t-micro-u"><i data-lucide="history" style="width:13px;height:13px;vertical-align:-2px"></i> Lịch sử xuất nhập</div>
+          <a href="lich-su-xnk-kho.html" class="btn-link" style="font-size:12px">Xem tất cả</a>
+        </div>
+        <div class="table-wrap" style="border:none">
+          <table class="tbl" style="font-size:12.5px">
+            <thead><tr><th>Ngày</th><th>Loại</th><th>Chứng từ</th><th class="num">Số lượng</th><th>Nguồn / Mục đích</th></tr></thead>
+            <tbody>${hisRows(m.his)}</tbody>
+          </table>
+        </div>`;
+      if(window.lucide) window.lucide.createIcons();
+      drawer.scrollTop = 0;
+    }
+
+    rows.forEach(tr=>{
+      tr.addEventListener('click', ()=>{
+        const ma = tr.dataset.ma; if(!ma) return;
+        rows.forEach(r=>r.classList.remove('row-selected'));
+        tr.classList.add('row-selected');
+        render(ma); openDrawer();
+      });
+    });
+
+    /* ===== Tab Xuất nhập kho — bảng tổng quan + bộ lọc ===== */
+    function ymOf(d){ const [dd,mm,yy]=d.split('/'); return yy+'-'+mm; }
+    const TX = [];
+    Object.keys(MAT).forEach(ma=>{
+      const m = MAT[ma];
+      m.his.forEach(([d,loai,ct,sl,gt,nguon])=>{
+        TX.push({ d, ym:ymOf(d), loai, type:loai==='Nhập'?'in':'out', ct, ma, ten:m.ten, nhom:m.nhom, sl, gt, nguon });
+      });
+    });
+    // sắp xếp mới nhất lên đầu
+    const toKey = d => { const [dd,mm,yy]=d.split('/'); return yy+mm+dd; };
+    TX.sort((a,b)=> toKey(b.d).localeCompare(toKey(a.d)));
+
+    const xnkBody = document.getElementById('xnkBody');
+    const xnkSearch = document.getElementById('xnkSearch');
+    const xnkType = document.getElementById('xnkType');
+    const xnkGroup = document.getElementById('xnkGroup');
+    const xnkMonth = document.getElementById('xnkMonth');
+    const xnkCount = document.getElementById('xnkCount');
+    function renderTx(){
+      const q=(xnkSearch?.value||'').toLowerCase().trim(), t=xnkType?.value||'', g=xnkGroup?.value||'', mo=xnkMonth?.value||'';
+      const list = TX.filter(x=>{
+        const hay = (x.ct+' '+x.ma+' '+x.ten+' '+x.nguon).toLowerCase();
+        return (!q||hay.includes(q)) && (!t||x.type===t) && (!g||x.nhom===g) && (!mo||x.ym===mo);
+      });
+      xnkBody.innerHTML = list.map(x=>{
+        const badge = x.type==='in' ? '<span class="badge badge-moss">Nhập</span>' : '<span class="badge badge-steel">Xuất</span>';
+        const slc = x.type==='in' ? 'color:var(--moss-deep)' : 'color:var(--signal)';
+        return `<tr><td>${x.d}</td><td><b>${ctLink(x.ct)}</b></td><td>${badge}</td><td>${x.ma}</td><td>${x.ten}</td><td>${x.nhom}</td><td class="num" style="font-weight:600;${slc}">${x.sl}</td><td class="num">${x.gt||'—'}</td><td>${srcLink(x.nguon)}</td></tr>`;
+      }).join('') || `<tr><td colspan="9" class="t-caption" style="text-align:center;padding:20px">Không có giao dịch phù hợp</td></tr>`;
+      if(window.lucide) window.lucide.createIcons();
+      if(xnkCount) xnkCount.textContent = `Hiển thị ${list.length}/${TX.length} giao dịch`;
+    }
+    xnkSearch?.addEventListener('input', renderTx);
+    [xnkType,xnkGroup,xnkMonth].forEach(s=>s?.addEventListener('change', renderTx));
+    renderTx();
+
+    let drawn=false;
+    function draw(){
+      if(drawn) return; drawn=true;
+      ERPCharts.bar('chartGroup', { labels:['Keo & hoá chất','Băng keo & màng','Mài cắt & hàn','Vệ sinh & bảo hộ'], values:[27.08,17.68,20.76,7.82], colors:['#c5400a','#9c7714','#2f5d3a','#4a5560'] }, { height:240, unit:'M' });
+      ERPCharts.line('chartUse', { labels:['T1','T2','T3','T4','T5','T6'], values:[32,35,34,39,36,38] }, { height:240, color:'#9c7714', fill:true, unit:'M' });
+    }
+    document.querySelector('[data-tab="tab-bc"]')?.addEventListener('click', ()=> setTimeout(draw, 60));
+  });
+</script>
+</body>
+</html>
